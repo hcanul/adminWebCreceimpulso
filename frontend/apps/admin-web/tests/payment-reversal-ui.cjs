@@ -1,0 +1,31 @@
+const { chromium }=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const assert=require('node:assert/strict');
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
+const page=await browser.newPage({viewport:{width:1200,height:1000}});page.setDefaultTimeout(12000);
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const id='22222222-2222-4222-8222-222222222222';let posts=0,input,role='Gerente';
+const receipt={id,folio:'REC-CRE-S008-000001-0001',credit_folio:'CRE-S008-000001',amount:'500.00',received_on:'2026-10-15',method:'cash_branch',status:'registered',actor_name:'Caja DEMO',bank_name:null,bank_reference:null,deposited_on:null,balance_version:'a'.repeat(64),reversal:null,reversed_on:null,verification_url:'http://localhost:8000/comprobantes/'+id+'/verificar?signature='+'a'.repeat(64),allocations:[{beneficiary:'María DEMO',payer:'María DEMO',number:1,due_on:'2026-10-15',amount:'500.00'}]};
+await page.addInitScript(()=>localStorage.setItem('access_token','__q_strn|reversal-fixture'));
+await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let body;
+if(path.endsWith('/me'))body={id:'66666666-6666-4666-8666-666666666666',name:role+' DEMO',branch_id:'11111111-1111-4111-8111-111111111111',is_active:true,roles:[{id:1,name:role}],permissions:['credit.view',role==='Gerente'?'credit.reverse':'credit.collect']};
+else if(path.endsWith('/reverse')){const v=route.request().postDataJSON();posts++;assert.equal(v.reason,'Importe capturado en el crédito equivocado.');assert.equal(v.confirmed,true);assert.equal(v.amount,undefined);if(posts===1){input=v;receipt.status='reversed';receipt.reversed_on='2026-10-15';receipt.reversal={id:v.id,actor_name:'Gerente DEMO',reason:v.reason,reversed_on:'2026-10-15'};return route.abort('failed');}assert.deepEqual(v,input);body=receipt;}
+else if(path.endsWith('/receipts/'+id))body=receipt;else throw Error('Unexpected '+path);
+return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});});
+await page.goto((process.env.CRECE_UI_URL||'http://localhost:9001')+'/#/comprobantes/'+id);
+await page.getByRole('heading',{name:receipt.folio,exact:true}).waitFor();
+assert.equal(await page.getByRole('button',{name:'Revertir pago completo',exact:true}).isDisabled(),true);
+await page.getByLabel('Motivo del reverso',{exact:true}).fill('Importe capturado en el crédito equivocado.');
+await page.getByRole('button',{name:'Revertir pago completo',exact:true}).click();
+await page.getByRole('button',{name:'Sí, registrar reverso',exact:true}).click();
+await page.getByRole('button',{name:'Entendido',exact:true}).click();
+await page.getByRole('button',{name:'Reintentar el mismo reverso',exact:true}).click();
+await page.getByText('PAGO REVERTIDO · 2026-10-15',{exact:true}).waitFor();
+assert.equal(posts,2);assert.equal(await page.getByRole('button',{name:'Revertir pago completo',exact:true}).count(),0);
+await page.reload();await page.getByText('PAGO REVERTIDO · 2026-10-15',{exact:true}).waitFor();
+await page.setViewportSize({width:390,height:844});await page.waitForTimeout(300);
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+await page.screenshot({path:'/tmp/crece-reversal-mobile.png',fullPage:true});
+role='Caja';receipt.status='registered';receipt.reversal=null;await page.reload();await page.getByRole('heading',{name:receipt.folio,exact:true}).waitFor();
+assert.equal(await page.getByRole('button',{name:'Revertir pago completo',exact:true}).count(),0);assert.deepEqual(errors,[]);
+console.log('OK: Gerencia revierte con motivo, reintento exacto, marca persistente tras recarga, Caja sin acción y móvil sin desbordamiento; API simulada.');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

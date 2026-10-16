@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "status": "source_mappings_pending_verification",
+  "branches": [
+    {
+      "code": "carrillo",
+      "name": "Carrillo",
+      "source_id": null,
+      "legacy_city_id": null,
+      "target_branch_uuid": null
+    },
+    {
+      "code": "tulum",
+      "name": "Tulum",
+      "source_id": null,
+      "legacy_city_id": null,
+      "target_branch_uuid": null
+    },
+    {
+      "code": "morelos",
+      "name": "Morelos",
+      "source_id": null,
+      "legacy_city_id": null,
+      "target_branch_uuid": null
+    },
+    {
+      "code": "playa-1",
+      "name": "Playa 1",
+      "source_id": null,
+      "legacy_city_id": null,
+      "target_branch_uuid": null
+    },
+    {
+      "code": "playa-2",
+      "name": "Playa 2",
+      "source_id": null,
+      "legacy_city_id": null,
+      "target_branch_uuid": null
+    },
+    {
+      "code": "cancun-1",
+      "name": "Cancún 1",
+      "source_id": null,
+      "legacy_city_id": null,
+      "target_branch_uuid": null
+    },
+    {
+      "code": "cancun-2",
+      "name": "Cancún 2",
+      "source_id": null,
+      "legacy_city_id": null,
+      "target_branch_uuid": null
+    }
+  ]
+}

@@ -1,0 +1,1426 @@
+{
+  "preserve_all_fields": true,
+  "field_count": 72,
+  "fields": [
+    {
+      "order": 1,
+      "section": "Datos Generales",
+      "name": "fecha",
+      "label": "fecha",
+      "control": "date",
+      "rule": "required",
+      "schema": {
+        "type": "date",
+        "nullable": false,
+        "line": 18
+      },
+      "options": [],
+      "line": 11,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 2,
+      "section": "Datos Generales",
+      "name": "city_id",
+      "label": "oficina",
+      "control": "select",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "integer",
+        "nullable": false,
+        "line": 19
+      },
+      "options": [],
+      "line": 16,
+      "preserve": true,
+      "note": "Catálogo City completo. No tiene required activo en el modelo, pero la migración no admite NULL."
+    },
+    {
+      "order": 3,
+      "section": "Datos Generales",
+      "name": "ncliente",
+      "label": "Núm. Cliente",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "integer",
+        "nullable": true,
+        "line": 20
+      },
+      "options": [],
+      "line": 21,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 4,
+      "section": "Datos Generales",
+      "name": "nCredito",
+      "label": "Núm. Credito",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "integer",
+        "nullable": true,
+        "line": 21
+      },
+      "options": [],
+      "line": 28,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 5,
+      "section": "Datos Generales",
+      "name": "team_id",
+      "label": "Nom. Grupo",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "integer",
+        "nullable": false,
+        "line": 22
+      },
+      "options": [],
+      "line": 33,
+      "preserve": true,
+      "note": "Grupos de la oficina del usuario. El valor de edición usa teams_id, aunque el campo persistido es team_id."
+    },
+    {
+      "order": 6,
+      "section": "Datos Generales",
+      "name": "promoter_id",
+      "label": "promotor",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "integer",
+        "nullable": false,
+        "line": 23
+      },
+      "options": [],
+      "line": 38,
+      "preserve": true,
+      "note": "Promotores de la oficina del usuario; conserva el identificador, no sólo el nombre."
+    },
+    {
+      "order": 7,
+      "section": "Datos Solicitante",
+      "name": "pNombre",
+      "label": "Primer Nombre",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 25
+      },
+      "options": [],
+      "line": 53,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 8,
+      "section": "Datos Solicitante",
+      "name": "sNombre",
+      "label": "Segundo Nombre",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "string",
+        "nullable": true,
+        "line": 26
+      },
+      "options": [],
+      "line": 58,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 9,
+      "section": "Datos Solicitante",
+      "name": "aPaterno",
+      "label": "Apellido Paterno",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 27
+      },
+      "options": [],
+      "line": 63,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 10,
+      "section": "Datos Solicitante",
+      "name": "aMaterno",
+      "label": "Apellido Materno",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 28
+      },
+      "options": [],
+      "line": 70,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 11,
+      "section": "Datos Solicitante",
+      "name": "genero",
+      "label": "Genero",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 29
+      },
+      "options": [
+        {
+          "value": "Masculino",
+          "label": "Masculino"
+        },
+        {
+          "value": "Femenino",
+          "label": "Femenino"
+        }
+      ],
+      "line": 75,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 12,
+      "section": "Datos Solicitante",
+      "name": "fNacimiento",
+      "label": "Fecha Nacimiento",
+      "control": "date",
+      "rule": "required",
+      "schema": {
+        "type": "date",
+        "nullable": false,
+        "line": 30
+      },
+      "options": [],
+      "line": 80,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 13,
+      "section": "Datos Solicitante",
+      "name": "lNacimiento",
+      "label": "Lugar de Nacimiento",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 31
+      },
+      "options": [],
+      "line": 87,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 14,
+      "section": "Datos Solicitante",
+      "name": "pais",
+      "label": "Pais",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 32
+      },
+      "options": [],
+      "line": 92,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 15,
+      "section": "Datos Solicitante",
+      "name": "nacionalidad",
+      "label": "Nacionalidad",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 33
+      },
+      "options": [],
+      "line": 97,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 16,
+      "section": "Datos Solicitante",
+      "name": "tidentificaion",
+      "label": "Identificacion",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 34
+      },
+      "options": [],
+      "line": 104,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 17,
+      "section": "Datos Solicitante",
+      "name": "rfc",
+      "label": "R. F. C.",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 35
+      },
+      "options": [],
+      "line": 109,
+      "preserve": true,
+      "note": "oninput llama validarInput; no se encontró definición cargada por este formulario. El modelo sólo exige presencia."
+    },
+    {
+      "order": 18,
+      "section": "Datos Solicitante",
+      "name": "curp",
+      "label": "C. U. R. P.",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 36
+      },
+      "options": [],
+      "line": 115,
+      "preserve": true,
+      "note": "oninput llama validarInput2; no se encontró su definición en archivos fuente revisados. La unicidad está comentada."
+    },
+    {
+      "order": 19,
+      "section": "Datos Solicitante",
+      "name": "nIdentificacion",
+      "label": "Núm. Identificacion",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 37
+      },
+      "options": [],
+      "line": 123,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 20,
+      "section": "Datos Solicitante",
+      "name": "ecivil",
+      "label": "Estado Civil",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 38
+      },
+      "options": [
+        {
+          "value": "Soltero",
+          "label": "Soltero"
+        },
+        {
+          "value": "Casado",
+          "label": "Casado"
+        },
+        {
+          "value": "U. Libre",
+          "label": "U. Libre"
+        },
+        {
+          "value": "Divorciado",
+          "label": "Divorciado"
+        },
+        {
+          "value": "Padre Soltero",
+          "label": "Padre Soltero"
+        }
+      ],
+      "line": 128,
+      "preserve": true,
+      "note": "El PDF incluye VIUDO y el catálogo digital no lo incluye."
+    },
+    {
+      "order": 21,
+      "section": "Datos Solicitante",
+      "name": "regimen",
+      "label": "Regimen",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 39
+      },
+      "options": [
+        {
+          "value": "Separación de Bienes",
+          "label": "Separación de Bienes"
+        },
+        {
+          "value": "Sociedad Conyugal",
+          "label": "Sociedad Conyugal"
+        },
+        {
+          "value": "Ninguno",
+          "label": "Ninguno"
+        }
+      ],
+      "line": 133,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 22,
+      "section": "Datos Solicitante",
+      "name": "nescolar",
+      "label": "Nivel Escolar",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 40
+      },
+      "options": [
+        {
+          "value": "Primaria",
+          "label": "Primaria"
+        },
+        {
+          "value": "Secundaria",
+          "label": "Secundaria"
+        },
+        {
+          "value": "Preparatoria",
+          "label": "Preparatoria"
+        },
+        {
+          "value": "Técnica",
+          "label": "Técnica"
+        },
+        {
+          "value": "Licenciatura",
+          "label": "Licenciatura"
+        },
+        {
+          "value": "Sin Estudios",
+          "label": "Sin Estudios"
+        }
+      ],
+      "line": 140,
+      "preserve": true,
+      "note": "PDF usa PROFR.; pantalla usa Licenciatura. Confirmar equivalencia antes de migrar."
+    },
+    {
+      "order": 23,
+      "section": "Datos Solicitante",
+      "name": "oficio",
+      "label": "oficio",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 41
+      },
+      "options": [],
+      "line": 145,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 24,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudcalle",
+      "label": "Calle",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 43
+      },
+      "options": [],
+      "line": 160,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 25,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudne",
+      "label": "Núm. Exterior",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 44
+      },
+      "options": [],
+      "line": 165,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 26,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudni",
+      "label": "Núm. Interior",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 45
+      },
+      "options": [],
+      "line": 170,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 27,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudcolonia",
+      "label": "Colonia",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 46
+      },
+      "options": [],
+      "line": 178,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 28,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudelegacion",
+      "label": "Municipio",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 47
+      },
+      "options": [],
+      "line": 183,
+      "preserve": true,
+      "note": "La interfaz usa el catálogo City y envía su id; la columna es string. Separar municipio y oficina en el modelo futuro con equivalencia explícita."
+    },
+    {
+      "order": 29,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudciudad",
+      "label": "Ciudad",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 48
+      },
+      "options": [],
+      "line": 188,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 30,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudcp",
+      "label": "C. P.",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 49
+      },
+      "options": [],
+      "line": 196,
+      "preserve": true,
+      "note": "Control number, pero almacenamiento string. Preservar ceros iniciales; son identificadores/contactos, no cantidades aritméticas."
+    },
+    {
+      "order": 31,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudreferencia",
+      "label": "Referencia",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 50
+      },
+      "options": [],
+      "line": 201,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 32,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudusotelefono",
+      "label": "Telefono Tipo",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 51
+      },
+      "options": [
+        {
+          "value": "Casa",
+          "label": "Casa"
+        },
+        {
+          "value": "Negocio",
+          "label": "Negocio"
+        },
+        {
+          "value": "Familiar",
+          "label": "Familiar"
+        },
+        {
+          "value": "Celular",
+          "label": "Celular"
+        },
+        {
+          "value": "Fax",
+          "label": "Fax"
+        },
+        {
+          "value": "Biper",
+          "label": "Biper"
+        }
+      ],
+      "line": 206,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 33,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudtelefono",
+      "label": "Núm. Telefono",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 52
+      },
+      "options": [],
+      "line": 214,
+      "preserve": true,
+      "note": "Control number, pero almacenamiento string. Preservar ceros iniciales; son identificadores/contactos, no cantidades aritméticas."
+    },
+    {
+      "order": 34,
+      "section": "Datos de Ubicación del Domicilio",
+      "name": "dudrecidencia",
+      "label": "Tipo Vivienda",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 53
+      },
+      "options": [
+        {
+          "value": "Propia",
+          "label": "Propia"
+        },
+        {
+          "value": "Rentada",
+          "label": "Rentada"
+        },
+        {
+          "value": "Familiar",
+          "label": "Familiar"
+        }
+      ],
+      "line": 219,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 35,
+      "section": "Datos de la Familia y Conyugue",
+      "name": "dfnombre",
+      "label": "nombre y apellido del Conyugue",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "string",
+        "nullable": true,
+        "line": 55
+      },
+      "options": [],
+      "line": 234,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 36,
+      "section": "Datos de la Familia y Conyugue",
+      "name": "dftrtabaja",
+      "label": "Trabaja Actualmente",
+      "control": "select",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "boolean",
+        "nullable": true,
+        "line": 56
+      },
+      "options": [
+        {
+          "value": "0",
+          "label": "No"
+        },
+        {
+          "value": "1",
+          "label": "Si"
+        }
+      ],
+      "line": 239,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 37,
+      "section": "Datos de la Familia y Conyugue",
+      "name": "dfcocupacion",
+      "label": "Ocupacion",
+      "control": "select",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "string",
+        "nullable": true,
+        "line": 57
+      },
+      "options": [
+        {
+          "value": "Comerciante",
+          "label": "Comerciante"
+        },
+        {
+          "value": "Empresario",
+          "label": "Empresario"
+        },
+        {
+          "value": "Empleado",
+          "label": "Empleado"
+        },
+        {
+          "value": "Jubilado",
+          "label": "Jubilado"
+        },
+        {
+          "value": "Desempleado",
+          "label": "Desempleado"
+        },
+        {
+          "value": "Hogar",
+          "label": "Hogar"
+        }
+      ],
+      "line": 244,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 38,
+      "section": "Datos de la Familia y Conyugue",
+      "name": "dfchijos",
+      "label": "Núm. Hijos",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "integer",
+        "nullable": false,
+        "line": 58
+      },
+      "options": [],
+      "line": 251,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 39,
+      "section": "Datos de la Familia y Conyugue",
+      "name": "dfcdeconomicos",
+      "label": "Dependientes Económicos",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "integer",
+        "nullable": false,
+        "line": 59
+      },
+      "options": [],
+      "line": 256,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 40,
+      "section": "Datos de la Situación Económica del Solicitante",
+      "name": "dseactividad",
+      "label": "Actividad Económica",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 61
+      },
+      "options": [],
+      "line": 271,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 41,
+      "section": "Datos de la Situación Económica del Solicitante",
+      "name": "dseofinggresos",
+      "label": "Ocupacion",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 62
+      },
+      "options": [
+        {
+          "value": "Abal",
+          "label": "Abal"
+        },
+        {
+          "value": "Apoyo Familiar",
+          "label": "Apoyo Familiar"
+        },
+        {
+          "value": "Negocio",
+          "label": "Negocio"
+        },
+        {
+          "value": "Jubilado",
+          "label": "Jubilado"
+        },
+        {
+          "value": "Envio de Dinero",
+          "label": "Envio de Dinero"
+        },
+        {
+          "value": "Otro",
+          "label": "Otro"
+        }
+      ],
+      "line": 276,
+      "preserve": true,
+      "note": "La etiqueta digital dice Ocupacion, pero el PDF dice OTRA FUENTE DE INGRESOS. Conservar el significado del PDF."
+    },
+    {
+      "order": 42,
+      "section": "Datos de la Situación Económica del Solicitante",
+      "name": "dseihogar",
+      "label": "Ingresos al Hogar",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "integer",
+        "nullable": false,
+        "line": 63
+      },
+      "options": [],
+      "line": 281,
+      "preserve": true,
+      "note": "El formulario no define periodicidad de ingresos. Migración integer; acordar manejo de centavos."
+    },
+    {
+      "order": 43,
+      "section": "Datos de la Situación Económica del Solicitante",
+      "name": "dsenphabitan",
+      "label": "Núm. Personas que habitan",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "integer",
+        "nullable": false,
+        "line": 64
+      },
+      "options": [],
+      "line": 288,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 44,
+      "section": "Datos de la Situación Económica del Solicitante",
+      "name": "dseccvivienda",
+      "label": "Cuantas Habitaciones Tiene",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "integer",
+        "nullable": false,
+        "line": 65
+      },
+      "options": [],
+      "line": 293,
+      "preserve": true,
+      "note": "El PDF especifica excluir baños, locales y bodegas; esta ayuda no aparece en la pantalla."
+    },
+    {
+      "order": 45,
+      "section": "Datos de la Situación Económica del Solicitante",
+      "name": "desmaterial",
+      "label": "Material de la Vivienda",
+      "control": "select",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 66
+      },
+      "options": [
+        {
+          "value": "Tierra Aplanado",
+          "label": "Tierra Aplanado"
+        },
+        {
+          "value": "Acabados",
+          "label": "Acabados (loza, ceramica, Marmol)"
+        },
+        {
+          "value": "Cemento",
+          "label": "Cemento"
+        }
+      ],
+      "line": 298,
+      "preserve": true,
+      "note": "El PDF pregunta por el material de la mayor parte del PISO; la pantalla dice Material de la Vivienda."
+    },
+    {
+      "order": 46,
+      "section": "Referencia Familiar",
+      "name": "rfNombre",
+      "label": "Nombre Completo",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 68
+      },
+      "options": [],
+      "line": 313,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 47,
+      "section": "Referencia Familiar",
+      "name": "rfParentesco",
+      "label": "Parentesco",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 69
+      },
+      "options": [],
+      "line": 318,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 48,
+      "section": "Referencia Familiar",
+      "name": "rfTelefono",
+      "label": "Telefono",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 70
+      },
+      "options": [],
+      "line": 323,
+      "preserve": true,
+      "note": "Control number, pero almacenamiento string. Preservar ceros iniciales; son identificadores/contactos, no cantidades aritméticas."
+    },
+    {
+      "order": 49,
+      "section": "Referencia Familiar",
+      "name": "rfDomicilio",
+      "label": "Domicilio",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 71
+      },
+      "options": [],
+      "line": 330,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 50,
+      "section": "Referencia Familiar",
+      "name": "rfcp",
+      "label": "C. P.",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 72
+      },
+      "options": [],
+      "line": 335,
+      "preserve": true,
+      "note": "Control number, pero almacenamiento string. Preservar ceros iniciales; son identificadores/contactos, no cantidades aritméticas."
+    },
+    {
+      "order": 51,
+      "section": "Referencia Familiar",
+      "name": "rfOcupacion",
+      "label": "Ocupacion",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 73
+      },
+      "options": [],
+      "line": 340,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 52,
+      "section": "Referencia Familiar",
+      "name": "rfLTrabajo",
+      "label": "Lugar de Trabajo",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 74
+      },
+      "options": [],
+      "line": 345,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 53,
+      "section": "Referencia Personal",
+      "name": "rpNombre",
+      "label": "Nombre Completo",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 76
+      },
+      "options": [],
+      "line": 360,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 54,
+      "section": "Referencia Personal",
+      "name": "rpParentesco",
+      "label": "Parentesco",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 77
+      },
+      "options": [],
+      "line": 365,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 55,
+      "section": "Referencia Personal",
+      "name": "rpTelefono",
+      "label": "Telefono",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 78
+      },
+      "options": [],
+      "line": 370,
+      "preserve": true,
+      "note": "Control number, pero almacenamiento string. Preservar ceros iniciales; son identificadores/contactos, no cantidades aritméticas."
+    },
+    {
+      "order": 56,
+      "section": "Referencia Personal",
+      "name": "rpDomicilio",
+      "label": "Domicilio",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 79
+      },
+      "options": [],
+      "line": 377,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 57,
+      "section": "Referencia Personal",
+      "name": "rpcp",
+      "label": "C. P.",
+      "control": "number",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 80
+      },
+      "options": [],
+      "line": 382,
+      "preserve": true,
+      "note": "Control number, pero almacenamiento string. Preservar ceros iniciales; son identificadores/contactos, no cantidades aritméticas."
+    },
+    {
+      "order": 58,
+      "section": "Referencia Personal",
+      "name": "rpOcupacion",
+      "label": "Ocupacion",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 81
+      },
+      "options": [],
+      "line": 387,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 59,
+      "section": "Referencia Personal",
+      "name": "rpLTrabajo",
+      "label": "Lugar de Trabajo",
+      "control": "text",
+      "rule": "required",
+      "schema": {
+        "type": "string",
+        "nullable": false,
+        "line": 82
+      },
+      "options": [],
+      "line": 392,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 60,
+      "section": "Actualemente Tiene Creditos Vigentes",
+      "name": "nempresa",
+      "label": "Nombre de la Empresa de Credito",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "string",
+        "nullable": true,
+        "line": 84
+      },
+      "options": [],
+      "line": 407,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 61,
+      "section": "Actualemente Tiene Creditos Vigentes",
+      "name": "fechaini",
+      "label": "Fecha inicio Credito",
+      "control": "date",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "date",
+        "nullable": true,
+        "line": 85
+      },
+      "options": [],
+      "line": 412,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 62,
+      "section": "Actualemente Tiene Creditos Vigentes",
+      "name": "fechafin",
+      "label": "Fecha Fin Credito",
+      "control": "date",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "date",
+        "nullable": true,
+        "line": 86
+      },
+      "options": [],
+      "line": 417,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 63,
+      "section": "Actualemente Tiene Creditos Vigentes",
+      "name": "total",
+      "label": "total",
+      "control": "number",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "float",
+        "nullable": true,
+        "line": 87
+      },
+      "options": [],
+      "line": 422,
+      "preserve": true,
+      "note": "El PDF dice TOTAL ADEUDADO: deuda externa 1; no confundir con importe original del préstamo."
+    },
+    {
+      "order": 64,
+      "section": "Actualemente Tiene Creditos Vigentes",
+      "name": "nempresa2",
+      "label": "Nombre de la Empresa de Credito",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "string",
+        "nullable": true,
+        "line": 88
+      },
+      "options": [],
+      "line": 429,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 65,
+      "section": "Actualemente Tiene Creditos Vigentes",
+      "name": "fechaini2",
+      "label": "Fecha Inicio Credito",
+      "control": "date",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "date",
+        "nullable": true,
+        "line": 89
+      },
+      "options": [],
+      "line": 434,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 66,
+      "section": "Actualemente Tiene Creditos Vigentes",
+      "name": "fechafin2",
+      "label": "Fecha Fin Credito",
+      "control": "date",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "date",
+        "nullable": true,
+        "line": 90
+      },
+      "options": [],
+      "line": 439,
+      "preserve": true,
+      "note": ""
+    },
+    {
+      "order": 67,
+      "section": "Actualemente Tiene Creditos Vigentes",
+      "name": "total2",
+      "label": "total",
+      "control": "number",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "float",
+        "nullable": true,
+        "line": 91
+      },
+      "options": [],
+      "line": 444,
+      "preserve": true,
+      "note": "El PDF dice TOTAL ADEUDADO: deuda externa 2."
+    },
+    {
+      "order": 68,
+      "section": "Información Importante al Solicitante",
+      "name": "tfdirectivos",
+      "label": "Tiene Familiares que Ocupen Puestos Directivos en la Empresa?",
+      "control": "select",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "boolean",
+        "nullable": true,
+        "line": 93
+      },
+      "options": [
+        {
+          "value": "0",
+          "label": "No"
+        },
+        {
+          "value": "1",
+          "label": "Si"
+        }
+      ],
+      "line": 459,
+      "preserve": true,
+      "note": "Pregunta sobre familiares directivos de la empresa. Invoca divPuesto; nombre complementario: ocupuesto."
+    },
+    {
+      "order": 69,
+      "section": "Información Importante al Solicitante",
+      "name": "dNombre",
+      "label": "Ocupa usted o algun familiar puesto de alto nivel en el servicio publico?",
+      "control": "select",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "string",
+        "nullable": true,
+        "line": 94
+      },
+      "options": [
+        {
+          "value": "0",
+          "label": "No"
+        },
+        {
+          "value": "1",
+          "label": "Si"
+        }
+      ],
+      "line": 464,
+      "preserve": true,
+      "note": "Respuesta sí/no sobre cargo público de alta relevancia. Invoca divDirec; nombre complementario: dNombre2."
+    },
+    {
+      "order": 70,
+      "section": "Información Importante al Solicitante",
+      "name": "ocupuesto",
+      "label": "Nombre Completo",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "boolean",
+        "nullable": true,
+        "line": 95
+      },
+      "options": [],
+      "line": 471,
+      "preserve": true,
+      "note": "Nombre de familiar directivo, control oculto inicialmente. Incompatibilidad: texto en pantalla, boolean en migración."
+    },
+    {
+      "order": 71,
+      "section": "Información Importante al Solicitante",
+      "name": "dNombre2",
+      "label": "Nombre Completo",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "string",
+        "nullable": true,
+        "line": 96
+      },
+      "options": [],
+      "line": 476,
+      "preserve": true,
+      "note": "Nombre asociado al cargo público. Control oculto inicialmente."
+    },
+    {
+      "order": 72,
+      "section": "Información Importante al Solicitante",
+      "name": "Observaciones",
+      "label": "Observaciones",
+      "control": "text",
+      "rule": "Sin regla declarada",
+      "schema": {
+        "type": "text",
+        "nullable": true,
+        "line": 98
+      },
+      "options": [],
+      "line": 484,
+      "preserve": true,
+      "note": "Control text de una línea; migración text. Conservar contenido completo."
+    }
+  ]
+}

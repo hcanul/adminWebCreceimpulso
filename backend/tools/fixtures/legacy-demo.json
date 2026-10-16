@@ -1,0 +1,28 @@
+{
+  "sources": [
+    {
+      "source_id": "sucursal-demo-a",
+      "branches": {
+        "1": "706a4a62-f9b9-4b30-94db-5a3522ca18ed"
+      },
+      "tables": {
+        "citys": [
+          {
+            "id": "1",
+            "name": "Sucursal ficticia"
+          }
+        ],
+        "promoters": [],
+        "teams": [],
+        "demands": [],
+        "rates": [],
+        "credits": [],
+        "credit_groups": [],
+        "paydays": [],
+        "charges": [],
+        "billing_details": [],
+        "latepayments": []
+      }
+    }
+  ]
+}
