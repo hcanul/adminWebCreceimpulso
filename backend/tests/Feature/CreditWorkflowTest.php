@@ -635,6 +635,102 @@ final class CreditWorkflowTest extends TestCase
         return $f + compact('payment');
     }
 
+    public function test_guarantee_waits_until_week_sixteen_is_separate_from_cash_and_reversible(): void
+    {
+        $this->freezeTime();
+        $f = $this->collectionFixture('cash_branch');
+        $url = $f['base'].'/guarantee';
+        $initial = $this->getJson($url)->assertOk()->assertJsonPath('eligible_date', false)->assertJsonPath('members.0.retained', '900.00')->json();
+        $input = ['id' => (string) Str::uuid(), 'version' => $initial['version'], 'reason' => 'Aplicación al final del ciclo.'];
+        $this->postJson($url, $input)->assertForbidden();
+        Sanctum::actingAs($f['commercial']);
+        $this->postJson($url, $input)->assertUnprocessable();
+        $this->travelTo(CarbonImmutable::parse($initial['available_on'], 'America/Cancun')->startOfDay());
+        $this->postJson($url, $input)->assertOk()->assertJsonPath('members.0.applied', '900.00')->assertJsonPath('members.0.available', '0.00')->assertJsonPath('members.0.balance', '10620.00');
+        $this->postJson($url, $input)->assertOk();
+        $this->assertDatabaseCount('guarantee_applications', 1);
+        $this->assertDatabaseCount('credit_payments', 0);
+        $this->assertDatabaseCount('cash_closings', 0);
+        $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('members.0.paid', '900.00')->assertJsonPath('guarantees.0.amount', '2200.00')->assertJsonMissingPath('guarantees.0.reason');
+        $stale = $input;
+        $stale['id'] = (string) Str::uuid();
+        $this->postJson($url, $stale)->assertConflict();
+        $this->postJson('/api/guarantees/'.$input['id'].'/reverse', ['reason' => 'Corrección de la aplicación registrada.'])->assertOk();
+        $this->getJson($url)->assertOk()->assertJsonPath('members.0.available', '900.00')->assertJsonPath('members.0.balance', '11520.00');
+        $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('members.0.paid', '0.00')->assertJsonPath('guarantees.0.reversed_on', now('America/Cancun')->toDateString());
+        $this->postJson('/api/guarantees/'.$input['id'].'/reverse', ['reason' => 'No duplicar este reverso.'])->assertConflict();
+        $other = User::factory()->create(['branch_id' => Branch::create(['name' => 'Otra', 'is_active' => true])->id, 'is_active' => true]);
+        $other->assignRole('Coordinación Comercial');
+        Sanctum::actingAs($other);
+        $this->getJson($url)->assertNotFound();
+        $this->postJson($url, $input)->assertNotFound();
+    }
+
+    public function test_guarantee_only_applies_the_remaining_debt_preserves_excess_and_closes_credit(): void
+    {
+        $f = $this->collectionFixture('cash_branch');
+        $state = $this->getJson($f['base'].'/payments')->assertOk()->json();
+        $p = $f['payment'];
+        $p['amount'] = '28060.00';
+        $p['balance_version'] = $state['balance_version'];
+        $p['contributions'] = [];
+        foreach ($state['members'] as $index => $m) {
+            $p['contributions'][] = ['client_id' => $m['client_id'], 'payer_client_id' => $m['client_id'], 'amount' => CreditCalculator::money(CreditCalculator::scaled($m['balance']) - ($index === 0 ? 10000 : 0))];
+        }
+        $this->postJson($f['base'].'/payments', $p)->assertOk();
+        $url = $f['base'].'/guarantee';
+        $g = $this->getJson($url)->assertOk()->json();
+        $this->travelTo(CarbonImmutable::parse($g['available_on'], 'America/Cancun')->startOfDay());
+        Sanctum::actingAs($f['commercial']);
+        $input = ['id' => (string) Str::uuid(), 'version' => $g['version'], 'reason' => 'Aplicar únicamente el adeudo restante.'];
+        $this->postJson($url, $input)->assertOk()->assertJsonPath('status', 'pagado')->assertJsonPath('members.0.applied', '100.00')->assertJsonPath('members.0.available', '800.00')->assertJsonPath('members.1.available', '800.00');
+        $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('members.0.balance', '0.00');
+        $new = $this->getJson($url)->json();
+        $input['id'] = (string) Str::uuid();
+        $input['version'] = $new['version'];
+        $this->postJson($url, $input)->assertUnprocessable();
+        $this->assertDatabaseCount('credit_payments', 1);
+    }
+
+    public function test_authorization_document_uses_frozen_credit_terms_and_date(): void
+    {
+        $f = $this->deliveryFixture();
+        $url = '/api/documents/sources/credit/'.$f['loan']['id'];
+        $id = $this->postJson($url, ['kind' => 'authorization'])->assertOk()->json('id');
+        $html = $this->getJson('/api/documents/versions/'.$id)->assertOk()->json('html');
+        $this->assertStringContainsString($f['delivery']['first_due_on'], $html);
+        $this->assertStringContainsString('22000.00', $html);
+        $this->postJson($url, ['kind' => 'authorization'])->assertOk()->assertJsonPath('id', $id);
+        $this->assertDatabaseCount('document_versions', 1);
+    }
+
+    public function test_schedule_document_preserves_sixteen_authorized_dates_and_amounts(): void
+    {
+        $f = $this->deliveryFixture();
+        $url = '/api/documents/sources/credit/'.$f['loan']['id'];
+        $id = $this->postJson($url, ['kind' => 'schedule'])->assertOk()->json('id');
+        $doc = DB::table('document_versions')->where('id', $id)->first();
+        $snapshot = json_decode($doc->snapshot, true);
+        $this->assertCount(16, $snapshot['schedule']);
+        foreach ($snapshot['schedule'] as $index => $week) {
+            $this->assertSame($index + 1, $week['number']);
+            $this->assertSame(CarbonImmutable::parse($f['delivery']['first_due_on'])->addWeeks($index)->toDateString(), $week['due_on']);
+            $this->assertSame('1760.00', $week['amount']);
+        }
+        $this->assertSame(28160.0, array_sum(array_column($snapshot['schedule'], 'amount')));
+        $this->postJson($url, ['kind' => 'schedule'])->assertOk()->assertJsonPath('id', $id);
+        $this->getJson('/api/documents/versions/'.$id)->assertOk()->assertJsonPath('sha256', hash('sha256', $doc->html));
+        $this->assertStringContainsString('No acredita desembolso ni pagos recibidos', $doc->html);
+        $loan = LoanApplication::findOrFail($f['loan']['id']);
+        $terms = $loan->approved_snapshot;
+        unset($terms['first_due_on']);
+        // Simulate an imported historical authorization without a first due date.
+        DB::table('loan_applications')->where('id', $loan->id)->update(['approved_snapshot' => json_encode($terms), 'authorization_version' => $loan->authorization_version + 1]);
+        $this->postJson($url, ['kind' => 'schedule'])->assertConflict();
+        $this->getJson('/api/documents/versions/'.$id)->assertOk()->assertJsonPath('html', $doc->html);
+        $this->assertDatabaseCount('document_versions', 1);
+    }
+
     public function test_portfolio_tracks_due_dates_payments_reversals_and_filters(): void
     {
         $this->freezeTime();

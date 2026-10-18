@@ -2,6 +2,7 @@
 
 namespace App\Domains\Credit\Services;
 
+use App\Domains\Guarantees\Services\GuaranteeBalance;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -85,7 +86,15 @@ final class CreditStatement
 
                 return $payment;
             });
-            abort_unless($validPaid === $members->sum(fn ($m) => CreditCalculator::scaled($m['paid'])), 409, 'Los pagos vigentes no coinciden con los saldos. Solicita revisión.');
+            $guaranteeState = app(GuaranteeBalance::class)->forLoan($loan);
+            $guarantees = $guaranteeState['history']->map(function ($event) use (&$validPaid) {
+                if (! $event->reversal) {
+                    $validPaid += CreditCalculator::scaled($event->amount);
+                }
+
+                return ['id' => $event->id, 'amount' => $event->amount, 'applied_on' => $event->applied_on, 'reversed_on' => $event->reversal?->reversed_on, 'allocations' => collect($event->allocations)->map(fn ($a) => ['client_id' => $a->client_id, 'amount' => CreditCalculator::money(CreditCalculator::scaled((string) $a->amount)), 'number' => $a->number, 'due_on' => $a->due_on])];
+            });
+            abort_unless($validPaid === $members->sum(fn ($m) => CreditCalculator::scaled($m['paid'])), 409, 'Los pagos y aplicaciones de garantía vigentes no coinciden con los saldos. Solicita revisión.');
 
             return [
                 'credit' => [
@@ -102,7 +111,7 @@ final class CreditStatement
                     'amount_due' => CreditCalculator::money(CreditCalculator::scaled((string) $r->amount_due)),
                     'amount_paid' => CreditCalculator::money(CreditCalculator::scaled((string) $r->amount_paid)),
                 ]),
-                'payments' => $payments,
+                'payments' => $payments, 'guarantees' => $guarantees,
             ];
         }, 3);
     }

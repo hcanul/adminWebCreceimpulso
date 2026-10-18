@@ -15,7 +15,9 @@ use App\Models\Team;
 use App\Models\TeamMembership;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
@@ -70,6 +72,45 @@ final class IntakeWorkflowTest extends TestCase
     private function data(Team $team): array
     {
         return ['id' => (string) Str::uuid(), 'version' => 0, 'team_id' => $team->id, 'curp' => $this->curp(), 'confirm_existing' => false, 'submit' => false, 'fields' => ['pNombre' => 'Prueba', 'aPaterno' => 'Persona']];
+    }
+
+    public function test_document_versions_preserve_fields_and_signed_files_with_scoped_access(): void
+    {
+        Storage::fake('local');
+        $actor = $this->actor();
+        $team = $this->team($actor);
+        $input = $this->data($team);
+        $input['fields']['Observaciones'] = '<script>alert(1)</script>';
+        $file = $this->postJson('/api/intake/client-files', $input)->assertOk()->json();
+        $base = '/api/documents/sources/file/'.$file['id'];
+        $id = $this->postJson($base, ['kind' => 'dossier'])->assertOk()->json('id');
+        $this->postJson($base, ['kind' => 'dossier'])->assertOk()->assertJsonPath('id', $id);
+        $this->postJson($base, ['kind' => 'installation'])->assertOk();
+        $this->postJson($base, ['kind' => 'authorization'])->assertUnprocessable();
+        $html = $this->getJson('/api/documents/versions/'.$id)->assertOk()->json('html');
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringContainsString($file['client']['folio'], $html);
+        $this->assertSame(hash('sha256', $html), DB::table('document_versions')->where('id', $id)->value('sha256'));
+        $record = ClientApplication::findOrFail($file['id']);
+        $record->update(['version' => 2, 'fields' => ['pNombre' => 'Nombre cambiado', 'aPaterno' => 'Persona']]);
+        $new = $this->postJson($base, ['kind' => 'dossier'])->assertOk()->json('id');
+        $this->assertNotSame($id, $new);
+        $this->assertSame($html, $this->getJson('/api/documents/versions/'.$id)->assertOk()->json('html'));
+        $pdf = "%PDF-1.4\n1 0 obj<</Type /Catalog>>endobj\n%%EOF";
+        $upload = fn () => UploadedFile::fake()->createWithContent('firmado.pdf', $pdf);
+        $attachment = $this->post('/api/documents/versions/'.$id.'/signed', ['file' => $upload()], ['Accept' => 'application/json'])->assertOk()->json('id');
+        $this->post('/api/documents/versions/'.$id.'/signed', ['file' => $upload()], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('id', $attachment);
+        $this->assertDatabaseCount('document_signed_files', 1);
+        $this->assertSame($pdf, $this->get('/api/documents/signed/'.$attachment)->assertOk()->getContent());
+        $this->post('/api/documents/versions/'.$id.'/signed', ['file' => UploadedFile::fake()->createWithContent('no.pdf', '<script>bad</script>')], ['Accept' => 'application/json'])->assertUnprocessable();
+        $this->actor('Gerente');
+        $this->getJson($base)->assertNotFound();
+        $this->getJson('/api/documents/versions/'.$id)->assertNotFound();
+        $this->get('/api/documents/signed/'.$attachment)->assertNotFound();
+        Sanctum::actingAs($actor);
+        DB::table('document_versions')->where('id', $id)->update(['html' => 'altered']);
+        $this->getJson('/api/documents/versions/'.$id)->assertConflict();
     }
 
     public function test_client_number_is_generated_at_save_and_never_taken_from_the_form(): void

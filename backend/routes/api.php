@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\CreditDisbursementController;
 use App\Http\Controllers\Api\CreditPortfolioController;
 use App\Http\Controllers\Api\CreditStatementController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\GuaranteeController;
 use App\Http\Controllers\Api\IntakeController;
 use App\Http\Controllers\Api\PaymentReceiptController;
 use App\Http\Controllers\Api\PaymentReversalController;
@@ -90,4 +92,19 @@ Route::middleware(['auth:sanctum'])->prefix('cash')->group(function () {
     Route::post('/closings', [$c, 'store'])->middleware('throttle:20,1');
     Route::get('/closings/{id}', [$c, 'show'])->whereUuid('id');
     Route::get('/closings/{id}/report', [$c, 'report'])->whereUuid('id')->middleware('throttle:20,1');
+});
+
+Route::middleware('auth:sanctum')->prefix('documents')->group(function () {
+    $c = DocumentController::class;
+    Route::get('/sources/{type}/{source}', [$c, 'index'])->whereIn('type', ['file', 'credit'])->whereUuid('source');
+    Route::post('/sources/{type}/{source}', [$c, 'issue'])->whereIn('type', ['file', 'credit'])->whereUuid('source')->middleware('throttle:20,1');
+    Route::get('/versions/{id}', [$c, 'show'])->whereUuid('id');
+    Route::post('/versions/{id}/signed', [$c, 'attach'])->whereUuid('id')->middleware('throttle:10,1');
+    Route::get('/signed/{id}', [$c, 'download'])->whereUuid('id')->middleware('throttle:30,1');
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/credit/applications/{id}/guarantee', [GuaranteeController::class, 'show'])->whereUuid('id');
+    Route::post('/credit/applications/{id}/guarantee', [GuaranteeController::class, 'store'])->whereUuid('id')->middleware('throttle:10,1');
+    Route::post('/guarantees/{id}/reverse', [GuaranteeController::class, 'reverse'])->whereUuid('id')->middleware('throttle:10,1');
 });
