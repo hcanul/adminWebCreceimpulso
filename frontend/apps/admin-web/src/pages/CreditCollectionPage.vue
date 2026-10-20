@@ -16,6 +16,7 @@
           label="Estado de cuenta"
           :to="`/creditos/${loan.id}/estado-de-cuenta`"
         />
+        <q-btn v-if="loan" flat no-caps label="Garantía" :to="`/creditos/${loan.id}/garantia`" />
         <q-btn flat no-caps icon="arrow_back" label="Cobros" to="/cobros" />
       </div>
     </div>
@@ -44,7 +45,7 @@
               <thead>
                 <tr>
                   <th>Integrante</th>
-                  <th>Saldo total</th>
+                  <th>Cuotas pendientes</th><th>Mora pendiente</th><th>Saldo total</th>
                   <th>Exigible hoy</th>
                   <th>Atraso</th>
                   <th>Días de atraso</th>
@@ -55,7 +56,7 @@
                   <td>
                     {{ member.name }}<br /><small>{{ member.folio }}</small>
                   </td>
-                  <td>{{ money(member.balance) }}</td>
+                  <td>{{ money(member.installment_balance ?? member.balance) }}</td><td>{{ money(member.late_fee_balance ?? '0.00') }}</td><td>{{ money(member.balance) }}</td>
                   <td>{{ money(member.due) }}</td>
                   <td :class="member.days_overdue ? 'text-negative' : ''">
                     {{ money(member.overdue) }}
@@ -75,9 +76,7 @@
         ><q-card-section
           ><h2>Registrar pago recibido</h2>
           <q-banner rounded class="bg-grey-2 q-mb-lg"
-            >Cada aportación cubre primero la cuota pendiente más antigua de la integrante indicada
-            y después adelanta cuotas. El interés pactado se conserva. La garantía no se usa para
-            pagar cuotas.</q-banner
+            ><template v-if="data.late_fees?.enabled">Cada aportación cubre primero las cuotas exigibles más antiguas, después la mora pendiente y finalmente adelanta cuotas.</template><template v-else>Este crédito conserva sus condiciones anteriores: cada aportación cubre las cuotas más antiguas y después adelanta cuotas; la simulación de mora no se cobra.</template> El interés pactado se conserva. La garantía se administra por separado.</q-banner
           >
           <q-form @submit="submit"
             ><fieldset :disabled="busy || !!pending" class="payment-fields">
@@ -207,7 +206,7 @@
           ></q-banner> </q-card-section
       ></q-card>
       <q-banner v-else-if="data.status === 'pagado'" rounded class="bg-green-1 q-mb-lg"
-        >Crédito liquidado. Todas las cuotas quedaron cubiertas.</q-banner
+        >Crédito liquidado. Cuotas y cargos aplicables quedaron cubiertos.</q-banner
       >
       <q-card flat bordered class="intake-card"
         ><q-card-section
@@ -260,7 +259,7 @@
                     <tr v-for="(allocation, i) in payment.allocations" :key="i">
                       <td>{{ memberName(allocation.payer_client_id) }}</td>
                       <td>{{ memberName(allocation.client_id) }}</td>
-                      <td>{{ allocation.number }}</td>
+                      <td>{{ allocation.kind === 'late_fee' ? 'Mora de cuota' : 'Cuota' }} {{ allocation.number }}<small v-if="allocation.charged_on"> · Cargo {{ allocation.charged_on }}</small></td>
                       <td>{{ allocation.due_on }}</td>
                       <td>{{ money(allocation.amount) }}</td>
                     </tr>
@@ -392,7 +391,7 @@ async function submit() {
     if (
       !(await alerts.confirm(
         'Confirmar pago recibido',
-        `${money(amount.value)} en ${bank.value ? 'depósito bancario' : 'efectivo'}. Se cubrirán las cuotas pendientes más antiguas de las integrantes indicadas y el excedente adelantará cuotas. Este registro no se puede editar.`,
+        `${money(amount.value)} en ${bank.value ? 'depósito bancario' : 'efectivo'}. ${data.value.late_fees?.enabled ? 'Se cubrirán cuotas exigibles, mora y después adelantos.' : 'Se cubrirán las cuotas más antiguas y después adelantos.'} Este registro no se puede editar.`,
         'Sí, registrar cobro',
       ))
     )
@@ -434,7 +433,7 @@ async function savePending() {
     contributions.value = [];
     addContribution();
     error.value = '';
-    await alerts.success('Cobro registrado y aplicado a las cuotas');
+    await alerts.success('Cobro registrado; distribución disponible en el comprobante');
   } catch (e) {
     error.value = administrationError(e);
     if (

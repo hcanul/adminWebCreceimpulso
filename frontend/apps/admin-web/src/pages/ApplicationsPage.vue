@@ -33,7 +33,13 @@
               application.id
             }}</q-item-label></q-item-section
           ><q-item-section side
-            ><q-badge :color="application.status === 'borrador' ? 'grey-7' : 'primary'">{{
+            ><q-btn
+              flat
+              no-caps
+              label="Documentos"
+              :to="`/documentos/file/${application.id}`"
+              @click.stop
+            /><q-badge :color="application.status === 'borrador' ? 'grey-7' : 'primary'">{{
               application.status === 'borrador' ? 'Borrador' : 'En revisión'
             }}</q-badge></q-item-section
           ></q-item

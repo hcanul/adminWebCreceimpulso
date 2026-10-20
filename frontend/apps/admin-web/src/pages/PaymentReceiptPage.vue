@@ -17,7 +17,7 @@
       class="receipt-actions reversal-form"
     >
       <q-banner rounded class="bg-orange-1"
-        >Reverso completo: se restituirá el saldo de las cuotas originales. Si el crédito estaba
+        >Reverso completo: se restituirán los saldos de las cuotas y cargos de mora originales. Si el crédito estaba
         liquidado, se reabrirá. El pago y sus cortes se conservan. Esto no devuelve dinero
         automáticamente.</q-banner
       ><q-input
@@ -52,6 +52,7 @@
         <h1>{{ receipt.folio }}</h1>
       </header>
       <p class="receipt-amount">{{ money(receipt.amount) }} <small>MXN</small></p>
+      <p v-if="receipt.late_fee_amount !== undefined">Aplicado a cuotas: {{ money(receipt.installment_amount ?? receipt.amount) }} · Aplicado a mora: {{ money(receipt.late_fee_amount) }}.</p>
       <dl>
         <div>
           <dt>Crédito</dt>
@@ -108,7 +109,7 @@
             <tr v-for="(row, index) in receipt.allocations" :key="index">
               <td>{{ row.payer }}</td>
               <td>{{ row.beneficiary }}</td>
-              <td>{{ row.number }} · {{ row.due_on }}</td>
+              <td>{{ row.kind === 'late_fee' ? 'Mora de cuota' : 'Cuota' }} {{ row.number }} · {{ row.due_on }}<br v-if="row.charged_on"><small v-if="row.charged_on">Cargo {{ row.charged_on }}</small></td>
               <td>{{ money(row.amount) }}</td>
             </tr>
           </tbody>

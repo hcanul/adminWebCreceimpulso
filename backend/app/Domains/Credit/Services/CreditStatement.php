@@ -3,6 +3,8 @@
 namespace App\Domains\Credit\Services;
 
 use App\Domains\Guarantees\Services\GuaranteeBalance;
+use App\Domains\LateFees\Services\LateFeeLedger;
+use App\Domains\LateFees\Services\LateFeePreview;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -64,7 +66,7 @@ final class CreditStatement
                 ->whereIn('a.credit_payment_id', $payments->pluck('id'))
                 ->orderBy('i.number')->orderBy('a.id')
                 ->get(['a.credit_payment_id', 'a.payer_client_id', 'a.amount', 'i.client_id', 'i.number', 'i.due_on'])
-                ->groupBy('credit_payment_id');
+                ->concat(app(LateFeeLedger::class)->allocations($payments->pluck('id')->all()))->groupBy('credit_payment_id');
             // Operational notes, bank references and reversal reasons stay in their restricted modules.
             $reversals = DB::table('credit_payment_reversals')->whereIn('credit_payment_id', $payments->pluck('id'))
                 ->get(['credit_payment_id', 'reversed_on'])->keyBy('credit_payment_id');
@@ -74,7 +76,7 @@ final class CreditStatement
                 $payment->folio = 'REC-'.$loan->folio.'-'.str_pad((string) $payment->number, 4, '0', STR_PAD_LEFT);
                 $payment->reversed_on = $reversals[$payment->id]->reversed_on ?? null;
                 if (! $payment->reversed_on) {
-                    $validPaid += CreditCalculator::scaled($payment->amount);
+                    $validPaid += CreditCalculator::scaled($payment->amount) - ($allocations[$payment->id] ?? collect())->filter(fn ($a) => ($a->kind ?? '') === 'late_fee')->sum(fn ($a) => CreditCalculator::scaled((string) $a->amount));
                 }
                 $payment->allocations = ($allocations[$payment->id] ?? collect())->map(function ($allocation) {
                     unset($allocation->credit_payment_id);
@@ -96,7 +98,11 @@ final class CreditStatement
             });
             abort_unless($validPaid === $members->sum(fn ($m) => CreditCalculator::scaled($m['paid'])), 409, 'Los pagos y aplicaciones de garantía vigentes no coinciden con los saldos. Solicita revisión.');
 
+            $fees = app(LateFeeLedger::class)->state($loan, $rows);
+            $members = app(LateFeeLedger::class)->members($members, $fees);
+
             return [
+                'late_fees' => $fees,
                 'credit' => [
                     'id' => $loan->id, 'folio' => $loan->folio, 'status' => $loan->status,
                     'group' => $loan->team?->name, 'branch' => $loan->branch?->name,
@@ -112,6 +118,7 @@ final class CreditStatement
                     'amount_paid' => CreditCalculator::money(CreditCalculator::scaled((string) $r->amount_paid)),
                 ]),
                 'payments' => $payments, 'guarantees' => $guarantees,
+                'late_fee_preview' => $fees['enabled'] ? null : app(LateFeePreview::class)->forLoan($id, $rows, $today),
             ];
         }, 3);
     }

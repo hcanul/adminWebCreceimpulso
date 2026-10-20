@@ -4,6 +4,7 @@ namespace App\Domains\Tickets\Services;
 
 use App\Domains\Credit\Services\CreditCalculator;
 use App\Domains\Credit\Services\CreditCollections;
+use App\Domains\LateFees\Services\LateFeeLedger;
 use App\Models\LoanApplication;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
@@ -30,7 +31,11 @@ final class PaymentReceipt
             return $data;
         }
         $members = collect($loan->approved_snapshot['members'] ?? [])->keyBy('client_id');
+        $feeParts = app(LateFeeLedger::class)->allocations([$id]);
+        $feeTotal = $feeParts->sum(fn ($r) => CreditCalculator::scaled($r->amount));
         $data += [
+            'late_fee_amount' => CreditCalculator::money($feeTotal),
+            'installment_amount' => CreditCalculator::money(CreditCalculator::scaled((string) $payment->amount) - $feeTotal),
             'balance_version' => app(CreditCollections::class)->version(app(CreditCollections::class)->rows($loan->id)),
             'reversal' => $reversal ? ['id' => $reversal->id, 'actor_name' => $reversal->actor_name, 'reason' => $reversal->reason, 'reversed_on' => $reversal->reversed_on] : null,
             'actor_name' => $payment->actor_name,
@@ -41,8 +46,8 @@ final class PaymentReceipt
             'allocations' => DB::table('credit_payment_allocations as a')
                 ->join('loan_installments as i', 'i.id', '=', 'a.loan_installment_id')
                 ->where('a.credit_payment_id', $id)->orderBy('i.client_id')->orderBy('i.number')->orderBy('a.id')
-                ->get(['i.client_id', 'i.number', 'i.due_on', 'a.payer_client_id', 'a.amount'])
-                ->map(fn ($r) => ['beneficiary' => $members[$r->client_id]['name'] ?? 'Integrante', 'payer' => $members[$r->payer_client_id]['name'] ?? 'Integrante', 'number' => $r->number, 'due_on' => $r->due_on, 'amount' => CreditCalculator::money(CreditCalculator::scaled((string) $r->amount))]),
+                ->get(['i.client_id', 'i.number', 'i.due_on', 'a.payer_client_id', 'a.amount'])->concat($feeParts)
+                ->map(fn ($r) => ['kind' => $r->kind ?? 'installment', 'charged_on' => $r->charged_on ?? null, 'beneficiary' => $members[$r->client_id]['name'] ?? 'Integrante', 'payer' => $members[$r->payer_client_id]['name'] ?? 'Integrante', 'number' => $r->number, 'due_on' => $r->due_on, 'amount' => CreditCalculator::money(CreditCalculator::scaled((string) $r->amount))]),
         ];
 
         return $data;

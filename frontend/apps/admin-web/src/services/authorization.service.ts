@@ -4,6 +4,7 @@ export type PaymentMethod = 'cash_branch' | 'bank_deposit';
 export type AuthorizationStatus =
   'awaiting_proposal' | 'pending_authorization' | 'returned' | 'authorized';
 export interface AuthorizationTerms {
+  late_fee_policy?: { id: string; weekly_percent: number } | null;
   first_due_on?: string | null;
   review_version: number;
   weeks: number;
@@ -26,6 +27,7 @@ export interface AuthorizationTerms {
   proposed_at: string;
 }
 export interface AuthorizationData {
+  late_fee_policy?: { id: string; weekly_percent: number } | null;
   status: AuthorizationStatus;
   version: number;
   proposal: AuthorizationTerms | null;

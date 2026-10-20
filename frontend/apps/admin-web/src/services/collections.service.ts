@@ -16,7 +16,17 @@ export interface CollectionInput {
   confirmed: boolean;
   contributions: Contribution[];
 }
+export interface LateFeeState {
+  enabled: boolean;
+  total: string;
+  paid: string;
+  balance: string;
+  charges: { id: string; client_id: string; number: number; due_on: string; charged_on: string; base: string; amount: string; paid: string; balance: string }[];
+}
 export interface CollectionMember {
+  installment_balance?: string;
+  installment_due?: string;
+  late_fee_balance?: string;
   client_id: string;
   name: string;
   folio: string;
@@ -37,6 +47,8 @@ export interface PaymentRecord {
   deposited_on: string | null;
   notes: string | null;
   allocations: {
+    kind?: 'installment' | 'late_fee';
+    charged_on?: string | null;
     client_id: string;
     payer_client_id: string;
     amount: string;
@@ -45,6 +57,7 @@ export interface PaymentRecord {
   }[];
 }
 export interface CollectionData {
+  late_fees?: LateFeeState;
   balance_version: string;
   status: string;
   as_of: string;

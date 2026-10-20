@@ -2,6 +2,7 @@
 
 namespace App\Domains\Credit\Services;
 
+use App\Domains\LateFees\Services\LateFeeLedger;
 use App\Models\LoanApplication;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -17,7 +18,14 @@ final class CreditCollections
 
     public function version(Collection $rows): string
     {
-        return hash('sha256', $rows->map(fn ($r) => [$r->id, (string) $r->amount_due, (string) $r->amount_paid])->toJson());
+        $base = $rows->map(fn ($r) => [$r->id, (string) $r->amount_due, (string) $r->amount_paid])->toJson();
+        $loan = $rows->isNotEmpty() ? LoanApplication::find($rows->first()->loan_application_id) : null;
+        $ledger = app(LateFeeLedger::class);
+        if ($loan && $ledger->enabled($loan)) {
+            $base .= now('America/Cancun')->toDateString().json_encode($ledger->state($loan, $rows), JSON_THROW_ON_ERROR);
+        }
+
+        return hash('sha256', $base);
     }
 
     public function rows(string $id, bool $lock = false): Collection
@@ -57,9 +65,10 @@ final class CreditCollections
             $locked = LoanApplication::whereKey($loan->id)->lockForUpdate()->firstOrFail();
             $rows = $this->rows($loan->id);
             $today = now('America/Cancun')->toDateString();
-            $members = $this->memberBalances($rows, $locked->approved_snapshot['members'] ?? [], $today);
+            $fees = app(LateFeeLedger::class)->state($locked, $rows);
+            $members = app(LateFeeLedger::class)->members($this->memberBalances($rows, $locked->approved_snapshot['members'] ?? [], $today), $fees);
             $payments = DB::table('credit_payments')->where('loan_application_id', $loan->id)->orderByDesc('number')->paginate(20, ['id', 'actor_name', 'received_on', 'method', 'amount', 'bank_name', 'bank_reference', 'deposited_on', 'notes', 'created_at'], 'page', $page);
-            $allocations = DB::table('credit_payment_allocations as a')->join('loan_installments as i', 'i.id', '=', 'a.loan_installment_id')->whereIn('a.credit_payment_id', collect($payments->items())->pluck('id'))->get(['a.credit_payment_id', 'a.payer_client_id', 'a.amount', 'i.client_id', 'i.number', 'i.due_on'])->groupBy('credit_payment_id');
+            $allocations = DB::table('credit_payment_allocations as a')->join('loan_installments as i', 'i.id', '=', 'a.loan_installment_id')->whereIn('a.credit_payment_id', collect($payments->items())->pluck('id'))->get(['a.credit_payment_id', 'a.payer_client_id', 'a.amount', 'i.client_id', 'i.number', 'i.due_on'])->concat(app(LateFeeLedger::class)->allocations(collect($payments->items())->pluck('id')->all()))->groupBy('credit_payment_id');
             $reversals = DB::table('credit_payment_reversals')->whereIn('credit_payment_id', collect($payments->items())->pluck('id'))->get(['credit_payment_id', 'id', 'actor_name', 'reason', 'reversed_on'])->keyBy('credit_payment_id');
             $payments->through(function ($p) use ($allocations, $reversals) {
                 $p->reversal = $reversals[$p->id] ?? null;
@@ -73,7 +82,7 @@ final class CreditCollections
                 return $p;
             });
 
-            return ['balance_version' => $this->version($rows), 'status' => $locked->status, 'as_of' => $today, 'members' => $members, 'payments' => $payments];
+            return ['balance_version' => $this->version($rows), 'status' => $locked->status, 'as_of' => $today, 'late_fees' => $fees, 'members' => $members, 'payments' => $payments];
         });
     }
 }

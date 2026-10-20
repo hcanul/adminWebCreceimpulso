@@ -1,5 +1,7 @@
 import { api } from './http';
 export interface PaymentReceipt {
+  installment_amount?: string;
+  late_fee_amount?: string;
   id: string;
   folio: string;
   credit_folio: string;
@@ -16,6 +18,8 @@ export interface PaymentReceipt {
   deposited_on: string | null;
   verification_url: string;
   allocations: {
+    kind?: 'installment' | 'late_fee';
+    charged_on?: string | null;
     beneficiary: string;
     payer: string;
     number: number;

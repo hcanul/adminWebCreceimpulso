@@ -31,6 +31,13 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
     children: [
       {
+        path: 'creditos/:id/garantia',
+        component: () => import('@/pages/GuaranteePage.vue'),
+        meta: { credit: true },
+      },
+      { path: 'documentos', component: () => import('@/pages/DocumentsPage.vue') },
+      { path: 'documentos/:type/:id', component: () => import('@/pages/DocumentsPage.vue') },
+      {
         path: 'cartera',
         component: () => import('@/pages/CreditPortfolioPage.vue'),
         meta: { credit: true },

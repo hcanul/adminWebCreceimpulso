@@ -4,6 +4,7 @@ namespace App\Domains\Cash\Services;
 
 use App\Domains\Credit\Services\CreditCalculator as Money;
 use App\Domains\Intake\Services\IntakeAccess;
+use App\Domains\LateFees\Services\LateFeeLedger;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
@@ -77,13 +78,25 @@ final class CashClosings
 
     public function paymentDetails(Builder $query, int $page)
     {
-        return $query->join('loan_applications as l', 'l.id', '=', 'p.loan_application_id')
-            ->orderBy('p.created_at')->orderBy('p.id')->paginate(30, ['p.id', 'p.received_on', 'p.method', 'p.amount', 'p.bank_name', 'p.bank_reference', 'p.deposited_on', 'l.folio as credit_folio', 'p.number'], 'page', $page)
-            ->through(function ($r) {
-                $r->amount = Money::money(Money::scaled((string) $r->amount));
+        $page = $query->join('loan_applications as l', 'l.id', '=', 'p.loan_application_id')
+            ->orderBy('p.created_at')->orderBy('p.id')->paginate(30, ['p.id', 'p.received_on', 'p.method', 'p.amount', 'p.bank_name', 'p.bank_reference', 'p.deposited_on', 'l.folio as credit_folio', 'p.number'], 'page', $page);
+        $page->setCollection($this->withBreakdown($page->getCollection()));
+        return $page;
+    }
 
-                return $r;
-            });
+    public function withBreakdown(Collection $rows): Collection
+    {
+        $fees = app(LateFeeLedger::class)->allocations($rows->map(fn ($row) => $row->credit_payment_id ?? $row->id)->all())->groupBy('credit_payment_id');
+        return $rows->map(function ($row) use ($fees) {
+            $id = $row->credit_payment_id ?? $row->id;
+            $total = Money::scaled((string) $row->amount);
+            $fee = ($fees[$id] ?? collect())->sum(fn ($a) => Money::scaled($a->amount));
+            abort_unless($fee <= $total, 409, 'El desglose de mora no coincide con el cobro.');
+            $row->amount = Money::money($total);
+            $row->late_fee_amount = Money::money($fee);
+            $row->installment_amount = Money::money($total - $fee);
+            return $row;
+        });
     }
 
     public function normalize(object $row): object
@@ -114,6 +127,7 @@ final class CashClosings
 
                 return $payment;
             });
+        $payments = $this->withBreakdown($payments);
         $record = $this->normalize($row);
         $totals = $this->summary($payments);
         abort_unless($totals['payment_count'] === (int) $record->payment_count
@@ -131,6 +145,7 @@ final class CashClosings
 
                 return $adjustment;
             });
+        $adjustments = $this->withBreakdown($adjustments);
         $adjustmentTotals = $this->summary($adjustments);
 
         return [
@@ -158,6 +173,7 @@ final class CashClosings
             return $r;
         });
 
+        $adjustments->setCollection($this->withBreakdown($adjustments->getCollection()));
         return ['adjustments' => $adjustments, 'record' => $this->normalize($row), 'payments' => $this->paymentDetails($q, $page)];
     }
 }

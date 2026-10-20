@@ -6,6 +6,8 @@ export interface Page<T> {
   total: number;
 }
 export interface ClosingPayment {
+  installment_amount?: string;
+  late_fee_amount?: string;
   id: string;
   credit_folio: string;
   number: number;

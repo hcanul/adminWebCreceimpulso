@@ -88,6 +88,81 @@
         <strong>Próximo vencimiento pendiente:</strong>
         {{ nextDue ?? 'No hay cuotas futuras pendientes.' }}
       </p>
+      <section
+        v-if="data.late_fee_preview"
+        class="late-fee-preview"
+        aria-label="Vista previa de mora"
+      >
+        <div class="late-fee-heading">
+          <div>
+            <span class="preview-badge">SIMULACIÓN · NO COBRABLE</span>
+            <h2>Mora semanal estimada</h2>
+          </div>
+          <strong class="late-fee-total">{{ money(lateFeeTotal) }}</strong>
+        </div>
+        <p>
+          10% del saldo pendiente de cada cuota al comenzar cada semana de atraso: días 1, 8, 15 y
+          siguientes. No se cobra mora sobre mora.
+        </p>
+        <p class="balance-note">
+          Esta vista previa no se suma al saldo ni al exigible y no genera cargos, tickets o
+          movimientos de Caja. Incluso si las cuotas aparecen pagadas, puede mostrar mora histórica
+          simulada. Los abonos posteriores no eliminan la mora de semanas anteriores.
+        </p>
+        <p v-if="!lateFeeRows.length">
+          No se estima mora para esta selección a la fecha de consulta.
+        </p>
+        <details v-else class="late-fee-details">
+          <summary>
+            Ver desglose de {{ lateFeeRows.length }}
+            {{ lateFeeRows.length === 1 ? 'cuota' : 'cuotas' }} con mora estimada
+          </summary>
+          <div class="statement-scroll">
+            <table aria-label="Desglose de mora simulada">
+              <thead>
+                <tr>
+                  <th>Integrante / cuota</th>
+                  <th>Semana de atraso</th>
+                  <th>Inicio</th>
+                  <th>Base pendiente</th>
+                  <th>Mora estimada</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="row in lateFeeRows" :key="`${row.client_id}-${row.number}`">
+                  <tr
+                    v-for="charge in row.charges"
+                    :key="`${row.client_id}-${row.number}-${charge.week}`"
+                  >
+                    <td>
+                      {{ memberName(row.client_id) }}<br /><small
+                        >Cuota {{ row.number }} · Vence {{ row.due_on }}</small
+                      >
+                    </td>
+                    <td>{{ charge.week }}</td>
+                    <td>{{ charge.charged_on }}</td>
+                    <td>{{ money(charge.base) }}</td>
+                    <td>{{ money(charge.amount) }}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </details>
+        <p class="balance-note">
+          Se consideran pagos registrados y aplicaciones de garantía vigentes, excluyendo los
+          revertidos. El cálculo toma el saldo al inicio del día, en horario de Cancún; un abono
+          registrado ese día reduce la base de la siguiente semana. Para depósitos se utiliza la
+          fecha de registro en Caja, no la fecha de la ficha bancaria.
+        </p>
+      </section>
+      <section v-if="data.late_fees?.enabled" class="late-fee-preview" aria-label="Mora del crédito">
+        <h2>Mora semanal del crédito</h2>
+        <p>10% sobre el saldo pendiente de cada cuota al inicio de cada semana de atraso. Cuotas exigibles → mora → adelantos. Sin mora sobre mora.</p>
+        <p><strong>Generada: {{ money(feeSum('amount')) }} · Pagada: {{ money(feeSum('paid')) }} · Pendiente: {{ money(feeSum('balance')) }}</strong></p>
+        <p>La mora pendiente ya está incluida en el saldo y en el exigible mostrados arriba; no la sumes de nuevo. Los cargos semanales conservados no se recalculan al revertir un pago.</p>
+        <details v-if="activeFeeCharges.length"><summary>Ver cargos semanales</summary><div class="statement-scroll"><table aria-label="Cargos de mora"><thead><tr><th>Integrante / cuota</th><th>Inicio</th><th>Base</th><th>Cargo</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody><tr v-for="fee in activeFeeCharges" :key="fee.id"><td>{{ memberName(fee.client_id) }} · {{ fee.number }}</td><td>{{ fee.charged_on }}</td><td>{{ money(fee.base) }}</td><td>{{ money(fee.amount) }}</td><td>{{ money(fee.paid) }}</td><td>{{ money(fee.balance) }}</td></tr></tbody></table></div></details>
+      </section>
       <h2>Condiciones aprobadas</h2>
       <div class="statement-scroll">
         <table aria-label="Condiciones aprobadas">
@@ -116,8 +191,9 @@
         $1,000 por semana · 16 semanas. Pagos: {{ method(data.credit.repayment_method) }}.
       </p>
       <p class="balance-note">
-        La garantía no es un abono. Los anticipos conservan el interés pactado. Este estado presenta
-        los saldos actuales; no reconstruye un saldo histórico a una fecha anterior.
+        La retención no es un abono. Solo una aplicación autorizada de garantía reduce el saldo. Los
+        anticipos conservan el interés pactado. Este estado presenta los saldos actuales; no
+        reconstruye un saldo histórico a una fecha anterior.
       </p>
       <section v-if="!selected">
         <h2>Saldo por integrante</h2>
@@ -126,7 +202,7 @@
             <thead>
               <tr>
                 <th>Integrante</th>
-                <th>Pagado vigente</th>
+                <th>Aplicado a cuotas</th><th>Mora pendiente</th>
                 <th>Saldo pendiente</th>
                 <th>Exigible</th>
                 <th>Atraso</th>
@@ -140,7 +216,7 @@
                     >{{ member.folio }} · {{ role(member.role_in_group) }}</small
                   >
                 </td>
-                <td>{{ money(member.paid) }}</td>
+                <td>{{ money(member.paid) }}</td><td>{{ money(member.late_fee_balance ?? '0.00') }}</td>
                 <td>{{ money(member.balance) }}</td>
                 <td>{{ money(member.due) }}</td>
                 <td>{{ money(member.overdue) }}</td>
@@ -158,7 +234,7 @@
               <th>Semana</th>
               <th>Vencimiento</th>
               <th>Cuota</th>
-              <th>Pagado vigente</th>
+              <th>Aplicado a cuotas</th><th>Mora pendiente</th>
               <th>Pendiente</th>
               <th>Estado</th>
             </tr>
@@ -177,6 +253,28 @@
           </tbody>
         </table>
       </div>
+      <h2 v-if="data.guarantees?.length">Aplicaciones de garantía</h2>
+      <p v-if="data.guarantees?.length">
+        El aplicado vigente incluye pagos y garantías aplicadas. Estas últimas no son efectivo ni
+        depósitos recibidos.
+      </p>
+      <section v-for="event in data.guarantees" :key="event.id" class="payment-entry">
+        <template v-if="!selected || event.allocations.some((a) => a.client_id === selected)">
+          <strong>Aplicación de garantía · {{ event.applied_on }}</strong>
+          <p v-if="event.reversed_on" class="warning">
+            REVERTIDA · {{ event.reversed_on }} · Sin efecto en el saldo actual.
+          </p>
+          <p
+            v-for="(allocation, index) in event.allocations.filter(
+              (a) => !selected || a.client_id === selected,
+            )"
+            :key="index"
+          >
+            {{ data.members.find((m) => m.client_id === allocation.client_id)?.name }} · Semana
+            {{ allocation.number }} · {{ allocation.due_on }} · {{ money(allocation.amount) }}
+          </p>
+        </template>
+      </section>
       <h2>Historial de pagos y aportaciones</h2>
       <p v-if="!payments.length">
         Sin pagos registrados{{ selected ? ' aplicados a esta integrante' : '' }}.
@@ -213,7 +311,7 @@
               <tr v-for="(allocation, index) in allocationsFor(payment)" :key="index">
                 <td>{{ memberName(allocation.payer_client_id) }}</td>
                 <td>{{ memberName(allocation.client_id) }}</td>
-                <td>{{ allocation.number }} · {{ allocation.due_on }}</td>
+                <td>{{ allocation.kind === 'late_fee' ? 'Mora de cuota' : 'Cuota' }} {{ allocation.number }} · {{ allocation.due_on }}<br v-if="allocation.charged_on"><small v-if="allocation.charged_on">Cargo {{ allocation.charged_on }}</small></td>
                 <td>{{ money(allocation.amount) }}</td>
               </tr>
             </tbody>
@@ -232,7 +330,7 @@
       <footer>
         <p>
           Los reversos pueden reabrir cuotas y atrasos sin redistribuir pagos posteriores. El saldo
-          aquí mostrado incluye únicamente pagos vigentes.
+          aquí mostrado incluye pagos y aplicaciones de garantía vigentes.
         </p>
         <p>
           Documento de consulta. No sustituye los comprobantes de pago ni registra nuevos
@@ -290,11 +388,23 @@ const total = (key: AmountKey) =>
   decimal(members.value.reduce((sum, m: StatementMember) => sum + cents(m[key]), 0n));
 const cards = computed(() => [
   { label: 'Total pactado a devolver', amount: total('total_repayment'), warning: false },
-  { label: 'Pagado vigente', amount: total('paid'), warning: false },
+  { label: 'Aplicado a cuotas', amount: total('paid'), warning: false },
   { label: 'Saldo pendiente', amount: total('balance'), warning: false },
   { label: 'Exigible a la fecha', amount: total('due'), warning: false },
   { label: 'Importe en atraso', amount: total('overdue'), warning: cents(total('overdue')) > 0n },
 ]);
+const activeFeeCharges = computed(() => data.value?.late_fees?.charges.filter((fee) =>
+  (!selected.value || fee.client_id === selected.value) && cents(fee.amount) > 0n) ?? []);
+const feeSum = (key: 'amount' | 'paid' | 'balance') => decimal(activeFeeCharges.value.reduce((sum, fee) => sum + cents(fee[key]), 0n));
+const lateFeeRows = computed(
+  () =>
+    data.value?.late_fee_preview?.installments.filter(
+      (row) => !selected.value || row.client_id === selected.value,
+    ) ?? [],
+);
+const lateFeeTotal = computed(() =>
+  decimal(lateFeeRows.value.reduce((sum, row) => sum + cents(row.amount), 0n)),
+);
 const daysOverdue = computed(() => Math.max(0, ...members.value.map((m) => m.days_overdue)));
 type Week = { number: number; due_on: string; due: bigint; paid: bigint };
 const schedule = computed(() => {
@@ -351,6 +461,39 @@ watch(id, (value) => store.load(value), { immediate: true });
 onUnmounted(() => store.clear());
 </script>
 <style scoped>
+.late-fee-preview {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid #dfc4cd;
+  border-radius: 12px;
+  background: #fcf8fa;
+}
+.late-fee-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.late-fee-heading h2 {
+  margin: 8px 0;
+}
+.preview-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #811335;
+}
+.late-fee-total {
+  font-size: 24px;
+  color: #811335;
+}
+.late-fee-details summary {
+  cursor: pointer;
+  padding: 12px 0;
+  font-weight: 600;
+}
+
 .statement-page {
   background: #f4f4f7;
   padding: 24px;

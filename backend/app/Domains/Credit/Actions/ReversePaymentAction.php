@@ -6,6 +6,7 @@ use App\Domains\Credit\DTOs\ReversePaymentData;
 use App\Domains\Credit\Services\CreditAccess;
 use App\Domains\Credit\Services\CreditCalculator as Money;
 use App\Domains\Credit\Services\CreditCollections;
+use App\Domains\LateFees\Services\LateFeeLedger;
 use App\Models\LoanApplication;
 use App\Models\Team;
 use App\Models\User;
@@ -38,8 +39,10 @@ final class ReversePaymentAction
                 $service = app(CreditCollections::class);
                 $rows = $service->rows($loan->id, true);
                 abort_unless(hash_equals($service->version($rows), $data->version), 409, 'El saldo cambió. Actualiza el comprobante antes de revertir.');
+                app(LateFeeLedger::class)->state($loan, $rows, true);
+                $feeAllocations = app(LateFeeLedger::class)->allocations([$payment->id]);
                 $allocations = DB::table('credit_payment_allocations')->where('credit_payment_id', $payment->id)->orderBy('id')->get();
-                $total = 0;
+                $total = $feeAllocations->sum(fn ($a) => Money::scaled((string) $a->amount));
                 $changes = [];
                 foreach ($allocations->groupBy('loan_installment_id') as $installmentId => $parts) {
                     $row = $rows->firstWhere('id', $installmentId);
@@ -52,7 +55,7 @@ final class ReversePaymentAction
                 }
                 abort_unless($total === Money::scaled((string) $payment->amount), 409, 'El detalle aplicado no coincide con el importe del pago.');
                 $closing = DB::table('cash_closing_payments')->where('credit_payment_id', $payment->id)->value('cash_closing_id');
-                DB::table('credit_payment_reversals')->insert(['id' => $data->id, 'credit_payment_id' => $payment->id, 'branch_id' => $payment->branch_id, 'actor_id' => $actor->id, 'actor_name' => $actor->name, 'reason' => $data->reason, 'amount' => $payment->amount, 'method' => $payment->method, 'reversed_on' => now('America/Cancun')->toDateString(), 'created_at' => now(), 'request_hash' => $data->fingerprint(), 'snapshot' => json_encode(['loan_status_before' => $loan->status, 'cash_closing_id' => $closing, 'allocations' => $allocations, 'installments' => $changes], JSON_THROW_ON_ERROR)]);
+                DB::table('credit_payment_reversals')->insert(['id' => $data->id, 'credit_payment_id' => $payment->id, 'branch_id' => $payment->branch_id, 'actor_id' => $actor->id, 'actor_name' => $actor->name, 'reason' => $data->reason, 'amount' => $payment->amount, 'method' => $payment->method, 'reversed_on' => now('America/Cancun')->toDateString(), 'created_at' => now(), 'request_hash' => $data->fingerprint(), 'snapshot' => json_encode(['loan_status_before' => $loan->status, 'cash_closing_id' => $closing, 'allocations' => $allocations, 'late_fee_allocations' => $feeAllocations, 'installments' => $changes], JSON_THROW_ON_ERROR)]);
                 foreach ($changes as $change) {
                     DB::table('loan_installments')->where('id', $change['id'])->update(['amount_paid' => $change['after']]);
                 }
@@ -63,7 +66,7 @@ final class ReversePaymentAction
                 }
             }, 3);
         } catch (UniqueConstraintViolationException $e) {
-            abort(409,'El reverso ya se registró. Actualiza antes de reintentar.');
+            abort(409, 'El reverso ya se registró. Actualiza antes de reintentar.');
         }
     }
 }

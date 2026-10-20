@@ -58,6 +58,14 @@
                     fileFor(member.client_id)?.status === 'borrador' ? 'En corrección' : 'Enviado'
                   }}
                 </p>
+                <q-btn
+                  flat
+                  no-caps
+                  icon="description"
+                  label="Documentos y archivos firmados"
+                  :to="`/documentos/file/${fileFor(member.client_id)!.id}`"
+                  :disable="busy"
+                />
                 <ReviewFileFields :fields="fileFor(member.client_id)!.fields" />
               </q-card-section>
               <p v-else class="q-pa-md text-negative">Expediente no disponible.</p>

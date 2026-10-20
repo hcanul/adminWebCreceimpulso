@@ -6,6 +6,7 @@ use App\Domains\Credit\DTOs\CollectCreditData;
 use App\Domains\Credit\Services\CreditAccess;
 use App\Domains\Credit\Services\CreditCalculator as Money;
 use App\Domains\Credit\Services\CreditCollections;
+use App\Domains\LateFees\Services\LateFeeLedger;
 use App\Models\LoanApplication;
 use App\Models\Team;
 use App\Models\User;
@@ -55,6 +56,10 @@ final class CollectCreditAction
                 $rows = $service->rows($loan->id, true);
                 abort_unless($rows->isNotEmpty() && hash_equals($service->version($rows), $v['balance_version']), 409, 'El saldo cambió. Actualiza y revisa la distribución antes de cobrar.');
                 $members = $loan->participations()->pluck('client_id')->all();
+                $ledger = app(LateFeeLedger::class);
+                $fees = $ledger->state($loan, $rows, true);
+                $feeAllocations = [];
+                $today = now('America/Cancun')->toDateString();
                 $allocations = [];
                 $total = 0;
                 foreach ($v['contributions'] as $contribution) {
@@ -66,17 +71,47 @@ final class CollectCreditAction
                         $this->invalid('contributions', 'Cada aportación debe ser mayor que cero.');
                     }
                     $total += $left;
-                    foreach ($rows->where('client_id', $contribution['client_id']) as $row) {
-                        $paid = Money::scaled((string) $row->amount_paid);
-                        $take = min($left, Money::scaled((string) $row->amount_due) - $paid);
-                        if ($take <= 0) {
-                            continue;
-                        }
-                        $allocations[] = ['id' => (string) Str::uuid(), 'credit_payment_id' => $v['id'], 'loan_installment_id' => $row->id, 'payer_client_id' => $contribution['payer_client_id'], 'amount' => Money::money($take)];
-                        $row->amount_paid = Money::money($paid + $take);
-                        $left -= $take;
+                    foreach (['due', 'fees', 'future'] as $stage) {
                         if ($left === 0) {
                             break;
+                        }
+                        if ($stage === 'fees') {
+                            foreach ($fees['charges'] as &$fee) {
+                                if ($fee['client_id'] !== $contribution['client_id']) {
+                                    continue;
+                                }
+                                $take = min($left, Money::scaled($fee['balance']));
+                                if ($take <= 0) {
+                                    continue;
+                                }
+                                $feeAllocations[] = ['id' => (string) Str::uuid(), 'credit_payment_id' => $v['id'],
+                                    'weekly_late_fee_id' => $fee['id'], 'payer_client_id' => $contribution['payer_client_id'], 'amount' => Money::money($take)];
+                                $fee['balance'] = Money::money(Money::scaled($fee['balance']) - $take);
+                                $left -= $take;
+                                if ($left === 0) {
+                                    break;
+                                }
+                            }
+                            unset($fee);
+
+                            continue;
+                        }
+                        foreach ($rows->where('client_id', $contribution['client_id']) as $row) {
+                            $isDue = ! $fees['enabled'] || $row->due_on <= $today;
+                            if (($stage === 'due') !== $isDue) {
+                                continue;
+                            }
+                            $paid = Money::scaled((string) $row->amount_paid);
+                            $take = min($left, Money::scaled((string) $row->amount_due) - $paid);
+                            if ($take <= 0) {
+                                continue;
+                            }
+                            $allocations[] = ['id' => (string) Str::uuid(), 'credit_payment_id' => $v['id'], 'loan_installment_id' => $row->id, 'payer_client_id' => $contribution['payer_client_id'], 'amount' => Money::money($take)];
+                            $row->amount_paid = Money::money($paid + $take);
+                            $left -= $take;
+                            if ($left === 0) {
+                                break;
+                            }
                         }
                     }
                     if ($left > 0) {
@@ -99,10 +134,13 @@ final class CollectCreditAction
                 foreach ($allocations as $allocation) {
                     DB::table('credit_payment_allocations')->insert($allocation);
                 }
+                if ($feeAllocations) {
+                    DB::table('late_fee_payment_allocations')->insert($feeAllocations);
+                }
                 foreach ($rows as $row) {
                     DB::table('loan_installments')->where('id', $row->id)->update(['amount_paid' => $row->amount_paid]);
                 }
-                if ($rows->every(fn ($r) => Money::scaled((string) $r->amount_paid) === Money::scaled((string) $r->amount_due))) {
+                if ($rows->every(fn ($r) => Money::scaled((string) $r->amount_paid) === Money::scaled((string) $r->amount_due)) && collect($fees['charges'])->every(fn ($fee) => Money::scaled($fee['balance']) === 0)) {
                     $loan->status = 'pagado';
                     $loan->save();
                 }

@@ -1,5 +1,5 @@
 import { api } from './http';
-import type { CollectionMember } from './collections.service';
+import type { CollectionMember, LateFeeState } from './collections.service';
 export interface StatementMember extends CollectionMember {
   role_in_group: string;
   principal: string;
@@ -19,6 +19,8 @@ export interface StatementPayment {
   amount: string;
   reversed_on: string | null;
   allocations: {
+    kind?: 'installment' | 'late_fee';
+    charged_on?: string | null;
     client_id: string;
     payer_client_id: string;
     amount: string;
@@ -27,6 +29,7 @@ export interface StatementPayment {
   }[];
 }
 export interface CreditStatement {
+  late_fees?: LateFeeState;
   credit: {
     id: string;
     folio: string;
@@ -49,6 +52,29 @@ export interface CreditStatement {
     amount_due: string;
     amount_paid: string;
   }[];
+  guarantees?: {
+    id: string;
+    amount: string;
+    applied_on: string;
+    reversed_on: string | null;
+    allocations: {
+    kind?: 'installment' | 'late_fee';
+    charged_on?: string | null; client_id: string; amount: string; number: number; due_on: string }[];
+  }[];
+  late_fee_preview?: {
+    mode: 'simulation';
+    policy: string;
+    weekly_percent: number;
+    as_of: string;
+    total: string;
+    installments: {
+      client_id: string;
+      number: number;
+      due_on: string;
+      amount: string;
+      charges: { week: number; charged_on: string; base: string; amount: string }[];
+    }[];
+  } | null;
   payments: StatementPayment[];
 }
 export const statementService = {

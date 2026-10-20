@@ -6,6 +6,7 @@ use App\Domains\Credit\Services\CreditAccess;
 use App\Domains\Credit\Services\CreditCalculator as Money;
 use App\Domains\Credit\Services\CreditCollections;
 use App\Domains\Guarantees\Services\GuaranteeBalance;
+use App\Domains\LateFees\Services\LateFeeLedger;
 use App\Models\LoanApplication;
 use App\Models\Team;
 use App\Models\User;
@@ -33,6 +34,7 @@ final class ApplyGuaranteeAction
             abort_unless($state['eligible_date'], 422, 'Solo se aplica la garantía a partir del vencimiento de la semana 16.');
             abort_unless(hash_equals($state['version'], $input['version']), 409, 'Los saldos cambiaron. Actualiza antes de aplicar.');
             $rows = app(CreditCollections::class)->rows($loan->id, true);
+            $fees = app(LateFeeLedger::class)->state($loan, $rows, true);
             $allocations = [];
             $total = 0;
             foreach ($state['members'] as $m) {
@@ -57,7 +59,7 @@ final class ApplyGuaranteeAction
             foreach ($rows as $row) {
                 DB::table('loan_installments')->where('id', $row->id)->update(['amount_paid' => $row->amount_paid]);
             }
-            if ($rows->every(fn ($r) => Money::scaled((string) $r->amount_due) === Money::scaled((string) $r->amount_paid))) {
+            if ($rows->every(fn ($r) => Money::scaled((string) $r->amount_due) === Money::scaled((string) $r->amount_paid)) && Money::scaled($fees['balance']) === 0) {
                 $loan->status = 'pagado';
                 $loan->save();
             }
@@ -76,6 +78,7 @@ final class ApplyGuaranteeAction
             $loan = LoanApplication::whereKey($visible->id)->lockForUpdate()->firstOrFail();
             abort_if(DB::table('guarantee_reversals')->where('guarantee_application_id', $event->id)->exists(), 409, 'Esta aplicación ya fue revertida.');
             $rows = app(CreditCollections::class)->rows($loan->id, true)->keyBy('id');
+            app(LateFeeLedger::class)->state($loan, $rows, true);
             $allocations = DB::table('guarantee_allocations')->where('guarantee_application_id', $event->id)->get();
             abort_unless($allocations->sum(fn ($a) => Money::scaled((string) $a->amount)) === Money::scaled((string) $event->amount), 409, 'La aplicación no coincide con su detalle.');
             foreach ($allocations as $a) {

@@ -8,6 +8,22 @@
       </div>
       <q-btn
         v-if="['entregado', 'pagado'].includes(loan?.status ?? '')"
+        flat
+        no-caps
+        icon="savings"
+        label="Garantía"
+        :to="`/creditos/${loan?.id}/garantia`"
+      />
+      <q-btn
+        v-if="loan"
+        flat
+        no-caps
+        icon="folder_open"
+        label="Documentos"
+        :to="`/documentos/credit/${loan.id}`"
+      />
+      <q-btn
+        v-if="['entregado', 'pagado'].includes(loan?.status ?? '')"
         outline
         color="primary"
         no-caps
