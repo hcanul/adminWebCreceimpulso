@@ -1,0 +1,56 @@
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE);
+const assert = require('node:assert/strict');
+(async () => {
+ const browser = await chromium.launch({channel:'chrome',headless:true});
+ try {
+  const context = await browser.newContext({viewport:{width:390,height:844}});
+  const page = await context.newPage();
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  let probes=0;
+  await page.route('http://192.168.1.25:8000/api/client/connection?*',async route=>{
+   assert.equal(route.request().headers().authorization,undefined);
+   probes++;
+   await route.fulfill({json:{service:'creceimpulso-client-api',challenge:new URL(route.request().url()).searchParams.get('challenge')}});
+  });
+  await page.goto('http://localhost:9014/#/login');
+  await page.getByRole('link',{name:'Configuración del dispositivo'}).click();
+  await page.evaluate(()=>sessionStorage.setItem('crece.client.session','old-server-token'));
+  const field=page.getByLabel('IP o dominio del servidor');
+  await field.fill('http://publico.example');
+  await page.getByRole('button',{name:'Probar conexión',exact:true}).click();
+  await page.getByText('Para un dominio público utiliza HTTPS.',{exact:false}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Guardar servidor',exact:true}).isDisabled(),false);
+  await field.fill('192.168.1.25:8000');
+  await page.getByRole('button',{name:'Probar conexión',exact:true}).click();
+  await page.getByText('Conexión correcta',{exact:false}).waitFor();
+  assert.equal(probes,1);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.screenshot({path:'/tmp/crece-server-settings.png',fullPage:true});
+  await page.getByRole('button',{name:'Guardar servidor',exact:true}).click();
+  await page.getByRole('button',{name:'Guardar y volver al acceso'}).click();
+  await page.waitForURL('**/#/login');
+  await page.getByRole('link',{name:'Configuración del dispositivo'}).waitFor();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('crece.client.server')),'http://192.168.1.25:8000/api');
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('crece.client.session')),null);
+  await page.reload();
+  await page.getByRole('button',{name:'Probar conexión',exact:true}).click();
+  await page.getByText('Conexión correcta',{exact:false}).waitFor();
+  assert.equal(probes,2);
+  await page.getByRole('link',{name:'Configuración del dispositivo'}).click();
+  assert.equal(await field.inputValue(),'http://192.168.1.25:8000/api');
+  await field.fill('192.168.1.26:8000');
+  assert.equal(await page.getByRole('button',{name:'Guardar servidor',exact:true}).isDisabled(),false);
+  await page.route('http://192.168.1.26:8000/api/client/connection?*', r => r.fulfill({status:500,json:{message:'database unavailable'}}));
+  await page.getByRole('button',{name:'Probar conexión',exact:true}).click();
+  await page.getByText('El servidor respondió con error 500.',{exact:false}).waitFor();
+  await page.getByRole('button',{name:'Guardar servidor',exact:true}).click();
+  await page.getByRole('button',{name:'Guardar y volver al acceso'}).click();
+  await page.waitForURL('**/#/login');
+  await page.reload();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('crece.client.server')),'http://192.168.1.26:8000/api');
+  await page.getByRole('link',{name:'Configuración del dispositivo'}).click();
+  assert.equal(await field.inputValue(),'http://192.168.1.26:8000/api');
+  assert.deepEqual(errors,[]);
+  console.log('OK: validation, anonymous probe, session cleared, persistent server and Axios after reload.');
+ } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

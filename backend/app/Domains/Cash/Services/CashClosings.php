@@ -81,12 +81,14 @@ final class CashClosings
         $page = $query->join('loan_applications as l', 'l.id', '=', 'p.loan_application_id')
             ->orderBy('p.created_at')->orderBy('p.id')->paginate(30, ['p.id', 'p.received_on', 'p.method', 'p.amount', 'p.bank_name', 'p.bank_reference', 'p.deposited_on', 'l.folio as credit_folio', 'p.number'], 'page', $page);
         $page->setCollection($this->withBreakdown($page->getCollection()));
+
         return $page;
     }
 
     public function withBreakdown(Collection $rows): Collection
     {
         $fees = app(LateFeeLedger::class)->allocations($rows->map(fn ($row) => $row->credit_payment_id ?? $row->id)->all())->groupBy('credit_payment_id');
+
         return $rows->map(function ($row) use ($fees) {
             $id = $row->credit_payment_id ?? $row->id;
             $total = Money::scaled((string) $row->amount);
@@ -95,6 +97,7 @@ final class CashClosings
             $row->amount = Money::money($total);
             $row->late_fee_amount = Money::money($fee);
             $row->installment_amount = Money::money($total - $fee);
+
             return $row;
         });
     }
@@ -174,6 +177,7 @@ final class CashClosings
         });
 
         $adjustments->setCollection($this->withBreakdown($adjustments->getCollection()));
+
         return ['adjustments' => $adjustments, 'record' => $this->normalize($row), 'payments' => $this->paymentDetails($q, $page)];
     }
 }

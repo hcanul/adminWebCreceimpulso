@@ -4,6 +4,7 @@ namespace App\Domains\LateFees\Services;
 
 use App\Domains\Credit\Services\CreditCalculator as Money;
 use App\Models\LoanApplication;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
@@ -20,7 +21,14 @@ final class LateFeeLedger
     public function enabled(LoanApplication $loan): bool
     {
         $policy = $loan->approved_snapshot['late_fee_policy'] ?? null;
-        abort_if($policy && $policy !== self::policy(), 409, 'La política de mora requiere una versión de cálculo compatible.');
+        if ($policy !== null) {
+            abort_unless(is_array($policy), 409, 'La política de mora requiere una versión de cálculo compatible.');
+            // MySQL normalizes JSON object key order. Values and list order remain strict.
+            $expected = self::policy();
+            ksort($policy);
+            ksort($expected);
+            abort_unless($policy === $expected, 409, 'La política de mora requiere una versión de cálculo compatible.');
+        }
 
         return (bool) $policy;
     }
@@ -35,8 +43,44 @@ final class LateFeeLedger
         $paid = DB::table('late_fee_payment_allocations as a')->join('credit_payments as p', 'p.id', '=', 'a.credit_payment_id')
             ->where('p.loan_application_id', $loan->id)->whereNotExists(fn ($q) => $q->selectRaw('1')->from('credit_payment_reversals as r')->whereColumn('r.credit_payment_id', 'p.id'))
             ->get(['a.weekly_late_fee_id', 'a.amount'])->groupBy('weekly_late_fee_id');
+
+        return $this->calculate($loan, $rows, $saved, $paid, null, $persist);
+    }
+
+    /** Read-only, bounded batch. Caller supplies only loans authorized for the current user. */
+    public function statesFor(Collection $loans): Collection
+    {
+        $loans = $loans->filter(fn ($loan) => $this->enabled($loan));
+        if ($loans->isEmpty()) {
+            return collect();
+        }
+        $ids = $loans->pluck('id');
+        $installments = DB::table('loan_installments')->whereIn('loan_application_id', $ids)->get()->groupBy('loan_application_id');
+        $saved = DB::table('weekly_late_fees')->whereIn('loan_application_id', $ids)->get()->groupBy('loan_application_id');
+        $paid = DB::table('late_fee_payment_allocations as a')->join('credit_payments as p', 'p.id', '=', 'a.credit_payment_id')
+            ->whereIn('p.loan_application_id', $ids)
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('credit_payment_reversals as r')->whereColumn('r.credit_payment_id', 'p.id'))
+            ->get(['a.weekly_late_fee_id', 'a.amount'])->groupBy('weekly_late_fee_id');
+        $payments = DB::table('credit_payment_allocations as a')->join('credit_payments as p', 'p.id', '=', 'a.credit_payment_id')
+            ->whereIn('p.loan_application_id', $ids)
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('credit_payment_reversals as r')->whereColumn('r.credit_payment_id', 'p.id'))
+            ->get(['a.loan_installment_id', 'a.amount', 'p.received_on as applied_on']);
+        $guarantees = DB::table('guarantee_allocations as a')->join('guarantee_applications as g', 'g.id', '=', 'a.guarantee_application_id')
+            ->whereIn('g.loan_application_id', $ids)
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('guarantee_reversals as r')->whereColumn('r.guarantee_application_id', 'g.id'))
+            ->get(['a.loan_installment_id', 'a.amount', 'g.applied_on']);
+        $events = $payments->concat($guarantees)->groupBy('loan_installment_id');
+
+        return $loans->mapWithKeys(fn ($loan) => [$loan->id => $this->calculate($loan,
+            $installments->get($loan->id, collect()),
+            $saved->get($loan->id, collect())->keyBy(fn ($row) => $row->loan_installment_id.':'.$row->charged_on),
+            $paid, $events, false)]);
+    }
+
+    private function calculate(LoanApplication $loan, Collection $rows, Collection $saved, Collection $paid, ?Collection $events, bool $persist): array
+    {
         $result = [];
-        foreach (app(LateFeePreview::class)->assessments($loan->id, $rows, now('America/Cancun')->toDateString()) as $row) {
+        foreach (app(LateFeePreview::class)->assessments($loan->id, $rows, now('America/Cancun')->toDateString(), $events) as $row) {
             $key = $row['loan_installment_id'].':'.$row['charged_on'];
             $existing = $saved->get($key);
             $id = $existing?->id ?? Uuid::uuid5(Uuid::NAMESPACE_URL, 'crece:late-fee:'.$key.':'.WeeklyLateFeeCalculator::POLICY)->toString();
@@ -78,6 +122,11 @@ final class LateFeeLedger
             $member['installment_balance'] = $member['balance'];
             $member['installment_due'] = $member['due'];
             $member['late_fee_balance'] = Money::money($fee);
+            if ($fee > 0) {
+                $oldest = collect($state['charges'])->where('client_id', $member['client_id'])->filter(fn ($r) => Money::scaled($r['balance']) > 0)->min('charged_on');
+                $days = (int) CarbonImmutable::parse($oldest, 'America/Cancun')->diffInDays(now('America/Cancun')->startOfDay()) + 1;
+                $member['days_overdue'] = max($member['days_overdue'], $days);
+            }
             foreach (['balance', 'due', 'overdue'] as $key) {
                 $member[$key] = Money::money(Money::scaled($member[$key]) + $fee);
             }

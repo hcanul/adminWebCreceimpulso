@@ -136,3 +136,7 @@ La confirmación fija tasa y recurrencia. Antes de activar cobros se debe resolv
 ### Regla completada y vista previa — 18 de octubre de 2026
 
 El usuario confirmó semanas iniciadas, base sobre saldo pendiente ($300 → $30) y aplicación de cobros en orden: cuotas pendientes, mora, adelantos. Ver [Mora semanal](mora-semanal.md) para la regla vigente, implementación y límites. El estado de cuenta incorpora una simulación verificable; todavía no registra ni cobra mora. Las notas anteriores que señalan estas tres definiciones como pendientes son históricas y quedan sustituidas por esta confirmación.
+
+### Contrato y pagaré grupal para revisión — 24 de octubre de 2026
+
+Disponibles dos propuestas imprimibles desde Documentos del crédito, con conservación de versiones. El usuario confirmó un solo pagaré grupal. No son formatos definitivos para firma; ver [Contrato y pagaré](contrato-y-pagare.md) para contenido, controles y definiciones pendientes.

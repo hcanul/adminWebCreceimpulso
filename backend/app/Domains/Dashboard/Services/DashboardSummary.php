@@ -4,6 +4,7 @@ namespace App\Domains\Dashboard\Services;
 
 use App\Domains\Credit\Services\CreditAccess;
 use App\Domains\Credit\Services\CreditCalculator as Money;
+use App\Domains\Credit\Services\CreditPortfolio;
 use App\Domains\Intake\Services\IntakeAccess;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +53,7 @@ final class DashboardSummary
                     $add('Créditos por entregar', (int) $rows->where('status', 'aprobado')->sum('total'), '/desembolsos?status=aprobado');
                 }
             }
+            $portfolio = $can('credit.view') ? app(CreditPortfolio::class)->payload($actor, [])['summary'] : null;
             $payments = null;
             if ($can('credit.collect') || $can('cash.audit')) {
                 $q = DB::table('credit_payments')->where('received_on', $today)->whereNotExists(fn ($q) => $q->selectRaw('1')->from('credit_payment_reversals as r')->whereColumn('r.credit_payment_id', 'credit_payments.id'));
@@ -75,7 +77,7 @@ final class DashboardSummary
                 $add('Tus cobros de hoy pendientes de corte', $uncut->count(), '/cortes');
             }
 
-            return ['as_of' => $now->toIso8601String(), 'business_date' => $today, 'scope' => $global ? 'Todas las sucursales' : (DB::table('branches')->where('id', $actor->branch_id)->value('name') ?? 'Sin sucursal asignada'), 'groups' => $groups, 'in_review' => $review, 'active_credits' => $active, 'payments' => $payments, 'inbox' => $inbox];
+            return ['as_of' => $now->toIso8601String(), 'business_date' => $today, 'scope' => $global ? 'Todas las sucursales' : (DB::table('branches')->where('id', $actor->branch_id)->value('name') ?? 'Sin sucursal asignada'), 'groups' => $groups, 'in_review' => $review, 'active_credits' => $active, 'payments' => $payments, 'portfolio' => $portfolio, 'inbox' => $inbox];
         });
     }
 }

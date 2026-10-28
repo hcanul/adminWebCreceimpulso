@@ -156,12 +156,53 @@
           fecha de registro en Caja, no la fecha de la ficha bancaria.
         </p>
       </section>
-      <section v-if="data.late_fees?.enabled" class="late-fee-preview" aria-label="Mora del crédito">
+      <section
+        v-if="data.late_fees?.enabled"
+        class="late-fee-preview"
+        aria-label="Mora del crédito"
+      >
         <h2>Mora semanal del crédito</h2>
-        <p>10% sobre el saldo pendiente de cada cuota al inicio de cada semana de atraso. Cuotas exigibles → mora → adelantos. Sin mora sobre mora.</p>
-        <p><strong>Generada: {{ money(feeSum('amount')) }} · Pagada: {{ money(feeSum('paid')) }} · Pendiente: {{ money(feeSum('balance')) }}</strong></p>
-        <p>La mora pendiente ya está incluida en el saldo y en el exigible mostrados arriba; no la sumes de nuevo. Los cargos semanales conservados no se recalculan al revertir un pago.</p>
-        <details v-if="activeFeeCharges.length"><summary>Ver cargos semanales</summary><div class="statement-scroll"><table aria-label="Cargos de mora"><thead><tr><th>Integrante / cuota</th><th>Inicio</th><th>Base</th><th>Cargo</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody><tr v-for="fee in activeFeeCharges" :key="fee.id"><td>{{ memberName(fee.client_id) }} · {{ fee.number }}</td><td>{{ fee.charged_on }}</td><td>{{ money(fee.base) }}</td><td>{{ money(fee.amount) }}</td><td>{{ money(fee.paid) }}</td><td>{{ money(fee.balance) }}</td></tr></tbody></table></div></details>
+        <p>
+          10% sobre el saldo pendiente de cada cuota al inicio de cada semana de atraso. Cuotas
+          exigibles → mora → adelantos. Sin mora sobre mora.
+        </p>
+        <p>
+          <strong
+            >Generada: {{ money(feeSum('amount')) }} · Pagada: {{ money(feeSum('paid')) }} ·
+            Pendiente: {{ money(feeSum('balance')) }}</strong
+          >
+        </p>
+        <p>
+          La mora pendiente ya está incluida en el saldo y en el exigible mostrados arriba; no la
+          sumes de nuevo. Los cargos semanales conservados no se recalculan al revertir un pago.
+        </p>
+        <details v-if="activeFeeCharges.length">
+          <summary>Ver cargos semanales</summary>
+          <div class="statement-scroll">
+            <table aria-label="Cargos de mora">
+              <thead>
+                <tr>
+                  <th>Integrante / cuota</th>
+                  <th>Inicio</th>
+                  <th>Base</th>
+                  <th>Cargo</th>
+                  <th>Pagado</th>
+                  <th>Pendiente</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="fee in activeFeeCharges" :key="fee.id">
+                  <td>{{ memberName(fee.client_id) }} · {{ fee.number }}</td>
+                  <td>{{ fee.charged_on }}</td>
+                  <td>{{ money(fee.base) }}</td>
+                  <td>{{ money(fee.amount) }}</td>
+                  <td>{{ money(fee.paid) }}</td>
+                  <td>{{ money(fee.balance) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
       </section>
       <h2>Condiciones aprobadas</h2>
       <div class="statement-scroll">
@@ -202,7 +243,8 @@
             <thead>
               <tr>
                 <th>Integrante</th>
-                <th>Aplicado a cuotas</th><th>Mora pendiente</th>
+                <th>Aplicado a cuotas</th>
+                <th>Mora pendiente</th>
                 <th>Saldo pendiente</th>
                 <th>Exigible</th>
                 <th>Atraso</th>
@@ -216,7 +258,8 @@
                     >{{ member.folio }} · {{ role(member.role_in_group) }}</small
                   >
                 </td>
-                <td>{{ money(member.paid) }}</td><td>{{ money(member.late_fee_balance ?? '0.00') }}</td>
+                <td>{{ money(member.paid) }}</td>
+                <td>{{ money(member.late_fee_balance ?? '0.00') }}</td>
                 <td>{{ money(member.balance) }}</td>
                 <td>{{ money(member.due) }}</td>
                 <td>{{ money(member.overdue) }}</td>
@@ -234,7 +277,8 @@
               <th>Semana</th>
               <th>Vencimiento</th>
               <th>Cuota</th>
-              <th>Aplicado a cuotas</th><th>Mora pendiente</th>
+              <th>Aplicado a cuotas</th>
+              <th>Mora pendiente</th>
               <th>Pendiente</th>
               <th>Estado</th>
             </tr>
@@ -311,7 +355,13 @@
               <tr v-for="(allocation, index) in allocationsFor(payment)" :key="index">
                 <td>{{ memberName(allocation.payer_client_id) }}</td>
                 <td>{{ memberName(allocation.client_id) }}</td>
-                <td>{{ allocation.kind === 'late_fee' ? 'Mora de cuota' : 'Cuota' }} {{ allocation.number }} · {{ allocation.due_on }}<br v-if="allocation.charged_on"><small v-if="allocation.charged_on">Cargo {{ allocation.charged_on }}</small></td>
+                <td>
+                  {{ allocation.kind === 'late_fee' ? 'Mora de cuota' : 'Cuota' }}
+                  {{ allocation.number }} · {{ allocation.due_on
+                  }}<br v-if="allocation.charged_on" /><small v-if="allocation.charged_on"
+                    >Cargo {{ allocation.charged_on }}</small
+                  >
+                </td>
                 <td>{{ money(allocation.amount) }}</td>
               </tr>
             </tbody>
@@ -393,9 +443,14 @@ const cards = computed(() => [
   { label: 'Exigible a la fecha', amount: total('due'), warning: false },
   { label: 'Importe en atraso', amount: total('overdue'), warning: cents(total('overdue')) > 0n },
 ]);
-const activeFeeCharges = computed(() => data.value?.late_fees?.charges.filter((fee) =>
-  (!selected.value || fee.client_id === selected.value) && cents(fee.amount) > 0n) ?? []);
-const feeSum = (key: 'amount' | 'paid' | 'balance') => decimal(activeFeeCharges.value.reduce((sum, fee) => sum + cents(fee[key]), 0n));
+const activeFeeCharges = computed(
+  () =>
+    data.value?.late_fees?.charges.filter(
+      (fee) => (!selected.value || fee.client_id === selected.value) && cents(fee.amount) > 0n,
+    ) ?? [],
+);
+const feeSum = (key: 'amount' | 'paid' | 'balance') =>
+  decimal(activeFeeCharges.value.reduce((sum, fee) => sum + cents(fee[key]), 0n));
 const lateFeeRows = computed(
   () =>
     data.value?.late_fee_preview?.installments.filter(

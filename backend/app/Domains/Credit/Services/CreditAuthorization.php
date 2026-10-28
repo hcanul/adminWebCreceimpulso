@@ -3,6 +3,7 @@
 namespace App\Domains\Credit\Services;
 
 use App\Domains\Credit\DTOs\ProposeCreditData;
+use App\Domains\LateFees\Services\LateFeeLedger;
 use App\Models\Client;
 use App\Models\LoanApplication;
 use App\Models\Team;
@@ -20,7 +21,7 @@ final class CreditAuthorization
         return [
             'status' => $loan->authorization_status, 'version' => $loan->authorization_version,
             'proposal' => $loan->authorization_proposal,
-            'late_fee_policy' => $loan->approved_at ? ($loan->approved_snapshot['late_fee_policy'] ?? null) : (config('late_fees.new_authorizations') ? \App\Domains\LateFees\Services\LateFeeLedger::policy() : null),
+            'late_fee_policy' => $loan->approved_at ? ($loan->approved_snapshot['late_fee_policy'] ?? null) : (config('late_fees.new_authorizations') ? LateFeeLedger::policy() : null),
             'history' => DB::table('credit_authorization_events')->where('loan_application_id', $loan->id)->orderByDesc('version')->get()->map(function ($row) {
                 $row->proposal = json_decode($row->proposal, true);
 

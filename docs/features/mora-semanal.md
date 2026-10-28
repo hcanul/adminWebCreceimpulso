@@ -1,52 +1,69 @@
-# Mora semanal: cálculo y vista previa
+# Mora semanal: cobro, comprobantes y reversos
 
-Entrega: 18 de octubre de 2026.
+Actualización: 23 de octubre de 2026.
 
-## Regla vigente confirmada
+## Regla vigente
 
 - Mora simple del 10% sobre el saldo pendiente de cada cuota, por semana de atraso iniciada.
-- Inicios: día siguiente al vencimiento y después cada siete días (días 1, 8, 15, 22…). El vencimiento mismo no genera mora.
-- Una cuota de $800 sin abonos produce $80 por semana: $160 al comenzar la segunda semana. No se capitaliza la mora.
-- Un abono reduce la base de los cargos siguientes. Si quedan $300, el siguiente cargo es de $30. No desaparecen los cargos calculados para semanas anteriores.
-- Orden confirmado para la futura integración de Caja: cuotas exigibles pendientes, mora, adelantos. Este orden aún NO se activa en el flujo de cobros actual.
-- Solo se retiene la garantía al desembolsar; no agregar una comisión de apertura.
+- Comienza el día siguiente al vencimiento y después cada siete días: días 1, 8, 15, 22… El día del vencimiento no genera mora.
+- Una cuota de $800 genera $80 por semana; dos semanas iniciadas producen $160. No se capitaliza la mora.
+- Si un abono deja $300 pendientes, el siguiente cargo es $30. Los cargos anteriores se conservan.
+- Caja aplica por integrante beneficiaria: **cuotas exigibles → mora → cuotas futuras**. Quien aporta puede ser otra integrante y queda registrado por separado.
+- Solo se retiene la garantía al desembolsar; no se descuenta comisión de apertura.
 
-Esta regla reemplaza las referencias previas al 10% mensual del contrato antiguo.
+Esta regla reemplaza las referencias al 10% mensual del contrato antiguo.
 
-## Entrega disponible
+## Vigencia y activación
 
-En **Crédito → Estado de cuenta** aparece **Mora semanal estimada**, marcada **SIMULACIÓN · NO COBRABLE**. Muestra el total grupal o individual según el filtro, y un desglose desplegable: cuota original, semana de atraso, fecha de inicio, base pendiente y cargo estimado. Se puede recargar sin perder el filtro de la URL.
+La autorización conserva una copia inmutable de la política. Se incorpora a las nuevas autorizaciones cuando `LATE_FEES_NEW_AUTHORIZATIONS` está habilitada (valor predeterminado: `true`). Cambiar esta configuración no modifica autorizaciones anteriores.
 
-La simulación reconstruye las bases de las semanas con las asignaciones de pagos y garantías vigentes; no utiliza simplemente el saldo actual multiplicado por semanas. Comprueba que las asignaciones de cada cuota coincidan con su saldo registrado. Los reversos se excluyen de la reconstrucción, por lo que corregir un registro puede cambiar la estimación histórica. No se elimina ni se modifica ningún movimiento original.
+Los créditos autorizados sin esa política conservan su funcionamiento anterior: la mora se presenta como **SIMULACIÓN · NO COBRABLE** y no aumenta su deuda. No se activan cargos retroactivos sobre esos créditos.
 
-Convenciones de esta vista previa:
+Antes de usar esta entrega, ejecutar desde `backend`:
 
-- Fechas operativas de Cancún; el cargo se simula al inicio del día.
-- Los abonos registrados ese mismo día reducen la base de la siguiente semana, no la del cargo ya iniciado.
-- Para depósitos se utiliza la fecha de registro en Caja, no la fecha del comprobante bancario. Antes de activar cargos, comprobar que esta convención coincide con la operación de depósitos presentados tarde.
-- El 10% se calcula en centavos enteros y se redondea por cargo al centavo más próximo, con mitades hacia arriba.
-- Puede mostrarse mora histórica estimada en un crédito cuyas cuotas ya están pagadas. El estado del crédito sigue correspondiendo al flujo existente.
+```sh
+php artisan migrate
+```
 
-## Límites y siguiente integración
+La migración `2026_10_18_010000_create_weekly_late_fees.php` crea el registro de cargos y sus aplicaciones de pagos. No se ejecutó sobre MySQL durante esta validación. Si el despliegue utiliza configuración en caché, regenerarla después de cambiar las variables del entorno. La migración evita eliminar automáticamente registros financieros mediante rollback.
 
-Esta entrega NO crea cargos exigibles, no aplica retroactivamente la política a créditos existentes, no modifica cuotas ni cambia el orden de cobro. No emite tickets de mora ni modifica cortes. El total simulado NO se suma al saldo, al exigible, a ingresos o al dashboard.
+## Operación de Caja
 
-Antes de activar el cobro falta:
+Caja y el estado de cuenta separan saldo de cuotas y mora. En créditos con la nueva política, el saldo total y el exigible incluyen los cargos pendientes. Un crédito no queda pagado mientras conserve cuotas o mora pendiente.
 
-1. Conservar la política aplicable en cada autorización y definir el inicio de vigencia para créditos existentes, sin reescribir condiciones autorizadas.
-2. Registrar cargos semanales con identidad estable y unicidad por cuota/política/semana; separar ajustes y reversos para conservar auditoría.
-3. Integrar cuotas exigibles → mora → adelantos, incluyendo quién aporta y a quién se aplica, reintentos idempotentes y control de concurrencia.
-4. Desglosar cuota/mora en comprobantes QR, depósitos, cortes y reversos. Ajustar liquidación, garantía y estado pagado para no cerrar un crédito con cargos pendientes.
-5. Actualizar contrato y pagaré con las reglas vigentes, eliminando la tasa mensual anterior y sin convertir la garantía en comisión.
+Se pueden recibir pagos mixtos o exclusivamente de mora, en efectivo o por depósito. El comprobante conserva un único total recibido y muestra cuánto se aplicó a cuotas y cuánto a mora, con su desglose y QR de verificación. Los reintentos con el mismo identificador no duplican el pago.
 
-## Implementación y verificación
+Los cortes conservan los totales separados de efectivo y depósitos. El desglose cuota/mora explica el pago, pero no duplica el ingreso.
 
-- `WeeklyLateFeeCalculator`: cálculo puro de fechas, bases explícitas y cargos; rechaza fechas inválidas, importes negativos e historia incompleta.
-- `LateFeePreview`: reconstrucción de aplicaciones válidas bajo el bloqueo y permisos del estado de cuenta. Sin escrituras ni tareas periódicas.
-- `CreditStatement`: entrega el campo adicional `late_fee_preview`; Axios y el store existente conservan el flujo de lectura y cancelación.
-- Pruebas: vencimiento, días 1/7/8/15, cambio de año y año bisiesto, redondeo, ejemplo $800→$160, abonos antes/después del cargo, pago completo de una cuota, reversos de pagos y garantías, aislamiento por sucursal y ausencia de cobros generados.
-- Prueba de navegador `frontend/apps/admin-web/tests/late-fee-preview-ui.cjs`: API simulada, total grupal/individual, desglose, recarga y móvil; confirma que la pantalla no hace escrituras. Requiere Chrome instalado, servidor temporal y variable `PLAYWRIGHT_MODULE` si el módulo no está en la resolución local.
+## Fechas y auditoría
 
-No se necesitan migraciones adicionales para esta entrega. El módulo requiere las tablas de documentos/garantías de las entregas anteriores. No se migró ni modificó MySQL durante estas pruebas.
+- Zona horaria operativa: America/Cancun. Los cargos se calculan al inicio del día.
+- Los pagos registrados el día de un cargo reducen la base de semanas posteriores, no el cargo que ya comenzó.
+- En depósitos cuenta la fecha de recepción en Caja, no la fecha impresa en la ficha bancaria.
+- El cálculo utiliza centavos enteros y redondeo por cargo al centavo, con mitades hacia arriba.
+- Las consultas proyectan los cargos sin escribir en la base. Al cobrar, aplicar garantía o revertir, se guardan los cargos transcurridos bajo bloqueo del crédito; no se necesita una tarea periódica para mostrarlos.
+- Cada cuota y fecha de cargo tienen identidad estable y unicidad. También se conservan bases en cero para no recrear deuda histórica tras una corrección posterior.
+- Los reversos restauran las aplicaciones a cuotas y mora, conservando comprobante y corte originales. Si el pago ya estaba cortado, aparece un ajuste separado. No implican devolución automática de dinero.
+- Los cargos ya registrados no se reescriben al revertir un pago. El saldo restaurado afecta los cargos futuros. Aún no existe un flujo de condonación o ajuste de cargos de mora.
 
-Resultado de validación: 114 pruebas y 1,409 aserciones en SQLite en memoria; TypeScript, ESLint y Pint correctos. Capturas de escritorio y móvil inspeccionadas. Servidor de prueba temporal detenido al terminar.
+## Garantía
+
+A partir de la semana 16, la aplicación autorizada por Comercial cubre cuotas pendientes, no mora. El remanente se conserva. Cubrir todas las cuotas mediante garantía no cierra el crédito si todavía debe mora.
+
+## Alcance pendiente
+
+- Cartera y Dashboard ya incorporan la mora pendiente autorizada en saldo, exigible y atraso, con desglose separado. Los filtros incluyen créditos con cuotas cubiertas y mora pendiente; no incorporan simulaciones de créditos anteriores.
+- Falta actualizar las plantillas definitivas de contrato y pagaré con las condiciones vigentes. La autorización ya presenta la política semanal aplicable.
+- No se incluyen condonaciones ni ajustes manuales de cargos.
+
+## Verificación
+
+- Suite del backend: 120 pruebas y 1,576 aserciones con SQLite en memoria.
+- Casos nuevos: pago mixto con adelanto, pago exclusivo de mora, depósito, reintento, saldo desactualizado, reverso de pago cortado, conservación de cargos y garantía sin condonar mora.
+- TypeScript y revisión de formato del backend correctos.
+- Prueba de navegador `frontend/apps/admin-web/tests/late-fee-collection-ui.cjs` con API simulada: Caja, desglose del ticket, QR, estado de cuenta y presentación móvil. Capturas inspeccionadas.
+- No sustituye la validación de migración y concurrencia sobre MySQL ni una prueba de impresión física.
+
+### Cierre de indicadores — 23 de octubre de 2026
+
+Cartera y Dashboard comparten los totales con mora autorizada. Se verificaron filtros, paginación, recarga, errores y permisos mediante pruebas de API y navegador con respuestas simuladas. TypeScript, ESLint y Pint correctos; capturas de escritorio y móvil inspeccionadas. Esta etapa no añade migraciones: requiere las tablas de mora de la entrega anterior. No se ejecutaron migraciones ni pruebas de carga en MySQL.

@@ -25,6 +25,11 @@ export default defineRouter(({ store }) => {
     if (to.meta.requiresAuth && !auth.isAuthenticated) {
       return { path: '/login', query: { redirect: to.fullPath } };
     }
+    if (
+      to.meta.clientAccess &&
+      !auth.roles.some((role) => ['Super Admin', 'Gerente General', 'Gerente'].includes(role))
+    )
+      return '/';
     if (to.meta.cash && !auth.can('cash.view')) return '/';
     if (to.meta.intake && !auth.can('intake.access')) return '/';
     if (to.meta.credit && !auth.can('credit.view')) return '/';

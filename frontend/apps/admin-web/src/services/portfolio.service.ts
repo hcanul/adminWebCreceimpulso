@@ -5,6 +5,8 @@ export interface PortfolioFilters {
   page: number;
 }
 export interface PortfolioTotals {
+  installment_balance: string;
+  late_fee_balance: string;
   balance: string;
   due: string;
   overdue: string;
@@ -21,13 +23,18 @@ export interface PortfolioRow extends PortfolioTotals {
 }
 export interface Portfolio {
   as_of: string;
-  summary: PortfolioTotals & { credits: number };
+  summary: PortfolioTotals & { credits: number; overdue_credits: number };
   data: PortfolioRow[];
   page: number;
   last_page: number;
   total: number;
 }
 export const portfolioService = {
+  async export(params: Omit<PortfolioFilters, 'page'>, signal: AbortSignal) {
+    return (
+      await api.get<Blob>('/credit/portfolio/export', { params, signal, responseType: 'blob' })
+    ).data;
+  },
   async get(params: PortfolioFilters, signal: AbortSignal) {
     return (await api.get<Portfolio>('/credit/portfolio', { params, signal })).data;
   },

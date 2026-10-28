@@ -35,6 +35,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/GuaranteePage.vue'),
         meta: { credit: true },
       },
+      {
+        path: 'accesos-clientes',
+        component: () => import('@/pages/ClientAccessPage.vue'),
+        meta: { clientAccess: true },
+      },
       { path: 'documentos', component: () => import('@/pages/DocumentsPage.vue') },
       { path: 'documentos/:type/:id', component: () => import('@/pages/DocumentsPage.vue') },
       {
@@ -51,6 +56,11 @@ const routes: RouteRecordRaw[] = [
         path: 'cortes/:id',
         component: () => import('@/pages/CashClosingsPage.vue'),
         meta: { cash: true },
+      },
+      {
+        path: 'administracion/datos-documentales',
+        component: () => import('@/pages/DocumentProfilesPage.vue'),
+        meta: { superAdmin: true },
       },
       {
         path: 'administracion/usuarios',

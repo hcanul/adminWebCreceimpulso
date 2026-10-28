@@ -5,14 +5,25 @@
         <h1>Cartera y vencimientos</h1>
         <p>Créditos entregados · Consulta al {{ data?.as_of ?? '—' }} (Cancún)</p>
       </div>
-      <q-btn
-        outline
-        color="primary"
-        icon="refresh"
-        label="Actualizar"
-        :disable="loading"
-        @click="load"
-      />
+      <div class="row q-gutter-sm">
+        <q-btn
+          outline
+          color="primary"
+          icon="download"
+          label="Descargar CSV"
+          :loading="exporting"
+          :disable="loading || !data"
+          @click="downloadReport"
+        />
+        <q-btn
+          outline
+          color="primary"
+          icon="refresh"
+          label="Actualizar"
+          :disable="loading"
+          @click="load"
+        />
+      </div>
     </div>
     <div class="filters q-mb-lg">
       <q-input
@@ -46,8 +57,10 @@
         >
       </div>
       <p class="q-mt-md text-grey-8">
-        Totales de todos los resultados filtrados, no solo de esta página. Lo exigible incluye hoy y
-        atrasos; estos importes ya forman parte del saldo pendiente.
+        Totales de todos los resultados filtrados, no solo de esta página. El saldo total y lo
+        exigible incluyen la mora pendiente de los créditos con esa política autorizada. La mora ya
+        está incluida en los importes en atraso: no debe sumarse de nuevo. “Vence hoy” muestra
+        únicamente las cuotas de hoy.
       </p>
       <q-banner v-if="!data.total" class="bg-grey-2"
         >No hay créditos que coincidan con esta búsqueda.</q-banner
@@ -58,7 +71,9 @@
             <tr>
               <th>Crédito / grupo</th>
               <th>Sucursal</th>
-              <th>Saldo pendiente</th>
+              <th>Cuotas pendientes</th>
+              <th>Mora pendiente</th>
+              <th>Saldo total</th>
               <th>Vence hoy</th>
               <th>En atraso</th>
               <th>Días de atraso</th>
@@ -73,6 +88,8 @@
                 ><br />{{ row.group }}
               </td>
               <td>{{ row.branch }}</td>
+              <td>{{ money(row.installment_balance) }}</td>
+              <td>{{ money(row.late_fee_balance) }}</td>
               <td>{{ money(row.balance) }}</td>
               <td>{{ money(row.due_today) }}</td>
               <td :class="row.days_overdue ? 'text-negative' : ''">{{ money(row.overdue) }}</td>
@@ -112,17 +129,50 @@ import { useRoute, useRouter } from 'vue-router';
 import FilterSelect from '../components/FilterSelect.vue';
 import { usePortfolioStore } from '../stores/portfolio.store';
 import { money } from '../domain/credit-calculation';
+import { portfolioService } from '../services/portfolio.service';
+import { alerts } from '../services/alerts.service';
 const route = useRoute(),
   router = useRouter(),
   store = usePortfolioStore();
 const { data, loading, error } = storeToRefs(store);
 const statuses = [
   { label: 'Todos los activos', value: 'all' },
-  { label: 'Con atraso', value: 'overdue' },
+  { label: 'Con atraso (cuotas o mora)', value: 'overdue' },
   { label: 'Con cuota pendiente hoy', value: 'today' },
   { label: 'Sin atraso', value: 'current' },
 ];
 const search = ref('');
+const exporting = ref(false);
+let exportController: AbortController | undefined;
+async function downloadReport() {
+  if (exporting.value) return;
+  exporting.value = true;
+  const controller = new AbortController();
+  exportController = controller;
+  try {
+    const blob = await portfolioService.export(
+      {
+        search: typeof route.query.search === 'string' ? route.query.search.slice(0, 100) : '',
+        status: status.value,
+      },
+      controller.signal,
+    );
+    if (controller.signal.aborted) return;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'cartera-y-vencimientos.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch {
+    if (!controller.signal.aborted)
+      await alerts.error('No se pudo descargar el reporte. Intenta nuevamente.');
+  } finally {
+    exporting.value = false;
+  }
+}
 const page = computed(() =>
   Math.max(1, Math.min(1000000, Math.floor(Number(route.query.page)) || 1)),
 );
@@ -163,6 +213,7 @@ watch(
   { immediate: true },
 );
 onBeforeUnmount(() => {
+  exportController?.abort();
   clearTimeout(timer);
   store.clear();
 });
@@ -170,7 +221,8 @@ const cards = computed(() =>
   data.value
     ? [
         { label: 'Créditos activos', value: String(data.value.summary.credits) },
-        { label: 'Saldo pendiente', value: money(data.value.summary.balance) },
+        { label: 'Saldo total', value: money(data.value.summary.balance) },
+        { label: 'Mora pendiente', value: money(data.value.summary.late_fee_balance) },
         { label: 'Exigible a la fecha', value: money(data.value.summary.due) },
         { label: 'Pendiente de hoy', value: money(data.value.summary.due_today) },
         { label: 'Importe en atraso', value: money(data.value.summary.overdue) },
@@ -196,7 +248,7 @@ h1 {
 }
 .metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 .metrics strong {

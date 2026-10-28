@@ -38,7 +38,13 @@ class AuthController extends Controller
     {
         abort_unless($request->user()->is_active && ! $request->user()->deleted_at, 401, 'Cuenta inactiva.');
 
-        return response()->json($request->user()->load('roles')->setAttribute('permissions', $request->user()->getAllPermissions()->pluck('name')));
+        $user = $request->user()->load('roles');
+        $permissions = $user->getAllPermissions()->pluck('name')->unique()->values()->all();
+        $data = $user->toArray();
+        // The loaded Spatie relation must not overwrite the API's permission names.
+        $data['permissions'] = $permissions;
+
+        return response()->json($data);
     }
 
     public function logout(Request $request, LogoutAction $action): Response

@@ -113,7 +113,12 @@
                   ><td>{{ payment.bank_name }}<br />{{ payment.bank_reference }}</td>
                   <td>{{ payment.deposited_on }}</td></template
                 >
-                <td class="amount">{{ money(payment.amount) }}<br><small>Cuotas: {{ money(payment.installment_amount ?? payment.amount) }} · Mora: {{ money(payment.late_fee_amount ?? '0.00') }}</small></td>
+                <td class="amount">
+                  {{ money(payment.amount) }}<br /><small
+                    >Cuotas: {{ money(payment.installment_amount ?? payment.amount) }} · Mora:
+                    {{ money(payment.late_fee_amount ?? '0.00') }}</small
+                  >
+                </td>
               </tr>
               <tr v-if="!paymentsFor(method.value).length">
                 <td :colspan="method.value === 'bank_deposit' ? 5 : 3">

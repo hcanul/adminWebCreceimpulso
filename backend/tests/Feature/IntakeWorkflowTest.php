@@ -27,6 +27,23 @@ final class IntakeWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_staff_session_returns_names_for_direct_and_role_permissions(): void
+    {
+        $user = $this->actor('Promotor');
+        $direct = \Spatie\Permission\Models\Permission::findOrCreate('intake.access', 'web');
+        $inherited = \Spatie\Permission\Models\Permission::findOrCreate('intake.submit', 'web');
+        $user->givePermissionTo($direct);
+        $user->roles->first()->givePermissionTo($inherited);
+        $user->unsetRelation('roles');
+        $response = $this->getJson('/api/me')->assertOk();
+        $this->assertContains('intake.access', $response->json('permissions'));
+        $this->assertContains('intake.submit', $response->json('permissions'));
+        foreach ($response->json('permissions') as $permission) {
+            $this->assertIsString($permission);
+        }
+        $response->assertJsonPath('roles.0.name', 'Promotor');
+    }
+
     private function actor(string $role = 'Gerente', ?Branch $branch = null): User
     {
         $branch ??= Branch::create(['name' => 'Carrillo', 'city' => 'Carrillo']);

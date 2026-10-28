@@ -14,7 +14,7 @@ const assert = require('node:assert/strict');
    else if(u.pathname.endsWith('/dashboard')){
     hits++;
     if(fail) return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'Servicio temporalmente no disponible.'})});
-    body={as_of:'2026-10-15T10:30:00-05:00',business_date:'2026-10-15',scope:'Sucursal DEMO',groups:restricted?null:12,in_review:3,active_credits:8,payments:restricted?null:{count:4,total:'1700.25',cash:'500.00',bank:'1200.25',scope:'Tu sucursal'},inbox:restricted?[]:[{label:'Solicitudes con observaciones',count:2,to:'/solicitudes-credito?status=returned'}]};
+    body={as_of:'2026-10-15T10:30:00-05:00',business_date:'2026-10-15',scope:'Sucursal DEMO',portfolio:restricted?null:{credits:8,overdue_credits:2,balance:'28336.00',installment_balance:'28160.00',late_fee_balance:'176.00',due:'1936.00',overdue:'1936.00',due_today:'0.00'},groups:restricted?null:12,in_review:3,active_credits:8,payments:restricted?null:{count:4,total:'1700.25',cash:'500.00',bank:'1200.25',scope:'Tu sucursal'},inbox:restricted?[]:[{label:'Solicitudes con observaciones',count:2,to:'/solicitudes-credito?status=returned'}]};
    } else if(u.pathname.endsWith('/credit/applications')){assert.equal(u.searchParams.get('review_status'),'returned');body={data:[],last_page:1,total:0,current_page:1};}
    else throw Error('Unexpected endpoint '+u.pathname);
    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
@@ -25,6 +25,10 @@ const assert = require('node:assert/strict');
   assert.equal(await page.locator('.metric-card').nth(0).locator('strong').textContent(),'12');
   assert.equal(await page.locator('.metric-card').nth(1).locator('strong').textContent(),'3');
   assert.equal(await page.locator('.metric-card').nth(2).locator('strong').textContent(),'8');
+  const portfolio=page.getByRole('region',{name:'Resumen de cartera'});
+  assert.match(await portfolio.innerText(),/28,336.00/);
+  assert.match(await portfolio.innerText(),/176.00/);
+  assert.match(await portfolio.innerText(),/2 créditos/);
   await page.getByText('Solicitudes con observaciones',{exact:true}).click();
   await page.getByRole('heading',{name:'Solicitudes de crédito',exact:true}).waitFor();
   await page.getByText('Aún no hay solicitudes que coincidan.',{exact:false}).waitFor();
@@ -43,6 +47,7 @@ const assert = require('node:assert/strict');
   restricted=true;await page.getByRole('button',{name:'Actualizar indicadores',exact:true}).click();
   await page.getByText('Sin pendientes en estas etapas',{exact:true}).waitFor();
   assert.equal(await page.getByText('Sin acceso',{exact:true}).count(),2);
+  assert.equal(await portfolio.count(),0);
   assert.ok(hits>=5);assert.deepEqual(errors,[]);
   console.log('OK: indicadores reales de API, navegación filtrada, recarga, recuperación de error sin ceros falsos, sin acceso y móvil sin desbordamiento; API simulada.');
  }finally{await browser.close();}

@@ -18,7 +18,12 @@
           <tr v-for="payment in rows.filter((p) => p.method === method.value)" :key="payment.id">
             <td>{{ payment.credit_folio }} · #{{ payment.number }}</td>
             <td>{{ payment.received_on }}</td>
-            <td>{{ money(payment.amount) }}<br><small>Cuotas: {{ money(payment.installment_amount ?? payment.amount) }} · Mora: {{ money(payment.late_fee_amount ?? '0.00') }}</small></td>
+            <td>
+              {{ money(payment.amount) }}<br /><small
+                >Cuotas: {{ money(payment.installment_amount ?? payment.amount) }} · Mora:
+                {{ money(payment.late_fee_amount ?? '0.00') }}</small
+              >
+            </td>
             <template v-if="method.value === 'bank_deposit'"
               ><td>{{ payment.bank_name }} · {{ payment.bank_reference }}</td>
               <td>{{ payment.deposited_on }}</td></template

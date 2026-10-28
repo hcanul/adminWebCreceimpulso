@@ -111,37 +111,41 @@ const router = useRouter();
 const route = useRoute();
 const canCapture = computed(() => auth.can('intake.access'));
 const heading = computed(() =>
-  route.path.startsWith('/documentos')
-    ? 'Documentos'
-    : route.path.endsWith('/garantia')
-      ? 'Garantía retenida'
-      : route.path.startsWith('/cartera')
-        ? 'Cartera y vencimientos'
-        : route.path.startsWith('/cortes')
-          ? 'Cortes de caja'
-          : route.path.startsWith('/cobros')
-            ? 'Cobros en caja'
-            : route.path.startsWith('/desembolsos')
-              ? 'Desembolsos y calendario'
-              : route.path.startsWith('/autorizaciones')
-                ? 'Autorización comercial'
-                : route.path.startsWith('/gestion')
-                  ? 'Gestión de solicitudes'
-                  : route.path.startsWith('/grupos')
-                    ? 'Grupos solidarios'
-                    : route.path.startsWith('/solicitudes-credito')
-                      ? 'Solicitudes de crédito'
-                      : route.path.startsWith('/tasas')
-                        ? 'Tasas de crédito'
-                        : route.path.startsWith('/clientes')
-                          ? 'Clientes y expedientes'
-                          : route.path.startsWith('/promotores')
-                            ? 'Promotores'
-                            : route.path.startsWith('/administracion/usuarios')
-                              ? 'Usuarios'
-                              : route.path.startsWith('/administracion/roles')
-                                ? 'Roles y permisos'
-                                : 'Resumen operativo',
+  route.path.startsWith('/accesos-clientes')
+    ? 'Accesos de clientes'
+    : route.path.startsWith('/administracion/datos-documentales')
+      ? 'Datos documentales'
+      : route.path.startsWith('/documentos')
+        ? 'Documentos'
+        : route.path.endsWith('/garantia')
+          ? 'Garantía retenida'
+          : route.path.startsWith('/cartera')
+            ? 'Cartera y vencimientos'
+            : route.path.startsWith('/cortes')
+              ? 'Cortes de caja'
+              : route.path.startsWith('/cobros')
+                ? 'Cobros en caja'
+                : route.path.startsWith('/desembolsos')
+                  ? 'Desembolsos y calendario'
+                  : route.path.startsWith('/autorizaciones')
+                    ? 'Autorización comercial'
+                    : route.path.startsWith('/gestion')
+                      ? 'Gestión de solicitudes'
+                      : route.path.startsWith('/grupos')
+                        ? 'Grupos solidarios'
+                        : route.path.startsWith('/solicitudes-credito')
+                          ? 'Solicitudes de crédito'
+                          : route.path.startsWith('/tasas')
+                            ? 'Tasas de crédito'
+                            : route.path.startsWith('/clientes')
+                              ? 'Clientes y expedientes'
+                              : route.path.startsWith('/promotores')
+                                ? 'Promotores'
+                                : route.path.startsWith('/administracion/usuarios')
+                                  ? 'Usuarios'
+                                  : route.path.startsWith('/administracion/roles')
+                                    ? 'Roles y permisos'
+                                    : 'Resumen operativo',
 );
 const drawer = ref(false);
 const closing = ref(false);
@@ -188,6 +192,9 @@ const operations = computed(() => [
     : []),
 ]);
 const administration = computed(() => [
+  ...(auth.roles.some((role) => ['Super Admin', 'Gerente General', 'Gerente'].includes(role))
+    ? [{ label: 'Accesos de clientes', icon: 'key', to: '/accesos-clientes' }]
+    : []),
   { label: 'Documentos', icon: 'folder_open', to: '/documentos' },
   ...(auth.can('credit.rates')
     ? [{ label: 'Tasas de crédito', icon: 'percent', to: '/tasas' }]
@@ -198,6 +205,7 @@ const administration = computed(() => [
   ...(auth.roles.includes('Super Admin')
     ? [
         { label: 'Usuarios', icon: 'manage_accounts', to: '/administracion/usuarios' },
+        { label: 'Datos documentales', icon: 'business', to: '/administracion/datos-documentales' },
         { label: 'Roles y permisos', icon: 'admin_panel_settings', to: '/administracion/roles' },
       ]
     : []),

@@ -1,4 +1,5 @@
 import { api } from './http';
+import type { Portfolio } from './portfolio.service';
 export interface DashboardSummary {
   as_of: string;
   business_date: string;
@@ -6,6 +7,7 @@ export interface DashboardSummary {
   groups: number | null;
   in_review: number | null;
   active_credits: number | null;
+  portfolio: Portfolio['summary'] | null;
   payments: null | { count: number; total: string; cash: string; bank: string; scope: string };
   inbox: { label: string; count: number; to: string }[];
 }

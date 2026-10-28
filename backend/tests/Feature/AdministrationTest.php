@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domains\Documents\Services\DocumentProfiles;
 use App\Models\Branch;
 use App\Models\Promoter;
 use App\Models\Team;
@@ -24,6 +25,29 @@ final class AdministrationTest extends TestCase
         Sanctum::actingAs($user);
 
         return $user;
+    }
+
+    public function test_document_profiles_support_general_branch_drafts_audit_and_conflicts(): void
+    {
+        $this->actor();
+        $branch = Branch::create(['name' => 'Carrillo', 'is_active' => true]);
+        $fields = array_fill_keys(DocumentProfiles::FIELDS, '');
+        $this->getJson('/api/administration/document-profiles/'.$branch->id)->assertOk()->assertJsonPath('effective.source', 'general')->assertJsonCount(5, 'effective.missing');
+        $fields['legal_address'] = 'Domicilio general';
+        $data = ['version' => 0, 'use_general' => true, 'fields' => $fields];
+        $this->putJson('/api/administration/document-profiles/general', $data)->assertOk()->assertJsonPath('profile.version', 1);
+        $this->putJson('/api/administration/document-profiles/general', $data)->assertConflict();
+        $this->getJson('/api/administration/document-profiles/'.$branch->id)->assertOk()->assertJsonPath('effective.fields.legal_address', 'Domicilio general');
+        $data['use_general'] = false;
+        $data['fields']['legal_address'] = 'Domicilio Carrillo';
+        $this->putJson('/api/administration/document-profiles/'.$branch->id, $data)->assertOk()->assertJsonPath('effective.source', $branch->id)->assertJsonPath('effective.fields.legal_address', 'Domicilio Carrillo');
+        $data['version'] = 1;
+        $data['use_general'] = true;
+        $this->putJson('/api/administration/document-profiles/'.$branch->id, $data)->assertOk()->assertJsonPath('effective.fields.legal_address', 'Domicilio general')->assertJsonPath('profile.fields.legal_address', 'Domicilio Carrillo');
+        $this->assertDatabaseCount('access_audits', 3);
+        $this->actor('Gerente General');
+        $this->getJson('/api/administration/document-profiles/general')->assertForbidden();
+        $this->putJson('/api/administration/document-profiles/general', $data)->assertForbidden();
     }
 
     private function payload(): array
@@ -99,6 +123,6 @@ final class AdministrationTest extends TestCase
         $this->putJson('/api/administration/roles/'.Role::findByName('Super Admin', 'web')->id, ['permissions' => []])->assertUnprocessable();
         $this->postJson('/api/administration/roles', ['name' => 'Auxiliar', 'permissions' => ['intake.submit']])->assertUnprocessable();
         $this->postJson('/api/administration/roles', ['name' => 'Auxiliar', 'permissions' => ['intake.access']])->assertCreated();
-        $this->postJson('/api/administration/roles',['name' => 'Tecnico', 'permissions' => ['roles.manage']])->assertUnprocessable();
+        $this->postJson('/api/administration/roles', ['name' => 'Tecnico', 'permissions' => ['roles.manage']])->assertUnprocessable();
     }
 }

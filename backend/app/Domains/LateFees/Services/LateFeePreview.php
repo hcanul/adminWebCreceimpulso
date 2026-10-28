@@ -10,19 +10,21 @@ use Illuminate\Support\Facades\DB;
 final class LateFeePreview
 {
     // Invoke only after access validation and while holding the loan lock.
-    public function assessments(string $loanId, Collection $installments, string $asOf): array
+    public function assessments(string $loanId, Collection $installments, string $asOf, ?Collection $events = null): array
     {
-        $payments = DB::table('credit_payment_allocations as a')
-            ->join('credit_payments as p', 'p.id', '=', 'a.credit_payment_id')
-            ->leftJoin('credit_payment_reversals as r', 'r.credit_payment_id', '=', 'p.id')
-            ->where('p.loan_application_id', $loanId)->whereNull('r.id')
-            ->get(['a.loan_installment_id', 'a.amount', 'p.received_on as applied_on']);
-        $guarantees = DB::table('guarantee_allocations as a')
-            ->join('guarantee_applications as g', 'g.id', '=', 'a.guarantee_application_id')
-            ->leftJoin('guarantee_reversals as r', 'r.guarantee_application_id', '=', 'g.id')
-            ->where('g.loan_application_id', $loanId)->whereNull('r.id')
-            ->get(['a.loan_installment_id', 'a.amount', 'g.applied_on']);
-        $events = $payments->concat($guarantees)->groupBy('loan_installment_id');
+        if ($events === null) {
+            $payments = DB::table('credit_payment_allocations as a')
+                ->join('credit_payments as p', 'p.id', '=', 'a.credit_payment_id')
+                ->leftJoin('credit_payment_reversals as r', 'r.credit_payment_id', '=', 'p.id')
+                ->where('p.loan_application_id', $loanId)->whereNull('r.id')
+                ->get(['a.loan_installment_id', 'a.amount', 'p.received_on as applied_on']);
+            $guarantees = DB::table('guarantee_allocations as a')
+                ->join('guarantee_applications as g', 'g.id', '=', 'a.guarantee_application_id')
+                ->leftJoin('guarantee_reversals as r', 'r.guarantee_application_id', '=', 'g.id')
+                ->where('g.loan_application_id', $loanId)->whereNull('r.id')
+                ->get(['a.loan_installment_id', 'a.amount', 'g.applied_on']);
+            $events = $payments->concat($guarantees)->groupBy('loan_installment_id');
+        }
         $calculator = app(WeeklyLateFeeCalculator::class);
         $details = [];
         foreach ($installments as $installment) {

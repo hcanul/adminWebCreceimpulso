@@ -1,0 +1,13 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE);const assert=require('node:assert/strict');
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
+const page=await browser.newPage({viewport:{width:390,height:844}});let active=false;const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.route('**/api/client/**',async route=>{const path=new URL(route.request().url()).pathname;let body={};let status=200;
+if(path.endsWith('/activate')){const data=route.request().postDataJSON();assert.equal(data.code,'a'.repeat(32));assert.equal(data.password_confirmation,data.password);}
+else if(path.endsWith('/login')){active=true;body={token:'test-client-token',expires_at:'2026-10-25T12:00:00Z'};}
+else if(path.endsWith('/me')){assert.equal(route.request().headers().authorization,'Bearer test-client-token');if(active)body={name:'María Prueba',folio:'CAR-000001',branch:'Carrillo'};else status=401;}
+else if(path.endsWith('/logout')){active=false;status=204;}
+await route.fulfill({status,contentType:'application/json',body:status===204?'':JSON.stringify(body)});});
+await page.goto('http://localhost:9013/#/activar');await page.getByLabel('Código de activación',{exact:true}).fill('a'.repeat(32));await page.getByLabel('Contraseña',{exact:true}).fill('SeguraCliente123');await page.getByLabel('Confirma tu contraseña',{exact:true}).fill('SeguraCliente123');await page.getByRole('button',{name:'Activar mi cuenta'}).click();await page.getByText('Tu cuenta está lista',{exact:true}).waitFor();await page.getByRole('button',{name:'OK',exact:true}).click();
+await page.getByLabel('Número de cliente',{exact:true}).fill('CAR-000001');await page.getByLabel('Contraseña',{exact:true}).fill('SeguraCliente123');await page.waitForTimeout(400);await page.screenshot({path:'/tmp/crece-client-login-mobile.png',fullPage:true});await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.getByText('Hola, María Prueba').waitFor();await page.reload();await page.getByText('Hola, María Prueba').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+await page.getByRole('button',{name:'Cerrar sesión'}).click();await page.getByLabel('Número de cliente',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>sessionStorage.getItem('crece.client.session')),null);await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'/tmp/crece-client-login-desktop.png',fullPage:true});assert.deepEqual(errors,[]);console.log('OK activación, login, recarga, logout y vista móvil (API simulada).');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

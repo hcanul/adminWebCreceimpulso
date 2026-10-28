@@ -26,7 +26,7 @@ final class DocumentController extends Controller
 
     public function issue(Request $request, IssueDocumentAction $action, string $type, string $source)
     {
-        $v = $request->validate(['kind' => 'required|in:dossier,installation,authorization,schedule']);
+        $v = $request->validate(['kind' => 'required|in:dossier,installation,authorization,schedule,contract_review,promissory_review']);
 
         return response()->json(['id' => $action->execute($request->user(), $type, $source, $v['kind'])]);
     }
@@ -41,7 +41,8 @@ final class DocumentController extends Controller
 
     public function attach(Request $request, DocumentAccess $access, string $id)
     {
-        $access->document($request->user(), $id);
+        $document = $access->document($request->user(), $id);
+        abort_if(in_array($document->kind, ['contract_review', 'promissory_review'], true), 422, 'Este documento está en revisión; no admite archivos firmados.');
         $request->validate(['file' => 'required|file|mimetypes:application/pdf|max:10240']);
         $file = $request->file('file');
         abort_unless(str_starts_with(file_get_contents($file->getRealPath(), false, null, 0, 5), '%PDF-'), 422, 'Adjunta un PDF válido.');

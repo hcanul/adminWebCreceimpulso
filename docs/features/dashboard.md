@@ -1,6 +1,6 @@
 # Dashboard operativo
 
-Actualizado el 15 de octubre de 2026. Los indicadores y la bandeja se consultan en `GET /api/dashboard`, con sesión Sanctum y usuario activo. El servicio de Axios y el store Pinia centralizan la carga; no se guardan indicadores en localStorage.
+Actualizado el 23 de octubre de 2026. Los indicadores y la bandeja se consultan en `GET /api/dashboard`, con sesión Sanctum y usuario activo. El servicio de Axios y el store Pinia centralizan la carga; no se guardan indicadores en localStorage.
 
 ## Indicadores
 
@@ -11,6 +11,12 @@ Actualizado el 15 de octubre de 2026. Los indicadores y la bandeja se consultan 
 
 Los créditos respetan `CreditAccess`. Los grupos respetan `IntakeAccess`: Promotor ve sus grupos asignados; Gerencia ve su sucursal; los perfiles globales tienen su alcance habitual. Para cobros, los usuarios con `credit.collect` ven sus propios registros, salvo que también tengan `cash.audit`, que habilita la agregación de los cajeros dentro del alcance de sucursales. Super Admin y Gerente General mantienen alcance global. Los perfiles sin acceso ven `Sin acceso`; un cero significa una consulta permitida sin registros coincidentes.
 
+## Cartera a la fecha
+
+Con permiso `credit.view`, muestra saldo total, exigible, mora pendiente e importe en atraso, con número de créditos atrasados y enlace a Cartera. Usa el mismo resumen y alcance que Cartera. La mora ya forma parte del total: no debe sumarse de nuevo. No incluye simulaciones de créditos sin política autorizada. Los cobros del día siguen contando cada pago una sola vez, aunque combine cuotas y mora.
+
+El cálculo carga historiales en lotes de 100 créditos y reutiliza el motor de mora de Caja. No escribe cargos ni pagos al consultar. Falta medir rendimiento con la cartera real en MySQL.
+
 ## Bandeja
 
 Muestra únicamente categorías con pendientes y permisos: revisión nueva/en curso, observaciones para captura, condiciones por proponer, propuestas devueltas, autorizaciones, entregas y cobros propios de hoy pendientes de corte. Los enlaces abren la bandeja correspondiente con su estado preseleccionado. No se presenta como una lista de toda la cobranza atrasada ni incluye cortes de días anteriores.
@@ -19,9 +25,9 @@ El botón de actualización vuelve a consultar el servidor. También se consulta
 
 ## Validación
 
-- 70 pruebas de backend, 774 comprobaciones, con SQLite en memoria. Los casos nuevos cubren permisos, sucursal, grupos inactivos, cobros propios versus sucursal, solicitudes devueltas, cortes ya cerrados, cambio de día en Cancún y usuarios inactivos.
+- 120 pruebas de backend, 1,576 comprobaciones, con SQLite en memoria. Los casos nuevos cubren permisos, sucursal, grupos inactivos, cobros propios versus sucursal, solicitudes devueltas, cortes ya cerrados, cambio de día en Cancún y usuarios inactivos.
 - TypeScript y ESLint correctos.
 - `tests/dashboard-ui.cjs` en admin-web: indicadores desde la API simulada, enlaces con filtro, recarga, error/reintento, acceso restringido y móvil sin desbordamiento. Se inspeccionó la vista de escritorio.
 - Consulta de solo lectura al MySQL local con los usuarios demo de Gerencia, Caja y Promotor. El demo tenía un grupo activo y ningún crédito entregado o cobro del día; los ceros corresponden a sus registros reales. No se crearon operaciones para inflar indicadores.
 
-No requiere nuevas migraciones. El endpoint usa las tablas de cobros y cortes ya instaladas en las etapas anteriores. No se ejecutaron pruebas de carga sobre una cartera de producción; los conteos y sumas se agregan en la base, sin traer expedientes completos al navegador.
+No requiere nuevas migraciones. El endpoint usa las tablas de cobros y cortes ya instaladas en las etapas anteriores. No se ejecutaron pruebas de carga sobre una cartera de producción; los conteos operativos se agregan en la base y la cartera combina cuotas agregadas con proyección de mora en lotes, sin enviar expedientes completos al navegador.

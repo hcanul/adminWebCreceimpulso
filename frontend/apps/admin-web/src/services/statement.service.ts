@@ -58,8 +58,13 @@ export interface CreditStatement {
     applied_on: string;
     reversed_on: string | null;
     allocations: {
-    kind?: 'installment' | 'late_fee';
-    charged_on?: string | null; client_id: string; amount: string; number: number; due_on: string }[];
+      kind?: 'installment' | 'late_fee';
+      charged_on?: string | null;
+      client_id: string;
+      amount: string;
+      number: number;
+      due_on: string;
+    }[];
   }[];
   late_fee_preview?: {
     mode: 'simulation';

@@ -45,7 +45,9 @@
               <thead>
                 <tr>
                   <th>Integrante</th>
-                  <th>Cuotas pendientes</th><th>Mora pendiente</th><th>Saldo total</th>
+                  <th>Cuotas pendientes</th>
+                  <th>Mora pendiente</th>
+                  <th>Saldo total</th>
                   <th>Exigible hoy</th>
                   <th>Atraso</th>
                   <th>Días de atraso</th>
@@ -56,7 +58,9 @@
                   <td>
                     {{ member.name }}<br /><small>{{ member.folio }}</small>
                   </td>
-                  <td>{{ money(member.installment_balance ?? member.balance) }}</td><td>{{ money(member.late_fee_balance ?? '0.00') }}</td><td>{{ money(member.balance) }}</td>
+                  <td>{{ money(member.installment_balance ?? member.balance) }}</td>
+                  <td>{{ money(member.late_fee_balance ?? '0.00') }}</td>
+                  <td>{{ money(member.balance) }}</td>
                   <td>{{ money(member.due) }}</td>
                   <td :class="member.days_overdue ? 'text-negative' : ''">
                     {{ money(member.overdue) }}
@@ -76,7 +80,14 @@
         ><q-card-section
           ><h2>Registrar pago recibido</h2>
           <q-banner rounded class="bg-grey-2 q-mb-lg"
-            ><template v-if="data.late_fees?.enabled">Cada aportación cubre primero las cuotas exigibles más antiguas, después la mora pendiente y finalmente adelanta cuotas.</template><template v-else>Este crédito conserva sus condiciones anteriores: cada aportación cubre las cuotas más antiguas y después adelanta cuotas; la simulación de mora no se cobra.</template> El interés pactado se conserva. La garantía se administra por separado.</q-banner
+            ><template v-if="data.late_fees?.enabled"
+              >Cada aportación cubre primero las cuotas exigibles más antiguas, después la mora
+              pendiente y finalmente adelanta cuotas.</template
+            ><template v-else
+              >Este crédito conserva sus condiciones anteriores: cada aportación cubre las cuotas
+              más antiguas y después adelanta cuotas; la simulación de mora no se cobra.</template
+            >
+            El interés pactado se conserva. La garantía se administra por separado.</q-banner
           >
           <q-form @submit="submit"
             ><fieldset :disabled="busy || !!pending" class="payment-fields">
@@ -259,7 +270,13 @@
                     <tr v-for="(allocation, i) in payment.allocations" :key="i">
                       <td>{{ memberName(allocation.payer_client_id) }}</td>
                       <td>{{ memberName(allocation.client_id) }}</td>
-                      <td>{{ allocation.kind === 'late_fee' ? 'Mora de cuota' : 'Cuota' }} {{ allocation.number }}<small v-if="allocation.charged_on"> · Cargo {{ allocation.charged_on }}</small></td>
+                      <td>
+                        {{ allocation.kind === 'late_fee' ? 'Mora de cuota' : 'Cuota' }}
+                        {{ allocation.number
+                        }}<small v-if="allocation.charged_on">
+                          · Cargo {{ allocation.charged_on }}</small
+                        >
+                      </td>
                       <td>{{ allocation.due_on }}</td>
                       <td>{{ money(allocation.amount) }}</td>
                     </tr>

@@ -18,7 +18,13 @@
       >
     </q-card-section>
     <template v-if="data">
-      <q-card-section><q-banner v-if="data?.late_fee_policy" class="bg-orange-1 q-mb-md">Política de mora: 10% del saldo pendiente de cada cuota por semana de atraso iniciada (días 1, 8, 15…), sin capitalización. Los pagos cubren cuotas exigibles, mora y después adelantos. Solo se retiene la garantía al entregar.</q-banner></q-card-section>
+      <q-card-section
+        ><q-banner v-if="data?.late_fee_policy" class="bg-orange-1 q-mb-md"
+          >Política de mora: 10% del saldo pendiente de cada cuota por semana de atraso iniciada
+          (días 1, 8, 15…), sin capitalización. Los pagos cubren cuotas exigibles, mora y después
+          adelantos. Solo se retiene la garantía al entregar.</q-banner
+        ></q-card-section
+      >
       <q-card-section v-if="canPropose">
         <h2>Propuesta del gerente</h2>
         <p>
@@ -34,7 +40,7 @@
             </p>
           </div>
 
-      <q-input
+          <q-input
             v-model="amounts[index]"
             outlined
             inputmode="decimal"

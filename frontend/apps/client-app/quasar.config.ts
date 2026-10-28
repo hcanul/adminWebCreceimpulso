@@ -1,6 +1,7 @@
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from '#q-app';
 
 export default defineConfig((/* ctx */) => {
@@ -43,7 +44,7 @@ export default defineConfig((/* ctx */) => {
       },
 
       // https://v2.quasar.dev/quasar-cli-vite/page-routing-with-vue-router#filename-based-routing
-      filenameBasedRouting: true,
+      filenameBasedRouting: false,
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
@@ -55,7 +56,12 @@ export default defineConfig((/* ctx */) => {
       // minify: false,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf(viteConf) {
+        viteConf.server = {
+          ...viteConf.server,
+          fs: { allow: [fileURLToPath(new URL('../..', import.meta.url))] },
+        };
+      },
       // viteVuePluginOptions: {},
 
       // to write components with JSX/TSX:
@@ -81,7 +87,7 @@ export default defineConfig((/* ctx */) => {
     devServer: {
       // vueDevtools: true,
       // https: true,
-      open: true, // opens browser window automatically
+      open: false, // opens browser window automatically
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework

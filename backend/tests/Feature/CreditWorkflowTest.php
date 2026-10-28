@@ -35,6 +35,27 @@ final class CreditWorkflowTest extends TestCase
         config(['late_fees.new_authorizations' => false]);
     }
 
+    private function canonicalObject(array $value): array
+    {
+        if (! array_is_list($value)) {
+            ksort($value);
+        }
+
+        return array_map(fn ($item) => is_array($item) ? $this->canonicalObject($item) : $item, $value);
+    }
+
+    private function failWrite(string $table, string $operation): void
+    {
+        // Inject a failure without database-specific triggers or implicit DDL commits.
+        DB::connection()->beforeExecuting(function (string $sql) use ($table, $operation) {
+            $normalized = strtolower(str_replace(['`', '"'], '', $sql));
+            $prefix = $operation === 'insert' ? 'insert into ' : 'update ';
+            if (str_starts_with($normalized, $prefix.$table.' ')) {
+                throw new \RuntimeException('Simulated persistence failure.');
+            }
+        });
+    }
+
     private function fixture(): array
     {
         $branch = Branch::create(['name' => 'Carrillo', 'is_active' => true]);
@@ -209,7 +230,7 @@ final class CreditWorkflowTest extends TestCase
         $this->postJson($url, $p)->assertConflict();
         $this->getJson($url)->assertOk()->assertJsonCount(1, 'history')->assertJsonPath('history.0.actor_id', $f['reviewer']->id)->assertJsonCount(3, 'history.0.files');
         $loan = LoanApplication::findOrFail($f['loan']['id']);
-        $this->assertSame($f['loan']['request_snapshot'], $loan->request_snapshot);
+        $this->assertSame($this->canonicalObject($f['loan']['request_snapshot']), $this->canonicalObject($loan->request_snapshot));
         $this->assertSame('23000.00', $loan->total_requested);
         $this->assertNull($loan->total_approved);
         $this->assertSame('pendiente', $loan->status);
@@ -323,7 +344,7 @@ final class CreditWorkflowTest extends TestCase
         $this->postJson($base.'/authorization', ['version' => 1, 'decision' => 'approve', 'first_due_on' => now('America/Cancun')->addDays(7)->toDateString(), 'notes' => 'Autorizado conforme a las condiciones del gerente.'])->assertOk()->assertJsonPath('status', 'authorized')->assertJsonPath('version', 2);
         $this->getJson($base)->assertOk()->assertJsonPath('status', 'aprobado')->assertJsonPath('total_approved', '22000.00')->assertJsonPath('total_requested', '23000.00')->assertJsonPath('disbursement_method', 'cash_branch')->assertJsonPath('repayment_method', 'bank_deposit')->assertJsonPath('approved_snapshot.totals.weekly_payment', '1760.00')->assertJsonPath('approved_snapshot.totals.total_repayment', '28160.00')->assertJsonPath('approved_snapshot.totals.interest', '6160.00')->assertJsonPath('approved_snapshot.totals.guarantee', '2200.00')->assertJsonPath('approved_snapshot.totals.net_delivery', '19800.00')->assertJsonPath('approved_snapshot.rate.factor', '80.0000')->assertJsonPath('approved_by', $f['commercial']->id)->assertJsonPath('pacted_date', null)->assertJsonMissingPath('authorization_proposal');
         $loan = LoanApplication::findOrFail($f['loan']['id']);
-        $this->assertSame($f['loan']['request_snapshot'], $loan->request_snapshot);
+        $this->assertSame($this->canonicalObject($f['loan']['request_snapshot']), $this->canonicalObject($loan->request_snapshot));
         $this->assertNotNull($loan->approved_at);
         $this->assertDatabaseHas('loan_participations', ['loan_application_id' => $loan->id, 'client_id' => $f['clients'][0]->id, 'amount_requested' => 10000, 'amount_approved' => 9000]);
         $this->getJson($base.'/authorization')->assertOk()->assertJsonCount(2, 'history')->assertJsonPath('history.0.actor_id', $f['commercial']->id);
@@ -806,6 +827,157 @@ final class CreditWorkflowTest extends TestCase
         $this->assertDatabaseCount('late_fee_payment_allocations', 1);
     }
 
+    public function test_new_policy_handles_fee_only_bank_payment_and_keeps_credit_open_until_paid(): void
+    {
+        $this->freezeTime();
+        config(['late_fees.new_authorizations' => true]);
+        $f = $this->collectionFixture('bank_deposit');
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDays(106)->startOfDay());
+        $state = $this->getJson($f['base'].'/payments')->assertOk()->json();
+        $payment = $f['payment'];
+        $payment['balance_version'] = $state['balance_version'];
+        $payment['amount'] = '28160.00';
+        $payment['contributions'] = array_map(fn ($m) => ['client_id' => $m['client_id'], 'payer_client_id' => $m['client_id'], 'amount' => $m['installment_balance']], $state['members']);
+        $this->postJson($f['base'].'/payments', $payment)->assertOk()->assertJsonPath('status', 'entregado')->assertJsonPath('late_fees.balance', '23936.00');
+        $this->getJson('/api/credit/portfolio?status=overdue')->assertOk()->assertJsonPath('total', 1)
+            ->assertJsonPath('summary.installment_balance', '0.00')->assertJsonPath('summary.balance', '23936.00')
+            ->assertJsonPath('data.0.days_overdue', 106);
+        $this->getJson('/api/credit/portfolio?status=current')->assertOk()->assertJsonPath('total', 0);
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio.overdue_credits', 1)->assertJsonPath('portfolio.balance', '23936.00');
+        $state = $this->getJson($f['base'].'/payments')->assertOk()->json();
+        $feePayment = $payment;
+        $feePayment['id'] = (string) Str::uuid();
+        $feePayment['bank_reference'] = 'MORA-002';
+        $feePayment['balance_version'] = $state['balance_version'];
+        $feePayment['amount'] = '23936.00';
+        $feePayment['contributions'] = array_map(fn ($m) => ['client_id' => $m['client_id'], 'payer_client_id' => $f['clients'][1]->id, 'amount' => $m['late_fee_balance']], $state['members']);
+        $this->postJson($f['base'].'/payments', $feePayment)->assertOk()->assertJsonPath('status', 'pagado')->assertJsonPath('late_fees.balance', '0.00');
+        $this->getJson('/api/credit/receipts/'.$feePayment['id'])->assertOk()->assertJsonPath('installment_amount', '0.00')->assertJsonPath('late_fee_amount', '23936.00');
+        $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('late_fees.paid', '23936.00')->assertJsonPath('late_fees.balance', '0.00');
+        $this->getJson('/api/cash/preview?branch_id='.$f['branch']->id.'&business_date='.now('America/Cancun')->toDateString())->assertOk()->assertJsonPath('cash_total', '0.00')->assertJsonPath('bank_total', '52096.00');
+        $f['payment'] = $feePayment;
+        $reversal = $this->reversalInput($f);
+        Sanctum::actingAs($f['manager']);
+        $this->postJson('/api/credit/receipts/'.$feePayment['id'].'/reverse', $reversal)->assertOk();
+        $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('credit.status', 'entregado')->assertJsonPath('late_fees.balance', '23936.00');
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio.balance', '23936.00')->assertJsonPath('payments.total', '28160.00');
+        $this->assertEquals(28160, DB::table('loan_installments')->sum('amount_paid'));
+    }
+
+    public function test_new_policy_requires_fresh_balance_and_does_not_rewrite_earlier_assessments(): void
+    {
+        $this->freezeTime();
+        config(['late_fees.new_authorizations' => true]);
+        $f = $this->collectionFixture('cash_branch');
+        $first = CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun');
+        $this->travelTo($first->addDay()->startOfDay());
+        $this->postJson($f['base'].'/payments', $f['payment'])->assertConflict();
+        $payment = $f['payment'];
+        $payment['balance_version'] = $this->getJson($f['base'].'/payments')->json('balance_version');
+        $this->postJson($f['base'].'/payments', $payment)->assertOk();
+        $this->travelTo($first->addDays(8)->startOfDay());
+        $f['payment'] = $payment;
+        $reversal = $this->reversalInput($f);
+        Sanctum::actingAs($f['manager']);
+        $this->postJson('/api/credit/receipts/'.$payment['id'].'/reverse', $reversal)->assertOk();
+        // The second assessment of the first quota remains 22; reversal does not retroactively make it 72.
+        $state = $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('late_fees.total', '478.00')->json('late_fees');
+        $second = collect($state['charges'])->first(fn ($r) => $r['client_id'] === $f['clients'][0]->id && $r['number'] === 1 && $r['charged_on'] === $first->addDays(8)->toDateString());
+        $this->assertSame('22.00', $second['amount']);
+        $this->assertSame('220.00', $second['base']);
+        $this->assertDatabaseCount('weekly_late_fees', 9);
+    }
+
+    public function test_new_policy_guarantee_covers_quotas_without_waiving_fees_or_closing_loan(): void
+    {
+        $this->freezeTime();
+        config(['late_fees.new_authorizations' => true]);
+        $f = $this->collectionFixture('cash_branch');
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDays(106)->startOfDay());
+        $state = $this->getJson($f['base'].'/payments')->assertOk()->json();
+        $payment = $f['payment'];
+        $payment['balance_version'] = $state['balance_version'];
+        $payment['contributions'] = array_map(fn ($m) => ['client_id' => $m['client_id'], 'payer_client_id' => $m['client_id'], 'amount' => CreditCalculator::money(CreditCalculator::scaled($m['installment_balance']) - 10000)], $state['members']);
+        $payment['amount'] = '27860.00';
+        $this->postJson($f['base'].'/payments', $payment)->assertOk();
+        Sanctum::actingAs($f['commercial']);
+        $url = $f['base'].'/guarantee';
+        $state = $this->getJson($url)->assertOk()->json();
+        $this->postJson($url, ['id' => (string) Str::uuid(), 'version' => $state['version'], 'reason' => 'Cubrir las últimas cuotas con la garantía retenida.'])->assertOk()->assertJsonPath('status', 'entregado');
+        $statement = $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('late_fees.balance', '23936.00')->json();
+        $this->assertSame('0.00', $statement['members'][0]['installment_balance']);
+        $this->assertGreaterThan(0, $statement['members'][0]['days_overdue']);
+    }
+
+    public function test_contract_and_single_group_note_preserve_terms_and_cannot_be_uploaded_as_signed(): void
+    {
+        config(['late_fees.new_authorizations' => true]);
+        $f = $this->deliveryFixture();
+        $url = '/api/documents/sources/credit/'.$f['loan']['id'];
+        foreach (['contract_review', 'promissory_review'] as $kind) {
+            $id = $this->postJson($url, ['kind' => $kind])->assertOk()->json('id');
+            $record = DB::table('document_versions')->where('id', $id)->first();
+            $snapshot = json_decode($record->snapshot, true);
+            $this->assertSame('review_only', $snapshot['document_status']);
+            $this->assertCount(16, $snapshot['schedule']);
+            $this->assertStringContainsString('28160.00', $record->html);
+            $this->assertStringContainsString('22000.00', $record->html);
+            $this->assertStringContainsString('NO UTILIZAR PARA FIRMA', $record->html);
+            $this->assertStringContainsString('10%', $record->html);
+            $this->assertStringNotContainsString('10% mensual', $record->html);
+            $this->postJson($url, ['kind' => $kind])->assertOk()->assertJsonPath('id', $id);
+            $this->postJson('/api/documents/versions/'.$id.'/signed', [])->assertUnprocessable();
+            $f['team']->update(['name' => 'Nombre modificado después de emitir']);
+            $this->getJson('/api/documents/versions/'.$id)->assertOk()->assertJsonPath('html', $record->html)->assertJsonPath('sha256', hash('sha256', $record->html));
+            if ($directory = getenv('DOCUMENT_REVIEW_PREVIEW_DIR')) {
+                file_put_contents($directory.'/'.$kind.'.html', $record->html);
+            }
+        }
+        $this->assertDatabaseCount('document_versions', 2);
+        $this->assertDatabaseCount('document_signed_files', 0);
+        $other = User::factory()->create(['branch_id' => Branch::create(['name' => 'Otra', 'is_active' => true])->id, 'is_active' => true]);
+        $other->assignRole('Gerente');
+        Sanctum::actingAs($other);
+        $this->postJson($url, ['kind' => 'promissory_review'])->assertNotFound();
+        $this->getJson('/api/documents/versions/'.$id)->assertNotFound();
+    }
+
+    public function test_confirmed_group_note_issues_current_template_without_replacing_previous_document(): void
+    {
+        $f = $this->deliveryFixture();
+        $url = '/api/documents/sources/credit/'.$f['loan']['id'];
+        $id = $this->postJson($url, ['kind' => 'promissory_review'])->assertOk()->json('id');
+        $record = (array) DB::table('document_versions')->where('id', $id)->first();
+        $snapshot = json_decode($record['snapshot'], true);
+        $this->assertSame(3, $record['template_version']);
+        $this->assertSame('28160.00', $snapshot['promissory_terms']['amount']);
+        $this->assertSame('principal_plus_ordinary_interest', $snapshot['promissory_terms']['amount_basis']);
+        $this->assertSame(CarbonImmutable::parse($f['delivery']['first_due_on'])->addWeeks(15)->toDateString(), $snapshot['promissory_terms']['due_on']);
+        $old = (string) Str::uuid();
+        DB::table('document_versions')->insert(array_merge($record, ['id' => $old, 'template_version' => 1, 'html' => 'Documento anterior conservado', 'sha256' => hash('sha256', 'Documento anterior conservado')]));
+        $this->postJson($url, ['kind' => 'promissory_review'])->assertOk()->assertJsonPath('id', $id);
+        $this->getJson('/api/documents/versions/'.$old)->assertOk()->assertJsonPath('html', 'Documento anterior conservado');
+        $this->assertDatabaseCount('document_versions', 2);
+    }
+
+    public function test_review_documents_do_not_add_weekly_fees_to_historical_terms_and_require_dates(): void
+    {
+        $f = $this->deliveryFixture();
+        $url = '/api/documents/sources/credit/'.$f['loan']['id'];
+        $id = $this->postJson($url, ['kind' => 'promissory_review'])->assertOk()->json('id');
+        $html = $this->getJson('/api/documents/versions/'.$id)->assertOk()->json('html');
+        $this->assertStringContainsString('no incluye política de mora cobrable', $html);
+        $this->assertStringNotContainsString('cargo simple del 10%', $html);
+        $loan = LoanApplication::findOrFail($f['loan']['id']);
+        $terms = $loan->approved_snapshot;
+        unset($terms['first_due_on']);
+        DB::table('loan_applications')->where('id', $loan->id)->update(['approved_snapshot' => json_encode($terms), 'authorization_version' => $loan->authorization_version + 1]);
+        foreach (['contract_review', 'promissory_review'] as $kind) {
+            $this->postJson($url, ['kind' => $kind])->assertConflict();
+        }
+        $this->assertDatabaseCount('document_versions', 1);
+    }
+
     public function test_authorization_document_uses_frozen_credit_terms_and_date(): void
     {
         $f = $this->deliveryFixture();
@@ -843,6 +1015,97 @@ final class CreditWorkflowTest extends TestCase
         $this->postJson($url, ['kind' => 'schedule'])->assertConflict();
         $this->getJson('/api/documents/versions/'.$id)->assertOk()->assertJsonPath('html', $doc->html);
         $this->assertDatabaseCount('document_versions', 1);
+    }
+
+    public function test_portfolio_and_dashboard_project_mora_without_writes_and_respect_scope(): void
+    {
+        $this->freezeTime();
+        config(['late_fees.new_authorizations' => true]);
+        $f = $this->collectionFixture();
+        $first = CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun');
+        $this->travelTo($first->startOfDay());
+        $this->getJson('/api/credit/portfolio?status=today')->assertOk()->assertJsonPath('summary.late_fee_balance', '0.00')->assertJsonPath('summary.due_today', '1760.00');
+        $this->travelTo($first->addDay()->startOfDay());
+        $this->getJson('/api/credit/portfolio?status=overdue')->assertOk()
+            ->assertJsonPath('summary.balance', '28336.00')->assertJsonPath('summary.installment_balance', '28160.00')
+            ->assertJsonPath('summary.late_fee_balance', '176.00')->assertJsonPath('summary.overdue', '1936.00')
+            ->assertJsonPath('summary.due', '1936.00')->assertJsonPath('summary.overdue_credits', 1)
+            ->assertJsonPath('data.0.late_fee_balance', '176.00')->assertJsonPath('data.0.days_overdue', 1)
+            ->assertJsonMissingPath('data.0.approved_snapshot');
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio.balance', '28336.00')->assertJsonPath('portfolio.late_fee_balance', '176.00')->assertJsonPath('payments.total', '0.00');
+        $this->getJson('/api/credit/portfolio?status=current')->assertOk()->assertJsonPath('total', 0);
+        $this->getJson('/api/credit/portfolio?search=NoExiste')->assertOk()->assertJsonPath('summary.late_fee_balance', '0.00');
+        $this->travelTo($first->addDays(8)->startOfDay());
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio.late_fee_balance', '528.00');
+        $this->assertDatabaseCount('weekly_late_fees', 0);
+        $this->assertDatabaseCount('credit_payments', 0);
+        $other = User::factory()->create(['branch_id' => $f['branch']->id, 'is_active' => true]);
+        $other->assignRole('Promotor');
+        Sanctum::actingAs($other);
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio.balance', '0.00');
+        $this->getJson('/api/credit/portfolio')->assertOk()->assertJsonPath('summary.late_fee_balance', '0.00');
+        $branch = Branch::create(['name' => 'Otra sucursal', 'is_active' => true]);
+        $manager = User::factory()->create(['branch_id' => $branch->id, 'is_active' => true]);
+        $manager->assignRole('Gerente');
+        Sanctum::actingAs($manager);
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio.balance', '0.00');
+        $this->getJson('/api/credit/portfolio')->assertOk()->assertJsonPath('total', 0);
+        Sanctum::actingAs(User::factory()->create(['is_active' => true]));
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio', null);
+    }
+
+    public function test_portfolio_totals_cover_all_batches_and_pages_without_duplicate_fees(): void
+    {
+        $this->freezeTime();
+        config(['late_fees.new_authorizations' => true]);
+        $f = $this->collectionFixture();
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDay()->startOfDay());
+        // Reporting fixtures: duplicate the authorized schedule to cross the 100-loan batch boundary.
+        $loan = (array) DB::table('loan_applications')->where('id', $f['loan']['id'])->first();
+        $installments = DB::table('loan_installments')->where('loan_application_id', $f['loan']['id'])->get();
+        $participations = DB::table('loan_participations')->where('loan_application_id', $f['loan']['id'])->get();
+        for ($n = 1; $n <= 100; $n++) {
+            $id = (string) Str::uuid();
+            DB::table('loan_applications')->insert(array_merge($loan, ['id' => $id, 'folio' => 'BATCH-'.$n]));
+            $participationIds = [];
+            foreach ($participations as $participation) {
+                $participationIds[$participation->id] = (string) Str::uuid();
+                DB::table('loan_participations')->insert(array_merge((array) $participation, ['id' => $participationIds[$participation->id], 'loan_application_id' => $id]));
+            }
+            DB::table('loan_installments')->insert($installments->map(fn ($row) => array_merge((array) $row, ['id' => (string) Str::uuid(), 'loan_application_id' => $id, 'loan_participation_id' => $participationIds[$row->loan_participation_id]]))->all());
+        }
+        $this->getJson('/api/credit/portfolio?page=5')->assertOk()->assertJsonPath('total', 101)
+            ->assertJsonPath('last_page', 5)->assertJsonCount(1, 'data')->assertJsonPath('summary.late_fee_balance', '17776.00')
+            ->assertJsonPath('summary.balance', '2861936.00')->assertJsonPath('summary.overdue_credits', 101);
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio.late_fee_balance', '17776.00');
+        $csv = $this->get('/api/credit/portfolio/export?page=5')->assertOk()->streamedContent();
+        $rows = array_map(fn ($line) => str_getcsv($line, ',', '"', ''), explode("\r\n", substr($csv, 3)));
+        $this->assertCount(101, array_filter($rows, fn ($row) => count($row) === 12 && Str::isUuid($row[0])));
+        $this->assertStringContainsString('TOTAL,,,,2844160.00,17776.00,2861936.00', $csv);
+        $this->assertDatabaseCount('weekly_late_fees', 0);
+    }
+
+    public function test_portfolio_export_filters_scope_and_escapes_spreadsheet_formulas(): void
+    {
+        $this->freezeTime();
+        config(['late_fees.new_authorizations' => true]);
+        $f = $this->collectionFixture();
+        $f['team']->update(['name' => '=SUM(1,2)']);
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDay()->startOfDay());
+        $response = $this->get('/api/credit/portfolio/export?status=overdue')->assertOk()->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $csv = $response->streamedContent();
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $csv);
+        $this->assertStringContainsString("'=SUM(1,2)", $csv);
+        $this->assertStringContainsString('28160.00,176.00,28336.00,1936.00,0.00,1936.00', $csv);
+        $this->assertStringContainsString('Créditos,0', $this->get('/api/credit/portfolio/export?status=current')->assertOk()->streamedContent());
+        $this->getJson('/api/credit/portfolio/export?status=invalid')->assertUnprocessable();
+        $other = User::factory()->create(['branch_id' => $f['branch']->id, 'is_active' => true]);
+        $other->assignRole('Promotor');
+        Sanctum::actingAs($other);
+        $this->assertStringNotContainsString('SUM', $this->get('/api/credit/portfolio/export')->assertOk()->streamedContent());
+        Sanctum::actingAs(User::factory()->create(['is_active' => true]));
+        $this->getJson('/api/credit/portfolio/export')->assertForbidden();
+        $this->assertDatabaseCount('weekly_late_fees', 0);
     }
 
     public function test_portfolio_tracks_due_dates_payments_reversals_and_filters(): void
@@ -1094,7 +1357,7 @@ final class CreditWorkflowTest extends TestCase
     {
         $f = $this->collectionFixture('cash_branch');
         Log::shouldReceive('error')->once();
-        DB::statement("CREATE TRIGGER fail_allocation BEFORE INSERT ON credit_payment_allocations BEGIN SELECT RAISE(ABORT, 'simulated allocation failure'); END");
+        $this->failWrite('credit_payment_allocations', 'insert');
         $this->postJson($f['base'].'/payments', $f['payment'])->assertStatus(500);
         $this->assertDatabaseCount('credit_payments', 0);
         $this->assertDatabaseCount('credit_payment_allocations', 0);
@@ -1322,7 +1585,7 @@ final class CreditWorkflowTest extends TestCase
     {
         $f = $this->cashClosingFixture();
         Log::shouldReceive('error')->once();
-        DB::statement("CREATE TRIGGER fail_cut_link BEFORE INSERT ON cash_closing_payments BEGIN SELECT RAISE(ABORT, 'simulated cut failure'); END");
+        $this->failWrite('cash_closing_payments', 'insert');
         $this->postJson('/api/cash/closings', $f['closing'])->assertStatus(500);
         $this->assertDatabaseCount('cash_closings', 0);
         $this->assertDatabaseCount('cash_closing_payments', 0);
@@ -1472,7 +1735,7 @@ final class CreditWorkflowTest extends TestCase
         $v = $this->reversalInput($f);
         Sanctum::actingAs($f['manager']);
         Log::shouldReceive('error')->once();
-        DB::statement("CREATE TRIGGER fail_reversal BEFORE UPDATE ON loan_installments BEGIN SELECT RAISE(ABORT, 'simulated reversal failure'); END");
+        $this->failWrite('loan_installments', 'update');
         $this->postJson('/api/credit/receipts/'.$f['payment']['id'].'/reverse', $v)->assertStatus(500);
         $this->assertDatabaseCount('credit_payment_reversals', 0);
         $this->assertDatabaseCount('active_bank_payment_references', 1);

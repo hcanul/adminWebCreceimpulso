@@ -2,8 +2,8 @@
   <q-page class="q-pa-md documents-page"
     ><h1>Documentos del expediente</h1>
     <p>
-      Emite una versión para impresión y firma. Las versiones anteriores y sus archivos firmados se
-      conservan.
+      Emite una versión para impresión. El contrato y el pagaré para revisión todavía no son
+      formatos para firma. Las versiones anteriores y sus archivos firmados se conservan.
     </p>
     <template v-if="!id"
       ><q-card flat bordered
@@ -40,6 +40,11 @@
         <q-banner v-if="!data.can_issue" class="bg-orange-1"
           >Primero autoriza el crédito para emitir el acta.</q-banner
         >
+        <q-banner v-if="type === 'credit'" class="bg-orange-1 q-mb-md"
+          >El contrato y el pagaré grupal para revisión reúnen las condiciones autorizadas. Faltan
+          los datos de celebración y la revisión del texto definitivo antes de usarlo para
+          firma.</q-banner
+        >
         <div class="row q-gutter-sm">
           <q-btn
             v-for="kind in kinds"
@@ -71,7 +76,10 @@
               label="Ver e imprimir"
               :disable="busy"
               @click="view(doc.id)" />
-            <div class="row items-center q-gutter-md q-mt-md">
+            <div
+              v-if="!['contract_review', 'promissory_review'].includes(doc.kind)"
+              class="row items-center q-gutter-md q-mt-md"
+            >
               <q-file
                 :model-value="uploads[doc.id] ?? null"
                 @update:model-value="(value) => (uploads[doc.id] = value as File | null)"
@@ -89,7 +97,10 @@
                 @click="attach(doc.id)"
               />
             </div>
-            <p class="text-caption">
+            <p
+              v-if="!['contract_review', 'promissory_review'].includes(doc.kind)"
+              class="text-caption"
+            >
               Adjuntar no valida la firma ni sustituye la revisión de Gestión. Para una corrección,
               agrega otro archivo; el anterior se conserva.
             </p>
@@ -150,9 +161,14 @@ const labels: Record<string, string> = {
   installation: 'Acta de instalación',
   authorization: 'Acta de autorización',
   schedule: 'Calendario de pagos',
+  contract_review: 'Contrato para revisión',
+  promissory_review: 'Pagaré grupal para revisión',
 };
 const kinds = computed(() =>
-  (type.value === 'file' ? ['dossier', 'installation'] : ['authorization', 'schedule']).map((value) => ({
+  (type.value === 'file'
+    ? ['dossier', 'installation']
+    : ['authorization', 'schedule', 'contract_review', 'promissory_review']
+  ).map((value) => ({
     value,
     label: labels[value],
   })),

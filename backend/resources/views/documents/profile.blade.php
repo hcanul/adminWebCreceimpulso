@@ -1,0 +1,3 @@
+<h2>Datos documentales configurados</h2>
+<p class="meta">Origen: {{ $snapshot['document_profile']['source'] === 'general' ? 'Datos generales de la empresa' : 'Datos propios de la sucursal' }} · Versión {{ $snapshot['document_profile']['version'] }}. La fecha efectiva de suscripción se captura al formalizar el crédito; no se sustituye por la fecha de emisión.</p>
+<div class="terms">@foreach(['legal_address'=>'Domicilio legal', 'representative_name'=>'Representante', 'representative_position'=>'Cargo', 'payment_place'=>'Lugar de pago', 'signing_place'=>'Lugar habitual de suscripción'] as $field => $label)<div>{{ $label }}<br><strong>{{ $snapshot['document_profile']['fields'][$field] ?: 'Pendiente de capturar' }}</strong></div>@endforeach</div>

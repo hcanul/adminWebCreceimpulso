@@ -21,7 +21,17 @@ export interface LateFeeState {
   total: string;
   paid: string;
   balance: string;
-  charges: { id: string; client_id: string; number: number; due_on: string; charged_on: string; base: string; amount: string; paid: string; balance: string }[];
+  charges: {
+    id: string;
+    client_id: string;
+    number: number;
+    due_on: string;
+    charged_on: string;
+    base: string;
+    amount: string;
+    paid: string;
+    balance: string;
+  }[];
 }
 export interface CollectionMember {
   installment_balance?: string;

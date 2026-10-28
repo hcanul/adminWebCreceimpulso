@@ -67,6 +67,26 @@
         loading ? 'Consultando los registros…' : 'No fue posible obtener los indicadores.'
       }}</span>
     </p>
+    <section v-if="data?.portfolio" class="panel q-mb-lg" aria-label="Resumen de cartera">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">SALDOS Y VENCIMIENTOS</p>
+          <h2>Cartera a la fecha</h2>
+        </div>
+        <q-btn flat no-caps color="primary" label="Ver cartera" to="/cartera" />
+      </div>
+      <div class="metrics-grid">
+        <article v-for="metric in portfolioMetrics" :key="metric.title" class="metric-card">
+          <div class="metric-top">{{ metric.title }}</div>
+          <strong>{{ metric.value }}</strong>
+          <div class="metric-note">{{ metric.note }}</div>
+        </article>
+      </div>
+      <p class="panel-description">
+        La mora pendiente ya está incluida en el saldo total, el exigible y el atraso. Los créditos
+        anteriores sin política autorizada no incorporan cargos simulados.
+      </p>
+    </section>
     <div class="dashboard-grid">
       <section class="panel" id="workflow" ref="workflowElement" tabindex="-1">
         <div class="panel-heading">
@@ -214,6 +234,33 @@ const metrics = computed(() => [
       : 'Por fecha de recepción, no de depósito',
   },
 ]);
+const portfolioMetrics = computed(() => {
+  const portfolio = data.value?.portfolio;
+  return portfolio
+    ? [
+        {
+          title: 'Saldo total',
+          value: money(portfolio.balance),
+          note: `Cuotas: ${money(portfolio.installment_balance)} + mora pendiente`,
+        },
+        {
+          title: 'Exigible a la fecha',
+          value: money(portfolio.due),
+          note: 'Cuotas vencidas, de hoy y mora pendiente',
+        },
+        {
+          title: 'Mora pendiente',
+          value: money(portfolio.late_fee_balance),
+          note: 'Cargos pendientes de pago, sin capitalización',
+        },
+        {
+          title: 'Importe en atraso',
+          value: money(portfolio.overdue),
+          note: `${portfolio.overdue_credits} créditos con cuotas o mora pendientes en atraso`,
+        },
+      ]
+    : [];
+});
 let disposed = false;
 async function load() {
   if (loading.value) return;
