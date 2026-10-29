@@ -2,7 +2,7 @@
   <q-page class="access-page q-pa-lg">
     <header class="q-mb-lg">
       <div class="text-overline text-primary">ATENCIÓN EN SUCURSAL</div>
-      <h1 class="text-h4 q-my-sm">Activación de clientes</h1>
+      <h1 class="text-h4 q-my-sm">Acceso y recuperación de clientes</h1>
       <p class="text-grey-7">
         Verifica presencialmente la identidad antes de entregar un código de acceso.
       </p>
@@ -37,10 +37,12 @@
         label="Verifiqué presencialmente la identidad del titular"
         :disable="busy || !!issued"
       />
+      <q-toggle v-model="recovery" label="Recuperar una cuenta existente" :disable="busy || !!issued" />
+      <p v-if="recovery">El código permite definir una contraseña nueva. La contraseña y las sesiones actuales solo se revocarán cuando el titular canjee el código.</p>
       <div class="q-mt-md">
         <q-btn
           color="primary"
-          label="Generar código de un solo uso"
+:label="recovery ? 'Generar código de recuperación' : 'Generar código de activación'"
           :disable="!verified || busy || !!issued"
           :loading="busy"
           @click="issue(client.id)"
@@ -55,8 +57,7 @@
         navegador. Al salir o recargar se oculta.
       </p>
       <p>
-        Generar un código nuevo invalida el anterior. Una cuenta ya activada no puede reemplazarse
-        desde aquí.
+        Generar un código nuevo invalida el anterior. En recuperación, el titular debe elegir una contraseña diferente. El código vence a los 30 minutos.
       </p>
     </q-banner>
   </q-page>
@@ -70,6 +71,7 @@ const identifier = ref('');
 const clients = ref<ActivationClient[]>([]);
 const busy = ref(false);
 const verified = ref(false);
+const recovery = ref(false);
 const searched = ref(false);
 const issued = ref<{ code: string; expires_at: string } | null>(null);
 async function search() {
@@ -77,6 +79,7 @@ async function search() {
   busy.value = true;
   issued.value = null;
   verified.value = false;
+  recovery.value = false;
   clients.value = [];
   searched.value = false;
   try {
@@ -92,7 +95,7 @@ async function issue(id: string) {
   if (busy.value || !verified.value) return;
   busy.value = true;
   try {
-    issued.value = await clientAccessService.issue(id);
+    issued.value = await clientAccessService.issue(id, recovery.value);
   } catch (e) {
     await alerts.error(administrationError(e));
   } finally {

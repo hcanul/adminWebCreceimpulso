@@ -26,6 +26,12 @@ export default defineRouter(({ store }) => {
       return { path: '/login', query: { redirect: to.fullPath } };
     }
     if (
+      auth.isAuthenticated &&
+      auth.user?.password_change_required &&
+      to.path !== '/cambiar-contrasena'
+    )
+      return '/cambiar-contrasena';
+    if (
       to.meta.clientAccess &&
       !auth.roles.some((role) => ['Super Admin', 'Gerente General', 'Gerente'].includes(role))
     )

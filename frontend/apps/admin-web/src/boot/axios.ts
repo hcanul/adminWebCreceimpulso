@@ -22,6 +22,14 @@ export default defineBoot(({ app, router, store }) => {
     (error: unknown) => {
       if (
         axios.isAxiosError(error) &&
+        error.response?.status === 403 &&
+        (error.response.data as { code?: string })?.code === 'PASSWORD_CHANGE_REQUIRED'
+      ) {
+        if (auth.user) auth.user.password_change_required = true;
+        void router.replace('/cambiar-contrasena');
+      }
+      if (
+        axios.isAxiosError(error) &&
         error.response?.status === 401 &&
         auth.token &&
         error.config?.headers.Authorization === `Bearer ${auth.token}`

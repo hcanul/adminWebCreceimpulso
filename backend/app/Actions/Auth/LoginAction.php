@@ -26,7 +26,7 @@ class LoginAction
         }
 
         // Generar Token de Sanctum
-        $token = $user->createToken($dto->deviceName);
+        $token = $user->createToken($dto->deviceName, $user->password_change_required ? ['staff:password-change'] : ['*'], now()->addHours(8));
 
         return [
             'user' => (clone $user)->setAttribute('permissions', $user->getAllPermissions()->pluck('name')), // Clonamos para evitar mutar el original accidentalmente

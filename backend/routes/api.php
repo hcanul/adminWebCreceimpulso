@@ -34,6 +34,7 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class])->group(function 
     Route::get('/dashboard', DashboardController::class)->middleware('throttle:60,1');
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/password', [AuthController::class, 'changePassword'])->middleware('throttle:5,1');
 });
 
 // Route::get('/user', function (Request $request) {
@@ -109,6 +110,7 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class])->prefix('documen
     Route::get('/sources/{type}/{source}', [$c, 'index'])->whereIn('type', ['file', 'credit'])->whereUuid('source');
     Route::post('/sources/{type}/{source}', [$c, 'issue'])->whereIn('type', ['file', 'credit'])->whereUuid('source')->middleware('throttle:20,1');
     Route::get('/versions/{id}', [$c, 'show'])->whereUuid('id');
+    Route::post('/versions/{id}/print', [$c, 'print'])->whereUuid('id')->middleware('throttle:5,1');
     Route::post('/versions/{id}/signed', [$c, 'attach'])->whereUuid('id')->middleware('throttle:10,1');
     Route::get('/signed/{id}', [$c, 'download'])->whereUuid('id')->middleware('throttle:30,1');
 });
@@ -121,6 +123,7 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class])->group(function 
 
 Route::middleware(['auth:sanctum', RequireStaffAccount::class])->prefix('client-access')->group(function () {
     Route::post('/search', [ClientActivationController::class, 'search'])->middleware('throttle:20,1');
+    Route::post('/clients/{client}/recovery', [ClientActivationController::class, 'recover'])->whereUuid('client')->middleware('throttle:5,1,client-recovery-issue');
     Route::post('/clients/{client}/activation', [ClientActivationController::class, 'issue'])->whereUuid('client')->middleware('throttle:5,1,client-activation-issue');
 });
 Route::post('/client/activate', [ClientActivationController::class, 'activate'])->middleware('throttle:5,1,client-activation-redeem');
@@ -128,6 +131,12 @@ Route::post('/client/activate', [ClientActivationController::class, 'activate'])
 Route::post('/client/login', [ClientSessionController::class, 'login'])->middleware('throttle:5,1,client-login');
 Route::middleware(['auth:sanctum', RequireClientAccount::class])->prefix('client')->group(function () {
     Route::get('/me', [ClientSessionController::class, 'me']);
+    Route::get('/push-device', [\App\Http\Controllers\Api\ClientPushController::class, 'show']);
+    Route::post('/push-device', [\App\Http\Controllers\Api\ClientPushController::class, 'store'])->middleware('throttle:20,1');
+    Route::delete('/push-device', [\App\Http\Controllers\Api\ClientPushController::class, 'destroy'])->middleware('throttle:20,1');
+    Route::post('/password', [ClientSessionController::class, 'password'])->middleware('throttle:5,1');
+    Route::get('/payments', \App\Http\Controllers\Api\ClientPaymentsController::class)->middleware('throttle:60,1');
+    Route::get('/statement', \App\Http\Controllers\Api\ClientStatementController::class)->middleware('throttle:60,1');
     Route::post('/logout', [ClientSessionController::class, 'logout']);
 });
 

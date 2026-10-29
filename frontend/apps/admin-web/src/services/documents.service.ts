@@ -31,6 +31,9 @@ export const documentsService = {
   async show(id: string) {
     return (await api.get<{ html: string; sha256: string }>(`/documents/versions/${id}`)).data;
   },
+  async print(id: string) {
+    return (await api.post<{ html: string }>(`/documents/versions/${id}/print`)).data;
+  },
   async attach(id: string, file: File) {
     const form = new FormData();
     form.append('file', file);

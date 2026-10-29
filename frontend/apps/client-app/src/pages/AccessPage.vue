@@ -12,7 +12,7 @@
     <section class="form-panel">
       <div class="form-content">
         <p class="eyebrow">PORTAL DE CLIENTES</p>
-        <h2>{{ activating ? 'Activa tu cuenta' : 'Bienvenida de nuevo' }}</h2>
+        <h2>{{ activating ? 'Configura tu acceso' : 'Bienvenida de nuevo' }}</h2>
         <p class="intro">
           {{
             activating
@@ -25,7 +25,7 @@
             v-if="activating"
             v-model="code"
             outlined
-            label="Código de activación"
+            label="Código de activación o recuperación"
             autocomplete="off"
             maxlength="32"
             :disable="busy"
@@ -82,13 +82,13 @@
             type="submit"
             color="primary"
             class="full-width submit-button"
-            :label="activating ? 'Activar mi cuenta' : 'Entrar'"
+            :label="activating ? 'Guardar mi acceso' : 'Entrar'"
             :loading="busy"
           />
         </q-form>
         <p class="switch-link">
           <router-link :to="activating ? '/login' : '/activar'" @click="reset">{{
-            activating ? 'Ya tengo cuenta. Iniciar sesión' : 'Tengo un código. Activar mi cuenta'
+            activating ? 'Ya tengo cuenta. Iniciar sesión' : 'Tengo un código de activación o recuperación'
           }}</router-link>
         </p>
         <div class="q-mb-lg text-center">

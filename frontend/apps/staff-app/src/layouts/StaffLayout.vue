@@ -38,7 +38,17 @@
         ><q-item v-if="auth.canIntake" clickable to="/sin-conexion" @click="drawer = false"
           ><q-item-section avatar><q-icon name="offline_pin" /></q-item-section
           ><q-item-section>Correcciones sin conexión</q-item-section></q-item
-        ><q-item clickable to="/mi-acceso" @click="drawer = false">
+        ><q-separator spaced />
+        <q-item
+          v-for="link in operationalLinks"
+          :key="link.to"
+          clickable
+          :to="link.to"
+          @click="drawer = false"
+          ><q-item-section avatar><q-icon :name="link.icon" /></q-item-section
+          ><q-item-section>{{ link.label }}</q-item-section></q-item
+        >
+        <q-item clickable to="/mi-acceso" @click="drawer = false">
           <q-item-section avatar><q-icon name="badge" /></q-item-section
           ><q-item-section>Mi acceso</q-item-section> </q-item
         ><q-item clickable to="/configuracion"
@@ -54,11 +64,11 @@
       ><q-banner v-if="!online" class="bg-orange-1 text-dark"
         >Sin conexión. Abre Correcciones sin conexión para editar expedientes preparados. Los demás
         módulos requieren internet.</q-banner
-      ><router-view /></q-page-container
+      ><router-view :key="$route.fullPath" /></q-page-container
   ></q-layout>
 </template>
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { useStaffAuth } from '../stores/auth';
@@ -67,6 +77,54 @@ const auth = useStaffAuth(),
   drawer = ref(false),
   busy = ref(false),
   online = ref(navigator.onLine);
+const operationalLinks = computed(() =>
+  [
+    {
+      to: '/solicitudes-credito',
+      label: 'Solicitudes de crédito',
+      icon: 'request_quote',
+      visible: auth.can('credit.view'),
+    },
+    {
+      to: '/gestion',
+      label: 'Gestión de expedientes',
+      icon: 'fact_check',
+      visible: auth.can('credit.view') && auth.can('credit.review'),
+    },
+    {
+      to: '/autorizaciones',
+      label: 'Autorizaciones',
+      icon: 'verified',
+      visible:
+        auth.can('credit.view') && (auth.can('credit.propose') || auth.can('credit.authorize')),
+    },
+    {
+      to: '/desembolsos',
+      label: 'Entrega en sucursal',
+      icon: 'account_balance',
+      visible: auth.can('credit.view') && auth.can('credit.disburse'),
+    },
+    {
+      to: '/cartera',
+      label: 'Cartera y atrasos',
+      icon: 'monitoring',
+      visible: auth.can('credit.view'),
+    },
+    {
+      to: '/cobros',
+      label: 'Caja en sucursal',
+      icon: 'point_of_sale',
+      visible:
+        auth.can('credit.view') && (auth.can('credit.collect') || auth.can('credit.reverse')),
+    },
+    {
+      to: '/cortes',
+      label: 'Cortes de caja',
+      icon: 'receipt_long',
+      visible: auth.can('cash.view'),
+    },
+  ].filter((link) => link.visible),
+);
 function update() {
   online.value = navigator.onLine;
 }

@@ -10,11 +10,13 @@ Pruebas: compilación SPA con TypeScript/ESLint, seis pruebas backend de adminis
 
 ## Orden de trabajo
 
-1. **Grupos y expedientes completos:** crear/editar grupos desde el móvil, asignar promotor según rol, integrantes, comité, documentos y entrega del expediente a Gestión. Mantener grupo primero, mínimo inicial de tres integrantes y CURP validada.
+1. **Grupos y expedientes completos:** crear/editar grupos desde el móvil, asignar promotor según rol, integrantes, comité y entrega del expediente a Gestión. La generación de documentos corresponde exclusivamente a admin-web. Mantener grupo primero, mínimo inicial de tres integrantes y CURP validada.
 2. **Flujo de crédito por función:** solicitud y montos por integrante; revisión de Gestión; condiciones y fechas; autorización comercial; entrega en sucursal. Conservar monto solicitado, aprobado y auditoría. El móvil debe mostrar cada acción solo cuando existe permiso y el estado permite ejecutarla.
 3. **Seguimiento y oficina:** cartera y atrasos por alcance, tareas de seguimiento; adaptación de Caja para usuarios autorizados que operan en oficina, pagos, depósitos, tickets, reversos y cortes. Los promotores no cobran en campo. No implementar cobros offline.
 4. **Base offline para campo:** almacenamiento local protegido y aislado por usuario/sucursal/servidor, borradores UUID, estado pendiente y sesión nativa segura. Definir vigencia de autorización offline y cierre de sesión antes de permitir expedientes locales.
 5. **Sincronización:** cola durable, idempotencia, versiones del servidor, reintentos y resolución visible de conflictos. No resolver conflictos financieros con último timestamp. Revalidar permisos y alcance al sincronizar.
 6. **Preparación operativa:** pruebas físicas Android/iPhone/iPad, recuperación y cambios de red, auditoría, privacidad, accesibilidad, backend HTTPS y distribución controlada.
+
+Las correcciones offline de borradores preparados ya tienen una primera implementación; ver `correcciones-offline.md`.
 
 Los permisos financieros listados en Mi acceso no significan que sus pantallas móviles estén implementadas. Hasta su adaptación se opera desde admin-web. La versión instalada antes de esta entrega necesita actualizarse para mostrar Usuarios y Roles.

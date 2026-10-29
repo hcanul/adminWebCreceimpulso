@@ -1,0 +1,846 @@
+[
+  {
+    "name": "fecha",
+    "label": "fecha",
+    "section": "Datos Generales",
+    "control": "date",
+    "options": [],
+    "required": true,
+    "data_type": "date"
+  },
+  {
+    "name": "city_id",
+    "label": "oficina",
+    "section": "Datos Generales",
+    "control": "select",
+    "options": [],
+    "required": false,
+    "data_type": "integer"
+  },
+  {
+    "name": "ncliente",
+    "label": "Núm. Cliente",
+    "section": "Datos Generales",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "integer"
+  },
+  {
+    "name": "nCredito",
+    "label": "Núm. Credito",
+    "section": "Datos Generales",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "integer"
+  },
+  {
+    "name": "team_id",
+    "label": "Nom. Grupo",
+    "section": "Datos Generales",
+    "control": "select",
+    "options": [],
+    "required": true,
+    "data_type": "integer"
+  },
+  {
+    "name": "promoter_id",
+    "label": "promotor",
+    "section": "Datos Generales",
+    "control": "select",
+    "options": [],
+    "required": true,
+    "data_type": "integer"
+  },
+  {
+    "name": "pNombre",
+    "label": "Primer Nombre",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "sNombre",
+    "label": "Segundo Nombre",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "string"
+  },
+  {
+    "name": "aPaterno",
+    "label": "Apellido Paterno",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "aMaterno",
+    "label": "Apellido Materno",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "genero",
+    "label": "Genero",
+    "section": "Datos Solicitante",
+    "control": "select",
+    "options": [
+      {
+        "value": "Masculino",
+        "label": "Masculino"
+      },
+      {
+        "value": "Femenino",
+        "label": "Femenino"
+      }
+    ],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "fNacimiento",
+    "label": "Fecha Nacimiento",
+    "section": "Datos Solicitante",
+    "control": "date",
+    "options": [],
+    "required": true,
+    "data_type": "date"
+  },
+  {
+    "name": "lNacimiento",
+    "label": "Lugar de Nacimiento",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "pais",
+    "label": "Pais",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "nacionalidad",
+    "label": "Nacionalidad",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "tidentificaion",
+    "label": "Identificacion",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rfc",
+    "label": "R. F. C.",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "curp",
+    "label": "C. U. R. P.",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "nIdentificacion",
+    "label": "Núm. Identificacion",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "ecivil",
+    "label": "Estado Civil",
+    "section": "Datos Solicitante",
+    "control": "select",
+    "options": [
+      {
+        "value": "Soltero",
+        "label": "Soltero"
+      },
+      {
+        "value": "Casado",
+        "label": "Casado"
+      },
+      {
+        "value": "U. Libre",
+        "label": "U. Libre"
+      },
+      {
+        "value": "Divorciado",
+        "label": "Divorciado"
+      },
+      {
+        "value": "Padre Soltero",
+        "label": "Padre Soltero"
+      }
+    ],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "regimen",
+    "label": "Regimen",
+    "section": "Datos Solicitante",
+    "control": "select",
+    "options": [
+      {
+        "value": "Separación de Bienes",
+        "label": "Separación de Bienes"
+      },
+      {
+        "value": "Sociedad Conyugal",
+        "label": "Sociedad Conyugal"
+      },
+      {
+        "value": "Ninguno",
+        "label": "Ninguno"
+      }
+    ],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "nescolar",
+    "label": "Nivel Escolar",
+    "section": "Datos Solicitante",
+    "control": "select",
+    "options": [
+      {
+        "value": "Primaria",
+        "label": "Primaria"
+      },
+      {
+        "value": "Secundaria",
+        "label": "Secundaria"
+      },
+      {
+        "value": "Preparatoria",
+        "label": "Preparatoria"
+      },
+      {
+        "value": "Técnica",
+        "label": "Técnica"
+      },
+      {
+        "value": "Licenciatura",
+        "label": "Licenciatura"
+      },
+      {
+        "value": "Sin Estudios",
+        "label": "Sin Estudios"
+      }
+    ],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "oficio",
+    "label": "oficio",
+    "section": "Datos Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudcalle",
+    "label": "Calle",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudne",
+    "label": "Núm. Exterior",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudni",
+    "label": "Núm. Interior",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudcolonia",
+    "label": "Colonia",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudelegacion",
+    "label": "Municipio",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "select",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudciudad",
+    "label": "Ciudad",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudcp",
+    "label": "C. P.",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudreferencia",
+    "label": "Referencia",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudusotelefono",
+    "label": "Telefono Tipo",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "select",
+    "options": [
+      {
+        "value": "Casa",
+        "label": "Casa"
+      },
+      {
+        "value": "Negocio",
+        "label": "Negocio"
+      },
+      {
+        "value": "Familiar",
+        "label": "Familiar"
+      },
+      {
+        "value": "Celular",
+        "label": "Celular"
+      },
+      {
+        "value": "Fax",
+        "label": "Fax"
+      },
+      {
+        "value": "Biper",
+        "label": "Biper"
+      }
+    ],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudtelefono",
+    "label": "Núm. Telefono",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dudrecidencia",
+    "label": "Tipo Vivienda",
+    "section": "Datos de Ubicación del Domicilio",
+    "control": "select",
+    "options": [
+      {
+        "value": "Propia",
+        "label": "Propia"
+      },
+      {
+        "value": "Rentada",
+        "label": "Rentada"
+      },
+      {
+        "value": "Familiar",
+        "label": "Familiar"
+      }
+    ],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dfnombre",
+    "label": "nombre y apellido del Conyugue",
+    "section": "Datos de la Familia y Conyugue",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "string"
+  },
+  {
+    "name": "dftrtabaja",
+    "label": "Trabaja Actualmente",
+    "section": "Datos de la Familia y Conyugue",
+    "control": "select",
+    "options": [
+      {
+        "value": "0",
+        "label": "No"
+      },
+      {
+        "value": "1",
+        "label": "Si"
+      }
+    ],
+    "required": false,
+    "data_type": "boolean"
+  },
+  {
+    "name": "dfcocupacion",
+    "label": "Ocupacion",
+    "section": "Datos de la Familia y Conyugue",
+    "control": "select",
+    "options": [
+      {
+        "value": "Comerciante",
+        "label": "Comerciante"
+      },
+      {
+        "value": "Empresario",
+        "label": "Empresario"
+      },
+      {
+        "value": "Empleado",
+        "label": "Empleado"
+      },
+      {
+        "value": "Jubilado",
+        "label": "Jubilado"
+      },
+      {
+        "value": "Desempleado",
+        "label": "Desempleado"
+      },
+      {
+        "value": "Hogar",
+        "label": "Hogar"
+      }
+    ],
+    "required": false,
+    "data_type": "string"
+  },
+  {
+    "name": "dfchijos",
+    "label": "Núm. Hijos",
+    "section": "Datos de la Familia y Conyugue",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "integer"
+  },
+  {
+    "name": "dfcdeconomicos",
+    "label": "Dependientes Económicos",
+    "section": "Datos de la Familia y Conyugue",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "integer"
+  },
+  {
+    "name": "dseactividad",
+    "label": "Actividad Económica",
+    "section": "Datos de la Situación Económica del Solicitante",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dseofinggresos",
+    "label": "Ocupacion",
+    "section": "Datos de la Situación Económica del Solicitante",
+    "control": "select",
+    "options": [
+      {
+        "value": "Abal",
+        "label": "Abal"
+      },
+      {
+        "value": "Apoyo Familiar",
+        "label": "Apoyo Familiar"
+      },
+      {
+        "value": "Negocio",
+        "label": "Negocio"
+      },
+      {
+        "value": "Jubilado",
+        "label": "Jubilado"
+      },
+      {
+        "value": "Envio de Dinero",
+        "label": "Envio de Dinero"
+      },
+      {
+        "value": "Otro",
+        "label": "Otro"
+      }
+    ],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "dseihogar",
+    "label": "Ingresos al Hogar",
+    "section": "Datos de la Situación Económica del Solicitante",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "integer"
+  },
+  {
+    "name": "dsenphabitan",
+    "label": "Núm. Personas que habitan",
+    "section": "Datos de la Situación Económica del Solicitante",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "integer"
+  },
+  {
+    "name": "dseccvivienda",
+    "label": "Cuantas Habitaciones Tiene",
+    "section": "Datos de la Situación Económica del Solicitante",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "integer"
+  },
+  {
+    "name": "desmaterial",
+    "label": "Material de la Vivienda",
+    "section": "Datos de la Situación Económica del Solicitante",
+    "control": "select",
+    "options": [
+      {
+        "value": "Tierra Aplanado",
+        "label": "Tierra Aplanado"
+      },
+      {
+        "value": "Acabados",
+        "label": "Acabados (loza, ceramica, Marmol)"
+      },
+      {
+        "value": "Cemento",
+        "label": "Cemento"
+      }
+    ],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rfNombre",
+    "label": "Nombre Completo",
+    "section": "Referencia Familiar",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rfParentesco",
+    "label": "Parentesco",
+    "section": "Referencia Familiar",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rfTelefono",
+    "label": "Telefono",
+    "section": "Referencia Familiar",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rfDomicilio",
+    "label": "Domicilio",
+    "section": "Referencia Familiar",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rfcp",
+    "label": "C. P.",
+    "section": "Referencia Familiar",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rfOcupacion",
+    "label": "Ocupacion",
+    "section": "Referencia Familiar",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rfLTrabajo",
+    "label": "Lugar de Trabajo",
+    "section": "Referencia Familiar",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rpNombre",
+    "label": "Nombre Completo",
+    "section": "Referencia Personal",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rpParentesco",
+    "label": "Parentesco",
+    "section": "Referencia Personal",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rpTelefono",
+    "label": "Telefono",
+    "section": "Referencia Personal",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rpDomicilio",
+    "label": "Domicilio",
+    "section": "Referencia Personal",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rpcp",
+    "label": "C. P.",
+    "section": "Referencia Personal",
+    "control": "number",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rpOcupacion",
+    "label": "Ocupacion",
+    "section": "Referencia Personal",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "rpLTrabajo",
+    "label": "Lugar de Trabajo",
+    "section": "Referencia Personal",
+    "control": "text",
+    "options": [],
+    "required": true,
+    "data_type": "string"
+  },
+  {
+    "name": "nempresa",
+    "label": "Nombre de la Empresa de Credito",
+    "section": "Actualemente Tiene Creditos Vigentes",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "string"
+  },
+  {
+    "name": "fechaini",
+    "label": "Fecha inicio Credito",
+    "section": "Actualemente Tiene Creditos Vigentes",
+    "control": "date",
+    "options": [],
+    "required": false,
+    "data_type": "date"
+  },
+  {
+    "name": "fechafin",
+    "label": "Fecha Fin Credito",
+    "section": "Actualemente Tiene Creditos Vigentes",
+    "control": "date",
+    "options": [],
+    "required": false,
+    "data_type": "date"
+  },
+  {
+    "name": "total",
+    "label": "total",
+    "section": "Actualemente Tiene Creditos Vigentes",
+    "control": "number",
+    "options": [],
+    "required": false,
+    "data_type": "float"
+  },
+  {
+    "name": "nempresa2",
+    "label": "Nombre de la Empresa de Credito",
+    "section": "Actualemente Tiene Creditos Vigentes",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "string"
+  },
+  {
+    "name": "fechaini2",
+    "label": "Fecha Inicio Credito",
+    "section": "Actualemente Tiene Creditos Vigentes",
+    "control": "date",
+    "options": [],
+    "required": false,
+    "data_type": "date"
+  },
+  {
+    "name": "fechafin2",
+    "label": "Fecha Fin Credito",
+    "section": "Actualemente Tiene Creditos Vigentes",
+    "control": "date",
+    "options": [],
+    "required": false,
+    "data_type": "date"
+  },
+  {
+    "name": "total2",
+    "label": "total",
+    "section": "Actualemente Tiene Creditos Vigentes",
+    "control": "number",
+    "options": [],
+    "required": false,
+    "data_type": "float"
+  },
+  {
+    "name": "tfdirectivos",
+    "label": "Tiene Familiares que Ocupen Puestos Directivos en la Empresa?",
+    "section": "Información Importante al Solicitante",
+    "control": "select",
+    "options": [
+      {
+        "value": "0",
+        "label": "No"
+      },
+      {
+        "value": "1",
+        "label": "Si"
+      }
+    ],
+    "required": false,
+    "data_type": "boolean"
+  },
+  {
+    "name": "dNombre",
+    "label": "Ocupa usted o algun familiar puesto de alto nivel en el servicio publico?",
+    "section": "Información Importante al Solicitante",
+    "control": "select",
+    "options": [
+      {
+        "value": "0",
+        "label": "No"
+      },
+      {
+        "value": "1",
+        "label": "Si"
+      }
+    ],
+    "required": false,
+    "data_type": "string"
+  },
+  {
+    "name": "ocupuesto",
+    "label": "Nombre Completo",
+    "section": "Información Importante al Solicitante",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "boolean"
+  },
+  {
+    "name": "dNombre2",
+    "label": "Nombre Completo",
+    "section": "Información Importante al Solicitante",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "string"
+  },
+  {
+    "name": "Observaciones",
+    "label": "Observaciones",
+    "section": "Información Importante al Solicitante",
+    "control": "text",
+    "options": [],
+    "required": false,
+    "data_type": "text"
+  }
+]

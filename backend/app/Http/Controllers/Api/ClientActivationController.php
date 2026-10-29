@@ -29,11 +29,17 @@ final class ClientActivationController extends Controller
         return response()->json($action->execute($request->user(), $client), 201)->header('Cache-Control', 'no-store');
     }
 
+    public function recover(Request $request, string $client, IssueClientActivationAction $action)
+    {
+        $request->validate(['identity_verified' => ['required', 'accepted']]);
+        return response()->json($action->execute($request->user(), $client, true), 201)->header('Cache-Control', 'no-store');
+    }
+
     public function activate(Request $request, ActivateClientAccountAction $action)
     {
         $data = $request->validate(['code' => ['required', 'string', 'regex:/^[a-f0-9]{32}$/'], 'password' => ['required', 'string', 'max:128', 'confirmed', Password::min(12)->letters()->numbers()]]);
         $action->execute($data['code'], $data['password']);
 
-        return response()->json(['message' => 'Cuenta activada correctamente.'])->header('Cache-Control', 'no-store');
+        return response()->json(['message' => 'Acceso configurado correctamente.'])->header('Cache-Control', 'no-store');
     }
 }

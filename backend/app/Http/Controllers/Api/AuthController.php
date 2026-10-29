@@ -47,6 +47,15 @@ class AuthController extends Controller
         return response()->json($data);
     }
 
+    public function changePassword(Request $request, \App\Actions\Auth\ChangeStaffPasswordAction $action): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string', 'max:1024'],
+            'password' => ['required', 'string', 'confirmed', 'max:128', \Illuminate\Validation\Rules\Password::min(12)->letters()->numbers()],
+        ]);
+        return response()->json($action->execute($request->user(), $data['current_password'], $data['password']))->header('Cache-Control', 'no-store');
+    }
+
     public function logout(Request $request, LogoutAction $action): Response
     {
         $action->execute($request->user());

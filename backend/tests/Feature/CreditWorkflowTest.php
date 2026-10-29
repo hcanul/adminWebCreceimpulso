@@ -35,6 +35,70 @@ final class CreditWorkflowTest extends TestCase
         config(['late_fees.new_authorizations' => false]);
     }
 
+    public function test_client_statement_is_personal_and_group_aggregate_with_scoped_access(): void
+    {
+        $this->freezeTime();
+        $f = $this->collectionFixture('cash_branch');
+        $this->postJson($f['base'].'/payments', $f['payment'])->assertOk();
+        $account = \App\Models\ClientAccount::create(['client_id' => $f['clients'][0]->id, 'password' => 'TestPassword123', 'is_active' => true]);
+        Sanctum::actingAs($account, ['client:read']);
+        $data = $this->getJson('/api/client/statement')->assertOk()->assertJsonPath('active', true)->assertJsonCount(16, 'personal')->assertJsonCount(16, 'group_schedule')->assertJsonPath('personal.0.status', 'partial')->assertJsonPath('personal.0.paid', 50000)->assertJsonMissingPath('members')->json();
+        $this->assertSame(1152000, array_sum(array_column($data['personal'], 'amount')));
+        $this->assertSame(2816000, array_sum(array_column($data['group_schedule'], 'amount')));
+        $this->assertArrayNotHasKey('client_id', $data['group_schedule'][0]);
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDay());
+        $this->getJson('/api/client/statement')->assertOk()->assertJsonPath('personal.0.status', 'overdue')->assertJsonPath('personal.1.status', 'upcoming');
+        $other = Client::create(['branch_id' => $f['branch']->id, 'curp' => 'OTHER'.Str::uuid(), 'first_name' => 'Otro', 'last_name' => 'Cliente', 'status' => 'activo']);
+        Sanctum::actingAs(\App\Models\ClientAccount::create(['client_id' => $other->id, 'password' => 'TestPassword123', 'is_active' => true]), ['client:read']);
+        $this->getJson('/api/client/statement?loan_id='.$f['loan']['id'])->assertOk()->assertExactJson(['active' => false]);
+        Sanctum::actingAs($f['cashier']);
+        $this->getJson('/api/client/statement')->assertForbidden();
+        Sanctum::actingAs($account, []);
+        $this->getJson('/api/client/statement')->assertForbidden();
+    }
+
+    public function test_client_receipts_hide_other_members_and_remain_verifiable_after_reversal(): void
+    {
+        $f = $this->collectionFixture('bank_deposit');
+        $this->postJson($f['base'].'/payments', $f['payment'])->assertOk();
+        $reversal = $this->reversalInput($f);
+        $accounts = [];
+        foreach ($f['clients'] as $client) {
+            $accounts[] = \App\Models\ClientAccount::create(['client_id' => $client->id, 'password' => 'TestPassword123', 'is_active' => true]);
+        }
+        Sanctum::actingAs($accounts[0], ['client:read']);
+        $receipt = $this->getJson('/api/client/payments')->assertOk()->assertJsonCount(1, 'receipts')
+            ->assertJsonPath('has_more', false)->assertJsonPath('receipts.0.personal_applied', '500.00')
+            ->assertJsonPath('receipts.0.status', 'registered')->assertJsonMissingPath('receipts.0.allocations')
+            ->assertJsonMissingPath('receipts.0.bank_reference')->assertJsonMissingPath('receipts.0.actor_name')->json('receipts.0');
+        $this->get($receipt['verification_url'])->assertOk()->assertSee('Pago registrado');
+        $this->get($receipt['verification_url'].'&tampered=1')->assertNotFound();
+        $this->getJson('/api/client/statement')->assertOk()->assertJsonPath('terms.requested', 1000000)
+            ->assertJsonPath('terms.approved', 900000)->assertJsonPath('terms.guarantee_retained', 90000)
+            ->assertJsonPath('late_fees.balance', 0);
+        Sanctum::actingAs($accounts[1], ['client:read']);
+        $this->getJson('/api/client/payments?client_id='.$f['clients'][0]->id)->assertOk()->assertJsonCount(0, 'receipts');
+        Sanctum::actingAs($f['manager']);
+        $this->getJson('/api/client/payments')->assertForbidden();
+        $this->postJson('/api/credit/receipts/'.$f['payment']['id'].'/reverse', $reversal)->assertOk();
+        Sanctum::actingAs($accounts[0], ['client:read']);
+        $this->getJson('/api/client/payments')->assertOk()->assertJsonPath('receipts.0.status', 'reversed');
+        $this->get($receipt['verification_url'])->assertOk()->assertSee('Pago revertido');
+        $this->getJson('/api/client/statement')->assertOk()->assertJsonPath('personal.0.paid', 0);
+        $this->getJson('/api/client/payments?page=0')->assertUnprocessable();
+        Sanctum::actingAs($accounts[0], []);
+        $this->getJson('/api/client/payments')->assertForbidden();
+    }
+
+    private function renewStaffFixturePasswords(array $fixture): void
+    {
+        // Long financial scenarios assume staff renewed their access during the elapsed weeks.
+        // Rotation itself is covered by StaffPasswordRotationTest; middleware remains enabled here.
+        foreach ($fixture as $value) {
+            if ($value instanceof User) $value->forceFill(['password_changed_at' => now()])->save();
+        }
+    }
+
     private function canonicalObject(array $value): array
     {
         if (! array_is_list($value)) {
@@ -674,6 +738,7 @@ final class CreditWorkflowTest extends TestCase
         Sanctum::actingAs($f['commercial']);
         $this->postJson($url, $input)->assertUnprocessable();
         $this->travelTo(CarbonImmutable::parse($initial['available_on'], 'America/Cancun')->startOfDay());
+        $this->renewStaffFixturePasswords($f);
         $this->postJson($url, $input)->assertOk()->assertJsonPath('members.0.applied', '900.00')->assertJsonPath('members.0.available', '0.00')->assertJsonPath('members.0.balance', '10620.00');
         $this->postJson($url, $input)->assertOk();
         $this->assertDatabaseCount('guarantee_applications', 1);
@@ -709,6 +774,7 @@ final class CreditWorkflowTest extends TestCase
         $url = $f['base'].'/guarantee';
         $g = $this->getJson($url)->assertOk()->json();
         $this->travelTo(CarbonImmutable::parse($g['available_on'], 'America/Cancun')->startOfDay());
+        $this->renewStaffFixturePasswords($f);
         Sanctum::actingAs($f['commercial']);
         $input = ['id' => (string) Str::uuid(), 'version' => $g['version'], 'reason' => 'Aplicar únicamente el adeudo restante.'];
         $this->postJson($url, $input)->assertOk()->assertJsonPath('status', 'pagado')->assertJsonPath('members.0.applied', '100.00')->assertJsonPath('members.0.available', '800.00')->assertJsonPath('members.1.available', '800.00');
@@ -782,12 +848,14 @@ final class CreditWorkflowTest extends TestCase
         $f = $this->collectionFixture('cash_branch');
         $first = CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun');
         $this->travelTo($first->addWeeks(15)->startOfDay());
+        $this->renewStaffFixturePasswords($f);
         Sanctum::actingAs($f['commercial']);
         $url = $f['base'].'/guarantee';
         $state = $this->getJson($url)->assertOk()->json();
         $id = (string) Str::uuid();
         $this->postJson($url, ['id' => $id, 'version' => $state['version'], 'reason' => 'Aplicación al finalizar la semana dieciséis.'])->assertOk();
         $this->travelTo($first->addDays(106)->startOfDay());
+        $this->renewStaffFixturePasswords($f);
         $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('late_fee_preview.total', '23716.00');
         $this->postJson('/api/guarantees/'.$id.'/reverse', ['reason' => 'Corregir aplicación de garantía registrada por error.'])->assertOk();
         $this->getJson($f['base'].'/statement')->assertOk()->assertJsonPath('late_fee_preview.total', '23936.00');
@@ -833,6 +901,7 @@ final class CreditWorkflowTest extends TestCase
         config(['late_fees.new_authorizations' => true]);
         $f = $this->collectionFixture('bank_deposit');
         $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDays(106)->startOfDay());
+        $this->renewStaffFixturePasswords($f);
         $state = $this->getJson($f['base'].'/payments')->assertOk()->json();
         $payment = $f['payment'];
         $payment['balance_version'] = $state['balance_version'];
@@ -894,6 +963,7 @@ final class CreditWorkflowTest extends TestCase
         config(['late_fees.new_authorizations' => true]);
         $f = $this->collectionFixture('cash_branch');
         $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDays(106)->startOfDay());
+        $this->renewStaffFixturePasswords($f);
         $state = $this->getJson($f['base'].'/payments')->assertOk()->json();
         $payment = $f['payment'];
         $payment['balance_version'] = $state['balance_version'];
@@ -1346,6 +1416,7 @@ final class CreditWorkflowTest extends TestCase
         $url = $f['base'].'/payments';
         $due = CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun');
         $this->travelTo($due->addDays(8)->setTime(12, 0));
+        $this->renewStaffFixturePasswords($f);
         $state = $this->getJson($url)->assertOk()->assertJsonPath('members.0.overdue', '1440.00')->assertJsonPath('members.0.days_overdue', 8)->json();
         $p = $f['payment'];
         $p['balance_version'] = $state['balance_version'];

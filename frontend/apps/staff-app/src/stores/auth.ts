@@ -1,3 +1,11 @@
+import { useStatementStore } from './statement.store';
+import { usePortfolioStore } from './portfolio.store';
+import { useGuaranteeStore } from './guarantee.store';
+import { useDisbursementStore } from './disbursement.store';
+import { useCollectionsStore } from './collections.store';
+import { useAuthorizationStore } from './authorization.store';
+import { useCashStore } from './cash.store';
+import { useCreditStore } from './credit.store';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { authService, type StaffUser } from '../services/auth.service';
@@ -17,6 +25,15 @@ export const useStaffAuth = defineStore('staff-auth', () => {
     return roles.value.includes('Super Admin') || !!user.value?.permissions?.includes(permission);
   }
   function clear() {
+    useCreditStore().clear();
+    useCashStore().clear();
+    useAuthorizationStore().clear();
+    useCollectionsStore().clear();
+    useDisbursementStore().clear();
+    useGuaranteeStore().clear();
+    usePortfolioStore().clear();
+    useStatementStore().clear();
+
     useIntakeStore().clear();
     useAdministrationStore().clear();
     user.value = null;
@@ -41,6 +58,11 @@ export const useStaffAuth = defineStore('staff-auth', () => {
       throw error;
     }
   }
+  async function changePassword(current: string, password: string, confirmation: string) {
+    const result = await authService.changePassword(current, password, confirmation);
+    sessionStorage.setItem(sessionKey, result.token);
+    await restore();
+  }
   async function logout() {
     try {
       await authService.logout();
@@ -57,6 +79,7 @@ export const useStaffAuth = defineStore('staff-auth', () => {
     can,
     restore,
     login,
+    changePassword,
     logout,
     clear,
   };

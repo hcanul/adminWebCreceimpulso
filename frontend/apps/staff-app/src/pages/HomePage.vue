@@ -37,11 +37,24 @@
       >Tu cuenta no tiene habilitado el acceso a grupos. Solicita a tu administrador que revise tus
       permisos.</q-banner
     >
+    <q-card v-if="auth.can('credit.view')" flat bordered class="q-mt-lg"
+      ><q-card-section
+        ><h2>Créditos y seguimiento</h2>
+        <div class="row q-gutter-sm">
+          <q-btn color="primary" to="/solicitudes-credito" label="Solicitudes" no-caps /><q-btn
+            outline
+            color="primary"
+            to="/cartera"
+            label="Cartera y atrasos"
+            no-caps
+          /></div></q-card-section
+    ></q-card>
     <q-card flat bordered class="q-mt-lg"
       ><q-card-section
-        ><h3>Estamos preparando las siguientes etapas</h3>
+        ><h3>Operación por función</h3>
         <p>
-          Documentos del expediente, flujo de crédito por función y sincronización de cambios sin
+          Desde el menú encontrarás las solicitudes, Gestión, autorizaciones, entrega, cartera y
+          Caja disponibles según tus permisos. Los cobros se registran únicamente en oficina con
           conexión.
         </p>
         <p class="text-caption">

@@ -34,6 +34,9 @@ final class SaveUserAction
             }
             $user->forceFill(['name' => $data->name, 'email' => $data->email, 'branch_id' => $data->branchId, 'is_active' => $data->active]);
             if ($data->password) {
+                if ($id && (\Illuminate\Support\Facades\Hash::check($data->password, $user->password) || ($user->previous_password && \Illuminate\Support\Facades\Hash::check($data->password, $user->previous_password)))) {
+                    throw ValidationException::withMessages(['password' => 'Usa una contraseña diferente de la actual y de la anterior.']);
+                }
                 $user->password = $data->password;
             }
             $user->save();

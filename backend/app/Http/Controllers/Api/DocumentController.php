@@ -39,6 +39,11 @@ final class DocumentController extends Controller
         return response()->json(['html' => $row->html, 'sha256' => $row->sha256])->header('Cache-Control', 'private, no-store');
     }
 
+    public function print(Request $request, \App\Domains\ClientAccess\Actions\PrintContractAccessAction $action, string $id)
+    {
+        return response()->json(['html' => $action->execute($request->user(), $id)])->header('Cache-Control', 'private, no-store');
+    }
+
     public function attach(Request $request, DocumentAccess $access, string $id)
     {
         $document = $access->document($request->user(), $id);

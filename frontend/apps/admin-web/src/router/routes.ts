@@ -2,6 +2,11 @@ import type { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/cambiar-contrasena',
+    component: () => import('@/pages/Auth/ChangePasswordPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/creditos/:id/estado-de-cuenta',
     component: () => import('@/layouts/BlankLayout.vue'),
     meta: { requiresAuth: true, credit: true },

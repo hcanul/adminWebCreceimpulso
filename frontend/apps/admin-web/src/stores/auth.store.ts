@@ -77,6 +77,13 @@ export const useAuthStore = defineStore('auth', () => {
     initialized.value = false;
     await restoreSession();
   }
+  async function changePassword(current: string, password: string, confirmation: string) {
+    const result = await authService.changePassword(current, password, confirmation);
+    LocalStorage.set('access_token', result.token);
+    token.value = result.token;
+    initialized.value = false;
+    await restoreSession();
+  }
   async function logout() {
     const currentToken = token.value;
     // Conservar la sesión si el servidor no pudo revocarla; permitir reintentar.
@@ -100,6 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     restoreSession,
     retrySession,
+    changePassword,
     logout,
     clearSession,
   };

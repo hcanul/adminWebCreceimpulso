@@ -26,5 +26,5 @@ export const useClientAuth = defineStore('client-auth', () => {
     await authService.logout();
     clear();
   }
-  return { profile, restore, login, logout };
+  return { profile, restore, login, logout, clear };
 });

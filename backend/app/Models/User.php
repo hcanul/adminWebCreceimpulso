@@ -41,6 +41,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'previous_password',
     ];
 
     /**
@@ -48,11 +49,34 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+    protected $appends = ['password_change_required', 'password_expires_at'];
+
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->isDirty('password')) {
+                if ($user->exists) $user->previous_password = $user->getRawOriginal('password');
+                $user->password_changed_at = now();
+            }
+        });
+    }
+
+    public function getPasswordChangeRequiredAttribute(): bool
+    {
+        return ! $this->password_changed_at || now()->greaterThanOrEqualTo($this->password_changed_at->copy()->addDays(15));
+    }
+
+    public function getPasswordExpiresAtAttribute(): ?string
+    {
+        return $this->password_changed_at?->copy()->addDays(15)->toIso8601String();
+    }
+
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_changed_at' => 'datetime',
         ];
     }
 }

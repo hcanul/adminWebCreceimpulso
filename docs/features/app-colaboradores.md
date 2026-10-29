@@ -55,3 +55,7 @@ En el detalle se asignan Presidenta, Tesorera e Integrante. Los cargos son propu
 El menú Expedientes de clientes muestra registros paginados con folio, grupo y estado dentro del alcance del usuario. Al abrirlos vuelve a verificarse CURP; no se guardan datos sensibles en parámetros de URL. Se reutilizan servicios y reglas existentes, sin cambios de base de datos.
 
 Validación: compilación TypeScript/ESLint, 28 pruebas backend y 172 comprobaciones; prueba móvil automatizada con API simulada para creación, selección obligatoria, promotor propio, edición, comité, listado y barrera de CURP. Falta adaptar documentos adjuntos e impresión móvil para completar la etapa de expedientes. No incluye offline.
+
+## Actualización de alcance: documentos y correcciones offline
+
+Por indicación del usuario, todos los documentos se generan en admin-web. Se elimina la generación/impresión documental móvil de la hoja de ruta. La app del personal incorpora preparación de borradores existentes, almacenamiento cifrado con clave local y sincronización explícita de correcciones con validación de versiones. Véase `correcciones-offline.md` para procedimiento y límites.

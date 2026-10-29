@@ -1,7 +1,13 @@
 <template>
   <main class="client-home">
     <header>
-      <q-btn flat round icon="settings" aria-label="Configuración del dispositivo" to="/configuracion" />
+      <q-btn
+        flat
+        round
+        icon="settings"
+        aria-label="Configuración del dispositivo"
+        to="/configuracion"
+      />
       <span class="eyebrow">CRECE IMPULSO · MI CUENTA</span
       ><q-btn flat label="Cerrar sesión" icon="logout" :loading="busy" @click="logout" />
     </header>
@@ -17,22 +23,33 @@
         >
       </div>
     </section>
+    <PaymentReminders />
     <q-banner v-if="loading" class="q-mt-lg">Cargando tu información…</q-banner>
     <q-banner v-else-if="loadError" class="q-mt-lg"
       >{{ loadError }} <q-btn flat label="Reintentar" @click="load"
     /></q-banner>
-    <ClientDemo v-else-if="demo" :data="demo" />
-    <q-card v-else flat bordered class="q-pa-lg q-mt-lg"
-      ><h2 class="text-h6">Tu acceso está listo</h2>
-      <p>
-        La consulta de créditos reales aún está en preparación. Consulta tu información de pagos en
-        sucursal.
-      </p></q-card
+    <template v-else
+      ><ActiveCredit v-if="statement && !statement.demo" :data="statement" /><AccountStatement
+        v-if="statement"
+        :data="statement"
+      /><ClientPayments v-if="statement && !statement.demo" /><ClientDemo
+        v-if="demo"
+        :data="demo"
+      />
+      <q-card v-if="!statement && !demo" flat bordered class="q-pa-lg q-mt-lg"
+        ><h2>No tienes un crédito activo para consultar</h2>
+        <p>Consulta en tu sucursal si necesitas revisar un crédito anterior.</p></q-card
+      ></template
     >
   </main>
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import PaymentReminders from '../components/PaymentReminders.vue';
+import ActiveCredit from '../components/ActiveCredit.vue';
+import ClientPayments from '../components/ClientPayments.vue';
+import AccountStatement from '../components/AccountStatement.vue';
+import { loadStatement, type ClientStatement } from '../services/statement.service';
 import ClientDemo from '../components/ClientDemo.vue';
 import { loadClientDemo, type DemoData } from '../services/demo.service';
 import { useRouter } from 'vue-router';
@@ -44,12 +61,64 @@ const router = useRouter();
 const busy = ref(false);
 const loading = ref(true);
 const loadError = ref('');
+const statement = ref<ClientStatement | null>(null);
 const demo = ref<DemoData | null>(null);
 async function load() {
   loading.value = true;
   loadError.value = '';
   try {
-    demo.value = await loadClientDemo();
+    statement.value = null;
+    demo.value = null;
+    const real = await loadStatement();
+    const example = real ? null : await loadClientDemo();
+    statement.value = real;
+    demo.value = real ? null : example;
+    if (!real && example) {
+      const personal = example.schedule.map((r) => ({
+        ...r,
+        status:
+          r.remaining === 0
+            ? ('paid' as const)
+            : r.due_on < example.as_of
+              ? ('overdue' as const)
+              : r.paid > 0
+                ? ('partial' as const)
+                : r.due_on === example.as_of
+                  ? ('due_today' as const)
+                  : ('upcoming' as const),
+      }));
+      // Explicit synthetic group: Maria and two fictitious members paying 800 each.
+      const group = personal.map((r) => {
+        const otherPaid = r.week <= 5 ? 160000 : r.week === 6 ? 40000 : 0;
+        const amount = r.amount * 3,
+          paid = r.paid + otherPaid;
+        return {
+          ...r,
+          amount,
+          paid,
+          remaining: amount - paid,
+          status:
+            paid === amount
+              ? ('paid' as const)
+              : r.due_on < example.as_of
+                ? ('overdue' as const)
+                : paid > 0
+                  ? ('partial' as const)
+                  : r.due_on === example.as_of
+                    ? ('due_today' as const)
+                    : ('upcoming' as const),
+        };
+      });
+      statement.value = {
+        active: true,
+        demo: true,
+        as_of: example.as_of,
+        folio: example.loan.folio,
+        group: example.loan.group,
+        personal,
+        group_schedule: group,
+      };
+    }
   } catch (e) {
     loadError.value = errorMessage(e);
   } finally {

@@ -1,5 +1,6 @@
 import { api } from './http';
 export interface ClientProfile {
+  must_change_password?: boolean;
   name: string;
   folio: string;
   branch: string;
@@ -18,6 +19,9 @@ export const authService = {
   },
   async me() {
     return (await api.get<ClientProfile>('/client/me')).data;
+  },
+  async changePassword(current_password: string, password: string, password_confirmation: string) {
+    await api.post('/client/password', { current_password, password, password_confirmation });
   },
   async logout() {
     await api.post('/client/logout');

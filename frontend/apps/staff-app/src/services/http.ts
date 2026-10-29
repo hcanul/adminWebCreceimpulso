@@ -14,6 +14,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 403 &&
+      error.response.data?.code === 'PASSWORD_CHANGE_REQUIRED'
+    ) {
+      window.dispatchEvent(new Event('staff-password-expired'));
+    }
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       sessionStorage.removeItem(sessionKey);
       window.dispatchEvent(new Event('staff-session-expired'));
