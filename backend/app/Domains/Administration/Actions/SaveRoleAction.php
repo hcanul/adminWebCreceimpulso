@@ -17,7 +17,7 @@ final class SaveRoleAction
             $role = $id ? Role::where('guard_name', 'web')->lockForUpdate()->findOrFail($id) : Role::create(['name' => $data['name'], 'guard_name' => 'web']);
             abort_if($role->name === 'Super Admin', 422, 'El rol Super Admin está protegido.');
             // Existing names define operational scope and cannot be renamed.
-            if (array_diff($data['permissions'], ['intake.access', 'credit.view', 'credit.disburse', 'credit.collect', 'credit.reverse', 'cash.view', 'cash.close', 'cash.audit']) && ! in_array('intake.access', $data['permissions'])) {
+            if (array_diff($data['permissions'], ['messages.send', 'intake.access', 'credit.view', 'credit.disburse', 'credit.collect', 'credit.reverse', 'cash.view', 'cash.close', 'cash.audit']) && ! in_array('intake.access', $data['permissions'])) {
                 throw ValidationException::withMessages(['permissions' => 'Habilita el acceso a grupos y expedientes para estos permisos.']);
             }
             if (array_intersect($data['permissions'], ['credit.create', 'credit.rates', 'credit.review', 'credit.propose', 'credit.authorize', 'credit.disburse', 'credit.collect', 'credit.reverse']) && ! in_array('credit.view', $data['permissions'])) {

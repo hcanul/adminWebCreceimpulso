@@ -145,3 +145,42 @@ test('usuario inactivo no puede restaurar sesión', async () => {
   assert.equal(auth.isAuthenticated, false);
   assert.equal(values.size, 0);
 });
+
+test('cambiar contraseña renueva el perfil sin depender de una segunda consulta', async () => {
+  let reads = 0;
+  const renewed = { ...profile, password_change_required: false };
+  const { auth, values } = await setup({
+    me: async () => {
+      reads++;
+      throw new Error('offline');
+    },
+    changePassword: async () => ({ token: 'renewed-token', user: renewed, roles: ['Gerente'] }),
+  });
+  await auth.changePassword('previous', 'new-password123', 'new-password123');
+  assert.equal(reads, 0);
+  assert.equal(auth.isAuthenticated, true);
+  assert.equal(auth.user.password_change_required, false);
+  assert.equal(values.get('access_token'), 'renewed-token');
+  assert.equal(auth.initialized, true);
+});
+
+test('una restauración anterior no reemplaza el perfil después del cambio', async () => {
+  let resolve;
+  const { auth } = await setup({
+    me: () =>
+      new Promise((r) => {
+        resolve = r;
+      }),
+    changePassword: async () => ({
+      token: 'renewed-token',
+      user: { ...profile, password_change_required: false },
+      roles: ['Gerente'],
+    }),
+  });
+  const pending = auth.restoreSession();
+  await auth.changePassword('previous', 'new-password123', 'new-password123');
+  resolve({ ...profile, password_change_required: true });
+  await pending;
+  assert.equal(auth.user.password_change_required, false);
+  assert.equal(auth.token, 'renewed-token');
+});

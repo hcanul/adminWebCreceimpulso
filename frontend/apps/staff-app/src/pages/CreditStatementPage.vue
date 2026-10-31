@@ -43,7 +43,7 @@
       {{
         loading
           ? 'Consultando saldos y movimientos…'
-          : 'Estado de cuenta no disponible. Actualiza antes de imprimir.'
+          : 'Estado de cuenta no disponible. Actualiza para consultar los saldos.'
       }}
     </p>
     <article v-if="data && !invalidMember" class="statement-paper">

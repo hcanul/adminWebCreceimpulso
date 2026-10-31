@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/layouts/Layout.vue'),
     meta: { requiresAuth: true },
     children: [
+      { path: 'mensajes', component: () => import('../pages/MessagesPage.vue') },
+      {
+        path: 'mensajes/enviar',
+        component: () => import('../pages/ComposeMessagePage.vue'),
+        meta: { messagesSend: true },
+      },
       {
         path: 'creditos/:id/garantia',
         component: () => import('@/pages/GuaranteePage.vue'),

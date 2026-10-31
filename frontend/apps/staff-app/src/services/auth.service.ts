@@ -13,7 +13,7 @@ export interface StaffUser {
 export const authService = {
   async changePassword(current: string, password: string, confirmation: string) {
     return (
-      await api.post<{ token: string }>('/password', {
+      await api.post<{ token: string; user: StaffUser; roles: string[] }>('/password', {
         current_password: current,
         password,
         password_confirmation: confirmation,

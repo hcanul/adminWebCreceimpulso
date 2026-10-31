@@ -326,6 +326,12 @@ importers:
 
   apps/staff-app:
     dependencies:
+      '@capacitor/core':
+        specifier: ^8.5.3
+        version: 8.5.3
+      '@capacitor/push-notifications':
+        specifier: ^8.1.3
+        version: 8.1.3(@capacitor/core@8.5.3)
       '@quasar/extras':
         specifier: ^2.1.0
         version: 2.1.0

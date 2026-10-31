@@ -1,3 +1,5 @@
+> Estado actualizado: [entrega móvil 29/10/2026](cierre-moviles-2026-10-29.md). El texto posterior conserva el historial de etapas anteriores.
+
 # Acceso a la app de clientes
 
 ## Entrega actual

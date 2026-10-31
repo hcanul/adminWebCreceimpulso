@@ -3,9 +3,11 @@
 namespace App\Domains\ClientAccess\Actions;
 
 use App\Domains\ClientAccess\Services\ClientAccess;
+use App\Domains\Push\Services\PushDevices;
 use App\Models\Client;
 use App\Models\ClientAccount;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 final class ActivateClientAccountAction
@@ -29,16 +31,18 @@ final class ActivateClientAccountAction
                 if (! $account || ! $account->is_active || $account->id !== $invitation->account_id || ! hash_equals($invitation->password_fingerprint ?? '', hash('sha256', $account->password))) {
                     $this->invalid();
                 }
-                if (\Illuminate\Support\Facades\Hash::check($password, $account->password)) {
+                if (Hash::check($password, $account->password)) {
                     throw ValidationException::withMessages(['password' => 'Elige una contraseña diferente de la anterior.']);
                 }
                 $account->update(['password' => $password, 'must_change_password' => false, 'temporary_password_expires_at' => null]);
                 foreach ($account->tokens()->pluck('id') as $tokenId) {
-                    app(\App\Domains\Push\Services\PushDevices::class)->revokeSession((int) $tokenId);
+                    app(PushDevices::class)->revokeSession((int) $tokenId);
                 }
                 $account->tokens()->delete();
             } else {
-                if ($account || $invitation->purpose !== 'activation') $this->invalid();
+                if ($account || $invitation->purpose !== 'activation') {
+                    $this->invalid();
+                }
                 $account = ClientAccount::create(['client_id' => $client->id, 'password' => $password]);
             }
             DB::table('client_activation_codes')->where('client_id', $client->id)->where('id', '!=', $invitation->id)->whereNull('consumed_at')->whereNull('revoked_at')->update(['revoked_at' => now()]);

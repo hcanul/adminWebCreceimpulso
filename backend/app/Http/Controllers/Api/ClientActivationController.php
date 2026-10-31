@@ -32,6 +32,7 @@ final class ClientActivationController extends Controller
     public function recover(Request $request, string $client, IssueClientActivationAction $action)
     {
         $request->validate(['identity_verified' => ['required', 'accepted']]);
+
         return response()->json($action->execute($request->user(), $client, true), 201)->header('Cache-Control', 'no-store');
     }
 

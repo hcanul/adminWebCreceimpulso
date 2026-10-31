@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Actions\Auth\ChangeStaffPasswordAction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -18,6 +18,7 @@ final class StaffPasswordRotationTest extends TestCase
     {
         $u = User::factory()->create(['is_active' => true, 'password' => 'OriginalClave123']);
         $u->assignRole('Super Admin');
+
         return $u;
     }
 
@@ -45,7 +46,12 @@ final class StaffPasswordRotationTest extends TestCase
         $this->postJson('/api/intake/teams', [])->assertForbidden()->assertJsonPath('code', 'PASSWORD_CHANGE_REQUIRED');
         $this->postJson('/api/password', ['current_password' => 'incorrect', 'password' => 'RenovadaClave456', 'password_confirmation' => 'RenovadaClave456'])->assertUnprocessable()->assertJsonValidationErrors('current_password');
         $this->postJson('/api/password', ['current_password' => 'OriginalClave123', 'password' => 'OriginalClave123', 'password_confirmation' => 'OriginalClave123'])->assertUnprocessable()->assertJsonValidationErrors('password');
-        $changed = $this->postJson('/api/password', ['current_password' => 'OriginalClave123', 'password' => 'RenovadaClave456', 'password_confirmation' => 'RenovadaClave456'])->assertOk();
+        $changed = $this->postJson('/api/password', ['current_password' => 'OriginalClave123', 'password' => 'RenovadaClave456', 'password_confirmation' => 'RenovadaClave456'])->assertOk()
+            ->assertJsonPath('user.email', $u->email)
+            ->assertJsonPath('user.password_change_required', false)
+            ->assertJsonPath('roles.0', 'Super Admin')
+            ->assertJsonMissingPath('user.password')
+            ->assertJsonMissingPath('user.previous_password');
         $this->app['auth']->forgetGuards();
         $this->getJson('/api/me')->assertUnauthorized();
         $this->withToken($changed->json('token'));
@@ -72,5 +78,22 @@ final class StaffPasswordRotationTest extends TestCase
         $u->refresh();
         $this->assertTrue(Hash::check('RenovadaClave456', $u->password));
         $this->assertArrayNotHasKey('previous_password', $u->toArray());
+    }
+
+    public function test_expired_staff_can_logout_and_login_again_with_password_spaces_preserved(): void
+    {
+        $u = $this->user();
+        $original = ' OriginalClave123 ';
+        $u->password = $original;
+        $u->save();
+        $u->forceFill(['password_changed_at' => null])->save();
+        $login = fn () => $this->postJson('/api/login', ['email' => $u->email, 'password' => $original, 'device_name' => 'QA'])->assertOk();
+        $this->withToken($login()->json('data.token'));
+        $this->postJson('/api/logout')->assertNoContent();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($login()->json('data.token'));
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/password', ['current_password' => $original, 'password' => 'RenovadaClave456', 'password_confirmation' => 'RenovadaClave456'])
+            ->assertOk()->assertJsonPath('user.password_change_required', false);
     }
 }

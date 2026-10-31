@@ -30,7 +30,13 @@ final class ChangeStaffPasswordAction
                 'changes' => json_encode(['password_changed' => true]), 'created_at' => now(),
             ]);
             $token = $user->createToken('Sesión renovada', ['*'], now()->addHours(8));
-            return ['token' => $token->plainTextToken];
+
+            // Return the renewed profile with the token: a second network request must
+            // not make a successful password change appear to have failed.
+            $profile = $user->load('roles')->toArray();
+            $profile['permissions'] = $user->getAllPermissions()->pluck('name')->unique()->values()->all();
+
+            return ['token' => $token->plainTextToken, 'user' => $profile, 'roles' => $user->getRoleNames()];
         });
     }
 }

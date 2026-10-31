@@ -18,6 +18,12 @@ export default defineRouter(({ store }) => {
         component: () => import('../layouts/StaffLayout.vue'),
         meta: { requiresAuth: true },
         children: [
+          { path: 'mensajes', component: () => import('../pages/MessagesPage.vue') },
+          {
+            path: 'mensajes/enviar',
+            component: () => import('../pages/ComposeMessagePage.vue'),
+            meta: { messagesSend: true },
+          },
           {
             path: 'solicitudes-credito',
             component: () => import('../pages/CreditApplicationsPage.vue'),
@@ -137,6 +143,7 @@ export default defineRouter(({ store }) => {
     if (!auth.user) return '/login';
     if (auth.user.password_change_required && to.path !== '/cambiar-contrasena')
       return '/cambiar-contrasena';
+    if (to.meta.messagesSend && !auth.can('messages.send')) return '/';
     if (to.meta.superAdmin && !auth.isSuperAdmin) return '/';
     if (to.meta.intake && !auth.canIntake) return '/';
     if (to.meta.credit && !auth.can('credit.view')) return '/';

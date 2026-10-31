@@ -1,9 +1,13 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-return new class extends Migration {
-    public function up(): void {
+
+return new class extends Migration
+{
+    public function up(): void
+    {
         Schema::create('client_push_devices', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->foreignUuid('client_account_id')->constrained()->cascadeOnDelete();
@@ -29,7 +33,9 @@ return new class extends Migration {
             $t->unique(['client_account_id', 'installation_id', 'due_on'], 'client_reminder_once');
         });
     }
-    public function down(): void {
+
+    public function down(): void
+    {
         Schema::dropIfExists('client_payment_reminders');
         Schema::dropIfExists('client_push_devices');
     }

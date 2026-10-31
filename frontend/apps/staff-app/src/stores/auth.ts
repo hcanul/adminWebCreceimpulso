@@ -61,7 +61,7 @@ export const useStaffAuth = defineStore('staff-auth', () => {
   async function changePassword(current: string, password: string, confirmation: string) {
     const result = await authService.changePassword(current, password, confirmation);
     sessionStorage.setItem(sessionKey, result.token);
-    await restore();
+    user.value = result.user;
   }
   async function logout() {
     try {

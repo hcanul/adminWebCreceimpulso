@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Domains\Credit\Services\CreditCalculator;
 use App\Domains\Credit\Services\CreditDisbursement;
 use App\Domains\Credit\Services\CreditReview;
+use App\Domains\Push\Services\PushSender;
 use App\Models\Branch;
 use App\Models\Client;
+use App\Models\ClientAccount;
 use App\Models\ClientApplication;
 use App\Models\LoanApplication;
 use App\Models\LoanParticipation;
@@ -40,7 +42,7 @@ final class CreditWorkflowTest extends TestCase
         $this->freezeTime();
         $f = $this->collectionFixture('cash_branch');
         $this->postJson($f['base'].'/payments', $f['payment'])->assertOk();
-        $account = \App\Models\ClientAccount::create(['client_id' => $f['clients'][0]->id, 'password' => 'TestPassword123', 'is_active' => true]);
+        $account = ClientAccount::create(['client_id' => $f['clients'][0]->id, 'password' => 'TestPassword123', 'is_active' => true]);
         Sanctum::actingAs($account, ['client:read']);
         $data = $this->getJson('/api/client/statement')->assertOk()->assertJsonPath('active', true)->assertJsonCount(16, 'personal')->assertJsonCount(16, 'group_schedule')->assertJsonPath('personal.0.status', 'partial')->assertJsonPath('personal.0.paid', 50000)->assertJsonMissingPath('members')->json();
         $this->assertSame(1152000, array_sum(array_column($data['personal'], 'amount')));
@@ -49,12 +51,30 @@ final class CreditWorkflowTest extends TestCase
         $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDay());
         $this->getJson('/api/client/statement')->assertOk()->assertJsonPath('personal.0.status', 'overdue')->assertJsonPath('personal.1.status', 'upcoming');
         $other = Client::create(['branch_id' => $f['branch']->id, 'curp' => 'OTHER'.Str::uuid(), 'first_name' => 'Otro', 'last_name' => 'Cliente', 'status' => 'activo']);
-        Sanctum::actingAs(\App\Models\ClientAccount::create(['client_id' => $other->id, 'password' => 'TestPassword123', 'is_active' => true]), ['client:read']);
+        Sanctum::actingAs(ClientAccount::create(['client_id' => $other->id, 'password' => 'TestPassword123', 'is_active' => true]), ['client:read']);
         $this->getJson('/api/client/statement?loan_id='.$f['loan']['id'])->assertOk()->assertExactJson(['active' => false]);
         Sanctum::actingAs($f['cashier']);
         $this->getJson('/api/client/statement')->assertForbidden();
         Sanctum::actingAs($account, []);
         $this->getJson('/api/client/statement')->assertForbidden();
+    }
+
+    public function test_payment_confirmation_is_transactional_and_retry_does_not_duplicate(): void
+    {
+        $f=$this->collectionFixture('cash_branch');
+        $a=\App\Models\ClientAccount::create(['client_id'=>$f['clients'][0]->id,'password'=>'SecretPassword123','is_active'=>true]);
+        $bad=$f['payment'];$bad['amount']='900.00';
+        $this->postJson($f['base'].'/payments',$bad)->assertUnprocessable();$this->assertDatabaseCount('app_messages',0);
+        $this->postJson($f['base'].'/payments',$f['payment'])->assertOk();
+        $this->postJson($f['base'].'/payments',$f['payment'])->assertOk();
+        $this->assertDatabaseCount('app_messages',1);$this->assertDatabaseHas('app_messages',['recipient_id'=>$a->id,'kind'=>'payment_received','payment_id'=>$f['payment']['id']]);
+        $reversal = $this->reversalInput($f);
+        Sanctum::actingAs($f['manager']);
+        $this->postJson('/api/credit/receipts/'.$f['payment']['id'].'/reverse', $reversal)->assertOk();
+        $this->assertNotNull(DB::table('app_messages')->value('cancelled_at'));
+        $this->assertDatabaseCount('app_messages', 1);
+        Sanctum::actingAs($a, ['client:read']);
+        $this->getJson('/api/client/messages')->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_client_receipts_hide_other_members_and_remain_verifiable_after_reversal(): void
@@ -64,7 +84,7 @@ final class CreditWorkflowTest extends TestCase
         $reversal = $this->reversalInput($f);
         $accounts = [];
         foreach ($f['clients'] as $client) {
-            $accounts[] = \App\Models\ClientAccount::create(['client_id' => $client->id, 'password' => 'TestPassword123', 'is_active' => true]);
+            $accounts[] = ClientAccount::create(['client_id' => $client->id, 'password' => 'TestPassword123', 'is_active' => true]);
         }
         Sanctum::actingAs($accounts[0], ['client:read']);
         $receipt = $this->getJson('/api/client/payments')->assertOk()->assertJsonCount(1, 'receipts')
@@ -90,12 +110,97 @@ final class CreditWorkflowTest extends TestCase
         $this->getJson('/api/client/payments')->assertForbidden();
     }
 
+    public function test_push_reminder_only_for_tomorrow_unpaid_and_not_duplicated(): void
+    {
+        $f = $this->collectionFixture('cash_branch');
+        $account = ClientAccount::create(['client_id' => $f['clients'][0]->id, 'password' => 'TestPassword123', 'is_active' => true]);
+        $token = $account->createToken('device', ['client:read'])->plainTextToken;
+        $installation = (string) Str::uuid();
+        $sender = new class extends PushSender
+        {
+            public int $calls = 0;
+
+            public function ready(string $platform): bool
+            {
+                return (bool) config('client_push.enabled');
+            }
+
+            public function send(string $platform, string $token, string $dedup): array
+            {
+                $this->calls++;
+
+                return ['status' => 'accepted', 'reference' => 'test'];
+            }
+        };
+        $this->app->instance(PushSender::class, $sender);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token);
+        $input = ['installation_id' => $installation, 'platform' => 'android', 'token' => str_repeat('a', 80), 'consent' => true];
+        config(['client_push.enabled' => false]);
+        $this->postJson('/api/client/push-device', $input)->assertStatus(503);
+        $this->artisan('clients:payment-reminders')->assertSuccessful();
+        $this->assertSame(0, $sender->calls);
+        config(['client_push.enabled' => true]);
+        $this->postJson('/api/client/push-device', $input)->assertOk();
+        $this->assertStringNotContainsString($input['token'], DB::table('client_push_devices')->get()->toJson());
+        $this->artisan('clients:payment-reminders')->assertSuccessful();
+        $this->assertSame(0, $sender->calls);
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->subDay()->setTime(9, 0));
+        $this->artisan('clients:payment-reminders')->assertSuccessful();
+        $this->artisan('clients:payment-reminders')->assertSuccessful();
+        $this->assertSame(1, $sender->calls);
+        $this->assertDatabaseCount('client_payment_reminders', 1);
+        $this->assertDatabaseHas('client_payment_reminders', ['status' => 'accepted']);
+        $this->travel(7)->days();
+        $account->update(['password' => 'ChangedPassword456']);
+        $this->artisan('clients:payment-reminders')->assertSuccessful();
+        $this->assertSame(1, $sender->calls);
+    }
+
+    public function test_push_skips_paid_installments_and_logout_revokes_registration(): void
+    {
+        $f = $this->collectionFixture('cash_branch');
+        $account = ClientAccount::create(['client_id' => $f['clients'][0]->id, 'password' => 'TestPassword123', 'is_active' => true]);
+        $token = $account->createToken('device', ['client:read'])->plainTextToken;
+        $sender = new class extends PushSender
+        {
+            public int $calls = 0;
+
+            public function ready(string $platform): bool
+            {
+                return true;
+            }
+
+            public function send(string $platform, string $token, string $dedup): array
+            {
+                $this->calls++;
+
+                return ['status' => 'accepted', 'reference' => 'test'];
+            }
+        };
+        $this->app->instance(PushSender::class, $sender);
+        config(['client_push.enabled' => true]);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token);
+        $input = ['installation_id' => (string) Str::uuid(), 'platform' => 'ios', 'token' => str_repeat('a', 64), 'consent' => true];
+        $this->postJson('/api/client/push-device', $input)->assertOk();
+        DB::table('loan_installments')->where('client_id', $account->client_id)->update(['amount_paid' => DB::raw('amount_due')]);
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->subDay()->setTime(9, 0));
+        $this->artisan('clients:payment-reminders')->assertSuccessful();
+        $this->assertSame(0, $sender->calls);
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/client/logout')->assertNoContent();
+        $this->assertDatabaseHas('client_push_devices', ['client_account_id' => $account->id, 'enabled' => false]);
+    }
+
     private function renewStaffFixturePasswords(array $fixture): void
     {
         // Long financial scenarios assume staff renewed their access during the elapsed weeks.
         // Rotation itself is covered by StaffPasswordRotationTest; middleware remains enabled here.
         foreach ($fixture as $value) {
-            if ($value instanceof User) $value->forceFill(['password_changed_at' => now()])->save();
+            if ($value instanceof User) {
+                $value->forceFill(['password_changed_at' => now()])->save();
+            }
         }
     }
 

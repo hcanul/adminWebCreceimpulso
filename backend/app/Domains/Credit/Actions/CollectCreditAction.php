@@ -145,6 +145,8 @@ final class CollectCreditAction
                     $loan->save();
                 }
 
+                // Transactional outbox: no notification leaves before the financial commit.
+                app(\App\Domains\Messages\Services\MessageWriter::class)->payment($v['id']);
                 return $loan;
             }, 3);
         } catch (UniqueConstraintViolationException $e) {

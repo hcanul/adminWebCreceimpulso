@@ -78,11 +78,16 @@ export const useAuthStore = defineStore('auth', () => {
     await restoreSession();
   }
   async function changePassword(current: string, password: string, confirmation: string) {
+    const attempt = generation;
     const result = await authService.changePassword(current, password, confirmation);
+    if (attempt !== generation) throw new Error('La sesión cambió. Vuelve a iniciar sesión.');
+    generation++;
     LocalStorage.set('access_token', result.token);
     token.value = result.token;
-    initialized.value = false;
-    await restoreSession();
+    user.value = result.user;
+    roles.value = result.roles;
+    initialized.value = true;
+    restoreFailed.value = false;
   }
   async function logout() {
     const currentToken = token.value;

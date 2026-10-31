@@ -223,7 +223,7 @@
         ><q-card-section
           ><h2>Historial de cobros</h2>
           <p>
-            El registro es permanente. Abre un pago para consultar o imprimir su comprobante QR.
+            El registro es permanente. Abre un pago para consultar su comprobante QR. La impresión se realiza en admin-web.
           </p>
           <p v-if="!data.payments.total" class="text-grey-7">
             Todavía no se han registrado pagos.

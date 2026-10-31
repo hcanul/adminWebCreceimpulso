@@ -48,7 +48,7 @@
           ><q-item-section avatar><q-icon :name="link.icon" /></q-item-section
           ><q-item-section>{{ link.label }}</q-item-section></q-item
         >
-        <q-item clickable to="/mi-acceso" @click="drawer = false">
+        <q-item clickable to="/mensajes"><q-item-section avatar><q-icon name="mail" /></q-item-section><q-item-section>Mis mensajes</q-item-section></q-item><q-item v-if="auth.can('messages.send')" clickable to="/mensajes/enviar"><q-item-section avatar><q-icon name="send" /></q-item-section><q-item-section>Enviar mensaje</q-item-section></q-item><q-item clickable to="/mi-acceso" @click="drawer = false">
           <q-item-section avatar><q-icon name="badge" /></q-item-section
           ><q-item-section>Mi acceso</q-item-section> </q-item
         ><q-item clickable to="/configuracion"

@@ -21,6 +21,7 @@ final class RequireClientAccount
                 return response()->json(['message' => 'Cambia tu contraseña temporal antes de continuar.', 'code' => 'password_change_required'], 423)->header('Cache-Control', 'no-store');
             }
         }
+
         return $next($request);
     }
 }

@@ -5,10 +5,19 @@ export default defineRouter(({ store }) => {
   const router = createRouter({
     history: createWebHashHistory(import.meta.env.QUASAR_VUE_ROUTER_BASE),
     routes: [
+      {
+        path: '/mensajes',
+        component: () => import('../pages/MessagesPage.vue'),
+        meta: { requiresAuth: true },
+      },
       { path: '/configuracion', component: () => import('../pages/ServerSettingsPage.vue') },
       { path: '/login', component: () => import('../pages/AccessPage.vue') },
       { path: '/activar', component: () => import('../pages/AccessPage.vue') },
-      { path: '/cambiar-contrasena', component: () => import('../pages/ChangePasswordPage.vue'), meta: { requiresAuth: true } },
+      {
+        path: '/cambiar-contrasena',
+        component: () => import('../pages/ChangePasswordPage.vue'),
+        meta: { requiresAuth: true },
+      },
       { path: '/', component: () => import('../pages/HomePage.vue'), meta: { requiresAuth: true } },
       { path: '/:pathMatch(.*)*', redirect: '/' },
     ],
@@ -22,7 +31,8 @@ export default defineRouter(({ store }) => {
         return '/login';
       }
       if (!auth.profile) return '/login';
-      if (auth.profile.must_change_password && to.path !== '/cambiar-contrasena') return '/cambiar-contrasena';
+      if (auth.profile.must_change_password && to.path !== '/cambiar-contrasena')
+        return '/cambiar-contrasena';
     }
     return true;
   });

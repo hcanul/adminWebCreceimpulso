@@ -23,6 +23,7 @@
         >
       </div>
     </section>
+    <q-btn class="q-mt-md" color="primary" outline icon="mail" label="Mis mensajes" to="/mensajes" />
     <PaymentReminders />
     <q-banner v-if="loading" class="q-mt-lg">Cargando tu información…</q-banner>
     <q-banner v-else-if="loadError" class="q-mt-lg"

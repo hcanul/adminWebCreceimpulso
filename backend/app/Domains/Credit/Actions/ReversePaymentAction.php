@@ -60,6 +60,8 @@ final class ReversePaymentAction
                     DB::table('loan_installments')->where('id', $change['id'])->update(['amount_paid' => $change['after']]);
                 }
                 DB::table('active_bank_payment_references')->where('credit_payment_id', $payment->id)->delete();
+                DB::table('app_messages')->where('payment_id', $payment->id)->where('kind', 'payment_received')
+                    ->whereNull('cancelled_at')->update(['cancelled_at' => now(), 'updated_at' => now()]);
                 if ($loan->status === 'pagado') {
                     $loan->status = 'entregado';
                     $loan->save();

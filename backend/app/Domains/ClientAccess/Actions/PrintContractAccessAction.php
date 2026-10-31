@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Domains\ClientAccess\Actions;
 
 use App\Domains\ClientAccess\Services\ClientAccess;
@@ -39,6 +40,7 @@ final class PrintContractAccessAction
                 $rows[] = ['name' => trim($client->first_name.' '.$client->last_name), 'folio' => $client->folio, 'password' => $password, 'expires' => $password ? $account->temporary_password_expires_at->timezone('America/Cancun')->format('d/m/Y H:i') : null];
             }
             $sheet = view('documents.client-access-sheet', ['rows' => $rows])->render();
+
             return str_replace('</body>', $sheet.'</body>', $document->html);
         }, 3);
     }

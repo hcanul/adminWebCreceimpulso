@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit bootstrap="vendor/autoload.php" colors="true">
-<testsuites><testsuite name="Intake"><file>tests/Feature/IntakeWorkflowTest.php</file><file>tests/Feature/AdministrationTest.php</file><file>tests/Feature/ClientActivationTest.php</file><file>tests/Feature/ClientSessionTest.php</file><file>tests/Feature/ClientDemoTest.php</file><file>tests/Feature/CreditWorkflowTest.php</file><file>tests/Unit/WeeklyLateFeeCalculatorTest.php</file></testsuite></testsuites>
+<testsuites><testsuite name="Intake"><file>tests/Feature/IntakeWorkflowTest.php</file><file>tests/Feature/AdministrationTest.php</file><file>tests/Feature/ClientActivationTest.php</file><file>tests/Feature/ClientSessionTest.php</file><file>tests/Feature/ClientDemoTest.php</file><file>tests/Feature/StaffPasswordRotationTest.php</file><file>tests/Feature/AppMessagesTest.php</file><file>tests/Feature/ClientContractAccessTest.php</file><file>tests/Feature/CreditWorkflowTest.php</file><file>tests/Unit/WeeklyLateFeeCalculatorTest.php</file></testsuite></testsuites>
 <php>
 <env name="APP_ENV" value="testing" force="true"/>
 <env name="APP_CONFIG_CACHE" value="/tmp/crece-intake-no-config-cache.php" force="true"/>

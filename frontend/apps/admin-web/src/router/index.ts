@@ -36,6 +36,7 @@ export default defineRouter(({ store }) => {
       !auth.roles.some((role) => ['Super Admin', 'Gerente General', 'Gerente'].includes(role))
     )
       return '/';
+    if (to.meta.messagesSend && !auth.can('messages.send')) return '/';
     if (to.meta.cash && !auth.can('cash.view')) return '/';
     if (to.meta.intake && !auth.can('intake.access')) return '/';
     if (to.meta.credit && !auth.can('credit.view')) return '/';

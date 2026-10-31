@@ -129,7 +129,7 @@
           >
           <p class="text-caption">
             Este comprobante conserva el historial del pago y su estado actual; no acredita la
-            liquidación de todo el crédito. Reimprimirlo no registra un nuevo pago.
+            liquidación de todo el crédito. Su consulta no registra un nuevo pago.
           </p>
         </div>
       </footer>

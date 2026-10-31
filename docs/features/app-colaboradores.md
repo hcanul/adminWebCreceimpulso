@@ -1,3 +1,5 @@
+> Estado actualizado: [entrega móvil 29/10/2026](cierre-moviles-2026-10-29.md). El texto posterior conserva el historial de etapas anteriores.
+
 # App de colaboradores — primera entrega
 
 Ubicación: `frontend/apps/staff-app`.

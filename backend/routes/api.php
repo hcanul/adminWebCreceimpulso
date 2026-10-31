@@ -144,3 +144,17 @@ Route::get('/client/connection', ClientConnectionController::class)->middleware(
 
 Route::get('/client/demo', [ClientDemoController::class, 'show'])->middleware(['auth:sanctum', RequireClientAccount::class]);
 Route::get('/client/demo-receipts/{receipt}', [ClientDemoController::class, 'receipt'])->name('client.demo.receipt')->middleware(['signed', 'throttle:30,1,demo-receipt']);
+
+Route::middleware(['auth:sanctum', RequireStaffAccount::class])->group(function () {
+    Route::get('/messages', [\App\Http\Controllers\Api\AppMessageController::class, 'inbox']);
+    Route::post('/messages/{id}/read', [\App\Http\Controllers\Api\AppMessageController::class, 'read'])->whereUuid('id');
+    Route::get('/messaging/recipients', [\App\Http\Controllers\Api\AppMessageController::class, 'recipients'])->middleware('throttle:60,1');
+    Route::post('/messaging/send', [\App\Http\Controllers\Api\AppMessageController::class, 'send'])->middleware('throttle:10,1');
+    Route::get('/push-device', [\App\Http\Controllers\Api\StaffPushController::class, 'show']);
+    Route::post('/push-device', [\App\Http\Controllers\Api\StaffPushController::class, 'store'])->middleware('throttle:20,1');
+    Route::delete('/push-device', [\App\Http\Controllers\Api\StaffPushController::class, 'destroy'])->middleware('throttle:20,1');
+});
+Route::middleware(['auth:sanctum', RequireClientAccount::class])->prefix('client')->group(function () {
+    Route::get('/messages', [\App\Http\Controllers\Api\AppMessageController::class, 'inbox']);
+    Route::post('/messages/{id}/read', [\App\Http\Controllers\Api\AppMessageController::class, 'read'])->whereUuid('id');
+});

@@ -4,17 +4,32 @@
       <q-card-section>
         <q-icon name="lock_reset" color="primary" size="40px" />
         <h1>Renueva tu contraseña</h1>
+        <p class="account-label">
+          Cuenta: <strong>{{ auth.user?.email }}</strong>
+        </p>
         <p>
           Por seguridad, la contraseña del personal vence cada 15 días. Usa una distinta de la
           actual y de la anterior.
         </p>
         <q-form class="q-gutter-y-md" @submit="save">
+          <input
+            :value="auth.user?.email"
+            type="text"
+            name="username"
+            autocomplete="username"
+            class="sr-only"
+            tabindex="-1"
+            aria-hidden="true"
+          />
           <q-input
             v-model="current"
             outlined
             stack-label
-            type="password"
+            :type="showPasswords ? 'text' : 'password'"
+            name="current_password"
             label="Contraseña actual"
+            hint="La misma con la que ingresas a esta cuenta."
+            @update:model-value="error = ''"
             autocomplete="current-password"
             :disable="busy"
             :rules="[(v: string) => !!v || 'Escribe la contraseña actual']"
@@ -23,7 +38,8 @@
             v-model="password"
             outlined
             stack-label
-            type="password"
+            :type="showPasswords ? 'text' : 'password'"
+            name="new_password"
             label="Nueva contraseña"
             autocomplete="new-password"
             :disable="busy"
@@ -37,12 +53,14 @@
             v-model="confirmation"
             outlined
             stack-label
-            type="password"
+            :type="showPasswords ? 'text' : 'password'"
+            name="password_confirmation"
             label="Confirma la nueva contraseña"
             autocomplete="new-password"
             :disable="busy"
             :rules="[(v: string) => v === password || 'Las contraseñas no coinciden']"
           />
+          <q-checkbox v-model="showPasswords" label="Mostrar contraseñas" :disable="busy" />
           <p v-if="error" role="alert" class="text-negative">{{ error }}</p>
           <q-btn
             type="submit"
@@ -55,7 +73,7 @@
           <q-btn
             flat
             no-caps
-            label="Cerrar sesión"
+            label="Salir e ingresar con otra cuenta"
             class="full-width"
             :disable="busy"
             @click="logout"
@@ -72,6 +90,7 @@ import axios from 'axios';
 import { useStaffAuth } from '../stores/auth';
 const auth = useStaffAuth(),
   router = useRouter();
+const showPasswords = ref(false);
 const current = ref(''),
   password = ref(''),
   confirmation = ref(''),
@@ -79,6 +98,10 @@ const current = ref(''),
   busy = ref(false);
 function message(e: unknown) {
   if (axios.isAxiosError(e)) {
+    if (e.response?.status === 429)
+      return 'Demasiados intentos. Espera un minuto y vuelve a intentar.';
+    if (e.response?.status === 401)
+      return 'Tu sesión terminó. Vuelve a ingresar con tu correo y contraseña.';
     const body = e.response?.data as { errors?: Record<string, string[]> } | undefined;
     return (
       Object.values(body?.errors || {})
@@ -100,6 +123,7 @@ async function save() {
     await router.replace('/');
   } catch (e) {
     error.value = message(e);
+    showPasswords.value = false;
   } finally {
     busy.value = false;
   }
@@ -111,12 +135,27 @@ async function logout() {
     await router.replace('/login');
   } catch (e) {
     error.value = message(e);
+    showPasswords.value = false;
   } finally {
     busy.value = false;
   }
 }
 </script>
 <style scoped>
+.account-label {
+  overflow-wrap: anywhere;
+  color: #555866;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+}
 .password-screen {
   min-height: 100dvh;
   display: grid;
