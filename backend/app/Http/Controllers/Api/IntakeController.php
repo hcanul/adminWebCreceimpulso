@@ -7,6 +7,7 @@ use App\Domains\Intake\Actions\LookupClientAction;
 use App\Domains\Intake\Actions\RegisterPromoterAction;
 use App\Domains\Intake\Actions\SaveApplicationAction;
 use App\Domains\Intake\Actions\SaveTeamAction;
+use App\Domains\Intake\Actions\SyncCorrectionAction;
 use App\Domains\Intake\DTOs\SaveApplicationData;
 use App\Domains\Intake\DTOs\SaveTeamData;
 use App\Domains\Intake\Rules\Curp;
@@ -116,6 +117,13 @@ final class IntakeController extends Controller
     public function applications(Request $request, IntakeAccess $access)
     {
         return response()->json(ClientApplication::whereIn('team_id', $access->teams($request->user())->select('id'))->with(['client:id,folio,curp,first_name,last_name', 'team:id,name'])->latest()->paginate(20, ['id', 'team_id', 'client_id', 'status', 'updated_at']));
+    }
+
+    public function syncCorrection(SaveApplicationRequest $request, SyncCorrectionAction $action)
+    {
+        $operation = $request->validate(['operation_id' => ['required', 'uuid']]);
+
+        return response()->json($action->execute($request->user(), SaveApplicationData::fromArray($request->validated()), $operation['operation_id']))->header('Cache-Control', 'no-store');
     }
 
     public function saveApplication(SaveApplicationRequest $request, SaveApplicationAction $action)

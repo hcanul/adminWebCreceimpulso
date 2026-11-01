@@ -34,16 +34,35 @@ final class AppMessageController extends Controller
         return response()->noContent();
     }
 
+    public function branches(Request $request, MessageAccess $access)
+    {
+        $actor = $request->user();
+        $access->authorizeSend($actor);
+        $q = DB::table('branches')->where('is_active', true)->whereNull('deleted_at');
+        if (! $actor->hasAnyRole(['Super Admin', 'Gerente General'])) {
+            $q->where('id', $actor->branch_id ?? '');
+        }
+
+        return response()->json(['data' => $q->orderBy('name')->get(['id', 'name'])])->header('Cache-Control', 'no-store');
+    }
+
     public function recipients(Request $request, MessageAccess $access)
     {
-        $v = $request->validate(['type' => ['required', 'in:client,staff'], 'search' => ['required', 'string', 'min:3', 'max:80']]);
+        $v = $request->validate(['type' => ['required', 'in:client,staff'], 'search' => ['required', 'string', 'min:1', 'max:80'], 'branch_id' => ['sometimes', 'uuid'], 'match' => ['sometimes', 'in:prefix']]);
         $q = $access->recipients($request->user(), $v['type']);
-        $term = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], trim($v['search'])).'%';
-        $q->where(function ($w) use ($v, $term) {
+        if (isset($v['branch_id'])) {
+            $q->where($v['type'] === 'client' ? 'c.branch_id' : 'a.branch_id', $v['branch_id']);
+        }
+        $prefix = ($v['match'] ?? null) === 'prefix';
+        $term = ($prefix ? '' : '%').str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower(trim($v['search']))).'%';
+        $q->where(function ($w) use ($v, $term, $prefix) {
             if ($v['type'] === 'client') {
-                $w->where('c.first_name', 'like', $term)->orWhere('c.last_name', 'like', $term)->orWhere('c.folio', 'like', $term);
+                $w->whereRaw('LOWER(c.first_name) LIKE ?', [$term]);
+                if (! $prefix) {
+                    $w->orWhereRaw('LOWER(c.last_name) LIKE ?', [$term])->orWhereRaw('LOWER(c.folio) LIKE ?', [$term]);
+                }
             } else {
-                $w->where('a.name', 'like', $term)->orWhere('a.email', 'like', $term);
+                $w->whereRaw('LOWER(a.name) LIKE ?', [$term])->orWhereRaw('LOWER(a.email) LIKE ?', [$term]);
             }
         });
 

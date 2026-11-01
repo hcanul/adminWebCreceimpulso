@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -30,8 +31,8 @@ final class IntakeWorkflowTest extends TestCase
     public function test_staff_session_returns_names_for_direct_and_role_permissions(): void
     {
         $user = $this->actor('Promotor');
-        $direct = \Spatie\Permission\Models\Permission::findOrCreate('intake.access', 'web');
-        $inherited = \Spatie\Permission\Models\Permission::findOrCreate('intake.submit', 'web');
+        $direct = Permission::findOrCreate('intake.access', 'web');
+        $inherited = Permission::findOrCreate('intake.submit', 'web');
         $user->givePermissionTo($direct);
         $user->roles->first()->givePermissionTo($inherited);
         $user->unsetRelation('roles');
@@ -89,6 +90,40 @@ final class IntakeWorkflowTest extends TestCase
     private function data(Team $team): array
     {
         return ['id' => (string) Str::uuid(), 'version' => 0, 'team_id' => $team->id, 'curp' => $this->curp(), 'confirm_existing' => false, 'submit' => false, 'fields' => ['pNombre' => 'Prueba', 'aPaterno' => 'Persona']];
+    }
+
+    public function test_offline_correction_retry_is_idempotent_and_cannot_overwrite_later_edits(): void
+    {
+        $actor = $this->actor();
+        $team = $this->team($actor);
+        $data = $this->data($team);
+        $saved = $this->postJson('/api/intake/client-files', $data)->assertOk()->json();
+        $data = array_merge($data, ['version' => $saved['version'], 'client_id' => $saved['client']['id'], 'client_version' => $saved['client']['version'], 'confirm_existing' => true, 'operation_id' => (string) Str::uuid()]);
+        $data['fields']['pNombre'] = 'Corregida';
+        $url = '/api/intake/offline/corrections';
+        $synced = $this->postJson($url, $data)->assertOk()->assertJsonPath('version', 2)->json();
+        $this->postJson($url, $data)->assertOk()->assertJsonPath('version', 2);
+        $this->assertDatabaseCount('offline_correction_operations', 1);
+        $this->assertDatabaseCount('application_revisions', 2);
+        $changed = $data;
+        $changed['fields']['pNombre'] = 'Otra';
+        $this->postJson($url, $changed)->assertConflict();
+        $changed['version'] = $synced['version'];
+        $changed['client_version'] = $synced['client']['version'];
+        $this->postJson('/api/intake/client-files', $changed)->assertOk();
+        $this->postJson($url, $data)->assertConflict();
+        $this->actor('Gerente');
+        $this->postJson($url, $data)->assertNotFound();
+    }
+
+    public function test_offline_corrections_reject_new_files_and_submission(): void
+    {
+        $actor = $this->actor();
+        $data = $this->data($this->team($actor));
+        $data['operation_id'] = (string) Str::uuid();
+        $this->postJson('/api/intake/offline/corrections', $data)->assertUnprocessable();
+        $this->assertDatabaseCount('offline_correction_operations', 0);
+        $this->assertDatabaseCount('client_applications', 0);
     }
 
     public function test_document_versions_preserve_fields_and_signed_files_with_scoped_access(): void

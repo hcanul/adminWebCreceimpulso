@@ -1,8 +1,8 @@
 {
   "name": "staff-app",
   "version": "0.0.1",
-  "description": "Aplicaci\u00f3n de campo para colaboradores de Crece Impulso",
-  "productName": "Crece Impulso \u00b7 Colaboradores",
+  "description": "Aplicación de campo para colaboradores de Crece Impulso",
+  "productName": "Crece Impulso · Colaboradores",
   "author": "hugoCanul <hcanul@avantronics.com.mx>",
   "type": "module",
   "private": true,
@@ -18,21 +18,23 @@
     "android:apk": "node scripts/build-android-demo.mjs"
   },
   "dependencies": {
+    "@aparajita/capacitor-secure-storage": "^8.0.1",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/push-notifications": "^8.1.3",
     "@quasar/extras": "^2.1.0",
     "axios": "^1.20.0",
     "pinia": "^4.0.2",
+    "qrcode": "1.5.4",
     "quasar": "^2.34.0",
     "sweetalert2": "^11.26.25",
     "vue": "^3.5.22",
-    "vue-router": "^5.0.6",
-    "qrcode": "1.5.4",
-    "@capacitor/core": "^8.5.3",
-    "@capacitor/push-notifications": "^8.1.3"
+    "vue-router": "^5.0.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@quasar/app-vite": "^3.10.1",
     "@types/node": "^22.19.11",
+    "@types/qrcode": "1.5.6",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.7.0",
     "autoprefixer": "^10.4.27",
@@ -44,8 +46,7 @@
     "typescript": "^6.0.0",
     "vite-plugin-checker": "^0.14.5",
     "vue-eslint-parser": "^10.4.0",
-    "vue-tsc": "^3.3.3",
-    "@types/qrcode": "1.5.6"
+    "vue-tsc": "^3.3.3"
   },
   "keywords": [
     "quasar",

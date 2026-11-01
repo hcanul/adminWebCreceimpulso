@@ -24,7 +24,7 @@ Tokens y cuerpo de mensajes se cifran con `APP_KEY`. Los títulos no se cifran. 
 
 ## Firebase para Android
 
-Proyecto previsto/creado en Google Cloud: `creceimpulso-apps-2026` (Crece Impulso Apps). Si Firebase responde 403 al añadirlo, revisar las condiciones de primer uso en su consola y permisos. No crear otro proyecto para resolverlo.
+Proyecto activado en Firebase: `creceimpulso-apps-2026` (Crece Impulso Apps). Si Firebase responde 403 al añadirlo, revisar las condiciones de primer uso en su consola y permisos. No crear otro proyecto para resolverlo.
 
 Registrar en el mismo proyecto:
 
@@ -71,3 +71,15 @@ En el servidor desplegado, ejecutar `php artisan schedule:run` cada minuto, desd
 Después de configurar el proveedor: registro Android/iOS, permiso denegado, app abierta/en segundo plano/cerrada, toque que abre Mis mensajes, cierre de sesión, cambio de contraseña y mensaje propio entre sucursales autorizadas. El proveedor puede retrasar los avisos; el estado de cuenta sigue siendo la fuente del saldo.
 
 Fuentes: [precios Firebase](https://firebase.google.com/pricing), [FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api), [Capacitor Push](https://capacitorjs.com/docs/apis/push-notifications), [Firebase en proyecto existente](https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project).
+
+## Configuración local realizada el 31 de octubre
+
+Ambas aplicaciones Android están registradas en `creceimpulso-apps-2026`. Se descargaron sus configuraciones a los proyectos nativos. La cuenta de servicio dedicada `crece-push-sender` tiene el rol de envío FCM y su clave privada está fuera del repositorio, con acceso limitado al usuario local. Google Cloud informa facturación deshabilitada. La verificación final del proveedor y los instaladores se documentan en el paquete de muestras.
+
+Se preparó el agente local `com.creceimpulso.messages-dev` para ejecutar el calendario una vez por minuto mientras la sesión de la Mac esté activa. El backend y la base de datos deben estar disponibles. Esto no sustituye el servicio programado del servidor de producción.
+
+Verificación del 31 de octubre completada: proyecto Firebase ACTIVE; facturación deshabilitada; validación FCM del backend aceptada con `validate_only=true`; ambas APK compiladas y firmas verificadas. Configuración Firebase comprobada dentro de cada APK. Paquete: `~/Downloads/Crece-Firebase-2026-10-31`. Pendiente recepción en Android físico y configuración APNs/firma para iPhone.
+
+## Registro de aplicaciones iPhone
+
+El 31 de octubre se registraron en el mismo proyecto Firebase las apps iOS `com.creceimpulso.clientes` y `com.creceimpulso.colaboradores`, y se descargó cada `GoogleService-Info.plist` a su carpeta nativa local. Esto es el registro de Firebase, no una habilitación de entrega push. El titular confirmó que continúa usando Apple Personal Team gratuito. Quedan pendientes la membresía que habilita Push Notifications, las credenciales APNs, los perfiles adecuados y la integración nativa FCM para enviar también iOS por Firebase. La versión actual conserva el transporte APNs directo preparado; no se intercambian tokens APNs por tokens FCM. Las bandejas y el envío personalizado desde Admin Web funcionan independientemente del proveedor push.

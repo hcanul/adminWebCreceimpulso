@@ -78,6 +78,28 @@ final class AppMessagesTest extends TestCase
         $this->withToken($other->createToken('other', ['client:read'])->plainTextToken)->postJson('/api/client/messages/'.DB::table('app_messages')->value('id').'/read')->assertNotFound();
     }
 
+    public function test_recipient_prefix_search_and_branches_respect_sender_scope(): void
+    {
+        $a = $this->account();
+        $b = $this->account();
+        $a->client->update(['first_name' => 'María']);
+        $b->client->update(['first_name' => 'Marta']);
+        $manager = User::factory()->create(['branch_id' => $a->client->branch_id]);
+        $manager->assignRole('Gerente');
+        $this->withToken($manager->createToken('manager')->plainTextToken);
+        $this->getJson('/api/messaging/branches')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $manager->branch_id);
+        $query = '/api/messaging/recipients?type=client&match=prefix&search=m&branch_id=';
+        $this->getJson($query.$manager->branch_id)->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $a->id);
+        $this->getJson($query.$b->client->branch_id)->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson(str_replace('search=m', 'search=ar', $query).$manager->branch_id)->assertOk()->assertJsonCount(0, 'data');
+        $admin = User::factory()->create();
+        $admin->assignRole('Super Admin');
+        app('auth')->forgetGuards();
+        $this->withToken($admin->createToken('admin')->plainTextToken);
+        $this->getJson($query.$b->client->branch_id)->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $b->id);
+        $this->getJson('/api/messaging/recipients?type=client&search=m&branch_id=invalid')->assertUnprocessable();
+    }
+
     public function test_custom_messages_require_permission_scope_and_idempotent_payload(): void
     {
         $a = $this->account();

@@ -248,7 +248,7 @@ async function save() {
     const own = editingId.value === auth.user?.id;
     close();
     if (own) {
-      auth.clear();
+      await auth.clear();
       await router.replace('/login');
       void alerts.success('Cuenta actualizada. Inicia sesión nuevamente.');
     } else {

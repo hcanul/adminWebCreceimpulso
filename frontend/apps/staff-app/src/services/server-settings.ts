@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { removeSession } from './session';
 import { normalizeServerAddress } from './server-address';
 export const serverKey = 'crece.staff.server';
 export const defaultServer = import.meta.env.QCLI_API_URL || 'http://localhost:8000/api';
@@ -13,13 +14,14 @@ export function getServerAddress(): string {
   }
   return defaultServer;
 }
-export function saveServerAddress(value: string): void {
+export async function saveServerAddress(value: string): Promise<void> {
   const normalized = normalizeServerAddress(value);
+  await removeSession();
   localStorage.setItem(serverKey, normalized);
   if (localStorage.getItem(serverKey) !== normalized)
     throw new Error('No se pudo persistir el servidor');
   // Session and in-memory data belong exclusively to the previous server.
-  sessionStorage.removeItem('crece.staff.session');
+
   window.location.hash = '/login';
   window.location.reload();
 }

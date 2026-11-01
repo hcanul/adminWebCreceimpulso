@@ -137,7 +137,6 @@ export default defineRouter(({ store }) => {
     try {
       await auth.restore();
     } catch {
-      auth.clear();
       return '/login';
     }
     if (!auth.user) return '/login';

@@ -1,3 +1,5 @@
+> Actualización del 31/10: sesión nativa protegida implementada; ver `sesion-movil-segura.md` y `prioridades-cierre-2026-10-31.md`. El texto siguiente conserva el estado histórico de la entrega.
+
 # Entrega móvil — 29 de octubre de 2026
 
 ## Cliente

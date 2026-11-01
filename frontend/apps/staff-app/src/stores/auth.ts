@@ -11,7 +11,7 @@ import { computed, ref } from 'vue';
 import { authService, type StaffUser } from '../services/auth.service';
 import { useIntakeStore } from './intake.store';
 import { useAdministrationStore } from './administration.store';
-import { sessionKey } from '../services/http';
+import { readSession, writeSession, removeSession } from '../services/session';
 export const useStaffAuth = defineStore('staff-auth', () => {
   const user = ref<StaffUser | null>(null);
   const roles = computed(() => user.value?.roles?.map((role) => role.name) || []);
@@ -24,7 +24,9 @@ export const useStaffAuth = defineStore('staff-auth', () => {
   function can(permission: string) {
     return roles.value.includes('Super Admin') || !!user.value?.permissions?.includes(permission);
   }
-  function clear() {
+  let generation = 0;
+  async function clear() {
+    generation++;
     useCreditStore().clear();
     useCashStore().clear();
     useAuthorizationStore().clear();
@@ -37,38 +39,39 @@ export const useStaffAuth = defineStore('staff-auth', () => {
     useIntakeStore().clear();
     useAdministrationStore().clear();
     user.value = null;
-    sessionStorage.removeItem(sessionKey);
+    await removeSession();
   }
-  window.addEventListener('staff-session-expired', clear);
+  window.addEventListener('staff-session-expired', () => {
+    void clear().catch(() => undefined);
+  });
   async function restore() {
-    if (!sessionStorage.getItem(sessionKey)) {
+    const attempt = generation;
+    if (!(await readSession())) {
       user.value = null;
       return;
     }
-    user.value = await authService.me();
+    const restored = await authService.me();
+    if (attempt === generation) user.value = restored;
   }
   async function login(email: string, password: string) {
-    clear();
+    await clear();
     const result = await authService.login(email, password);
-    sessionStorage.setItem(sessionKey, result.token);
+    await writeSession(result.token);
     try {
       await restore();
     } catch (error) {
-      clear();
+      await clear();
       throw error;
     }
   }
   async function changePassword(current: string, password: string, confirmation: string) {
     const result = await authService.changePassword(current, password, confirmation);
-    sessionStorage.setItem(sessionKey, result.token);
+    await writeSession(result.token);
     user.value = result.user;
   }
   async function logout() {
-    try {
-      await authService.logout();
-    } finally {
-      clear();
-    }
+    await authService.logout();
+    await clear();
   }
   return {
     user,

@@ -2,6 +2,7 @@ import { getServerAddress } from './server-settings';
 import { intakeService, type SaveApplication, type Team } from './intake.service';
 import type { StaffUser } from './auth.service';
 export interface OfflineRecord {
+  operationId?: string;
   id: string;
   name: string;
   group: string;

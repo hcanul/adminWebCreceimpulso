@@ -131,6 +131,14 @@ export const intakeService = {
   async applications(page = 1) {
     return (await api.get<Page<Application>>('/intake/client-files', { params: { page } })).data;
   },
+  async syncCorrection(data: SaveApplication, operationId: string) {
+    return (
+      await api.post<Application>('/intake/offline/corrections', {
+        ...data,
+        operation_id: operationId,
+      })
+    ).data;
+  },
   async saveApplication(data: SaveApplication) {
     return (await api.post<Application>('/intake/client-files', data)).data;
   },

@@ -74,6 +74,15 @@
             @click="edit(record)"
           />
           <q-btn
+            v-if="record.message.startsWith('Conflicto:')"
+            flat
+            no-caps
+            color="primary"
+            label="Revisar conflicto con oficina"
+            :disable="busy"
+            @click="reviewConflict(record)"
+          />
+          <q-btn
             flat
             no-caps
             label="Eliminar copia local"
@@ -81,6 +90,54 @@
             @click="remove(record)"
           /> </q-card-section
       ></q-card>
+      <q-dialog v-model="reviewing" persistent>
+        <q-card style="width: 850px; max-width: 95vw">
+          <q-card-section
+            ><h2>Conciliar con oficina</h2>
+            <p>
+              Elige qué valor conservar en cada diferencia. Esto prepara una nueva corrección local;
+              todavía no modifica el servidor.
+            </p>
+            <q-markup-table flat wrap-cells
+              ><thead>
+                <tr>
+                  <th>Campo</th>
+                  <th>En dispositivo</th>
+                  <th>En oficina</th>
+                  <th>Conservar</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="diff in differences" :key="diff.name">
+                  <td>{{ diff.label }}</td>
+                  <td>{{ diff.local || 'Sin dato' }}</td>
+                  <td>{{ diff.remote || 'Sin dato' }}</td>
+                  <td>
+                    <q-option-group
+                      v-model="choices[diff.name]"
+                      :options="[
+                        { label: 'Dispositivo', value: 'local' },
+                        { label: 'Oficina', value: 'remote' },
+                      ]"
+                    />
+                  </td>
+                </tr></tbody
+            ></q-markup-table>
+            <p v-if="!differences.length">
+              No hay diferencias en los campos editables. Puedes actualizar tu copia con la versión
+              de oficina.
+            </p>
+          </q-card-section>
+          <q-card-actions align="right"
+            ><q-btn flat label="Cancelar" :disable="busy" @click="closeReview" /><q-btn
+              color="primary"
+              label="Guardar conciliación local"
+              :loading="busy"
+              :disable="differences.some((d) => !choices[d.name])"
+              @click="applyReview"
+          /></q-card-actions>
+        </q-card>
+      </q-dialog>
       <q-dialog v-model="editing" persistent
         ><q-card style="width: 650px; max-width: 95vw"
           ><q-card-section
@@ -148,7 +205,7 @@ import {
   type OfflineRecord,
 } from '../services/offline-vault';
 import { useStaffAuth } from '../stores/auth';
-import { intakeService, intakeError } from '../services/intake.service';
+import { intakeService, intakeError, type Lookup } from '../services/intake.service';
 import { alerts } from '../services/alerts.service';
 const auth = useStaffAuth(),
   vault = shallowRef<Vault | null>(null),
@@ -163,6 +220,94 @@ const auth = useStaffAuth(),
 const fields = schema.filter(
   (f) => !['curp', 'team_id', 'city_id', 'promoter_id', 'ncliente', 'nCredito'].includes(f.name),
 );
+const reviewing = ref(false);
+const reviewedRecord = shallowRef<OfflineRecord | null>(null);
+const remoteReview = ref<Lookup | null>(null);
+const choices = ref<Record<string, string>>({});
+const differences = computed(() =>
+  fields
+    .map((f) => ({
+      name: f.name,
+      label: f.label,
+      local: reviewedRecord.value?.payload.fields[f.name] ?? '',
+      remote: remoteReview.value?.application?.fields[f.name] ?? '',
+    }))
+    .filter((d) => d.local !== d.remote),
+);
+function closeReview() {
+  reviewing.value = false;
+  reviewedRecord.value = null;
+  remoteReview.value = null;
+  choices.value = {};
+}
+async function reviewConflict(record: OfflineRecord) {
+  if (!vault.value || busy.value) return;
+  busy.value = true;
+  error.value = '';
+  try {
+    await auth.restore();
+    if (!auth.user || !auth.canIntake || scopeFor(auth.user) !== vault.value.id)
+      throw new Error('Inicia sesión con la cuenta que preparó este espacio.');
+    const remote = await intakeService.lookup(record.payload.curp, record.payload.team_id);
+    if (
+      !remote.can_edit ||
+      remote.client?.id !== record.payload.client_id ||
+      !remote.client.version ||
+      remote.application?.id !== record.id ||
+      remote.application.status !== 'borrador'
+    )
+      throw new Error(
+        'El expediente ya no se puede conciliar como borrador. Consulta con oficina; tu copia se conserva.',
+      );
+    reviewedRecord.value = record;
+    remoteReview.value = remote;
+    choices.value = {};
+    reviewing.value = true;
+  } catch (e) {
+    error.value = message(e);
+  } finally {
+    busy.value = false;
+  }
+}
+async function applyReview() {
+  if (
+    !vault.value ||
+    !reviewedRecord.value ||
+    !remoteReview.value?.application ||
+    !remoteReview.value.client?.version ||
+    busy.value ||
+    differences.value.some((d) => !choices.value[d.name])
+  )
+    return;
+  busy.value = true;
+  const record = reviewedRecord.value,
+    before = structuredClone(record),
+    remote = remoteReview.value;
+  try {
+    const merged = { ...remote.application!.fields };
+    for (const diff of differences.value)
+      if (choices.value[diff.name] === 'local')
+        merged[diff.name] = record.payload.fields[diff.name] ?? null;
+    record.payload = {
+      ...record.payload,
+      fields: merged,
+      version: remote.application!.version,
+      client_version: remote.client!.version,
+      submit: false,
+    };
+    record.operationId = crypto.randomUUID();
+    record.pending = true;
+    record.message = 'Conciliado en dispositivo; pendiente de sincronizar';
+    await persistVault(vault.value);
+    vault.value = { ...vault.value };
+    closeReview();
+  } catch (e) {
+    Object.assign(record, before);
+    error.value = message(e);
+  } finally {
+    busy.value = false;
+  }
+}
 const sections = computed(() => [...new Set(fields.map((f) => f.section))]);
 async function unlock() {
   busy.value = true;
@@ -180,6 +325,7 @@ function message(e: unknown) {
   return e instanceof Error ? e.message : 'No se pudo completar la operación.';
 }
 function lock() {
+  closeReview();
   vault.value = null;
   values.value = {};
   editing.value = false;
@@ -210,6 +356,7 @@ async function save() {
   try {
     r.payload.fields = { ...values.value };
     r.pending = true;
+    r.operationId = crypto.randomUUID();
     r.message = 'Pendiente de sincronizar';
     await persistVault(vault.value);
     editing.value = false;
@@ -261,8 +408,16 @@ async function sync() {
         'Inicia sesión con la cuenta que preparó estos expedientes y conserva su sucursal y servidor.',
       );
     for (const r of vault.value.data.records.filter((x) => x.pending)) {
+      let before: OfflineRecord | undefined;
       try {
-        const result = await intakeService.saveApplication({ ...r.payload, submit: false });
+        if (!r.operationId) r.operationId = crypto.randomUUID();
+        // The operation must be durable before any request, including after a failed local write.
+        await persistVault(vault.value);
+        before = structuredClone(r);
+        const result = await intakeService.syncCorrection(
+          { ...r.payload, submit: false },
+          r.operationId,
+        );
         r.payload = {
           ...r.payload,
           version: result.version,
@@ -271,7 +426,9 @@ async function sync() {
         };
         r.pending = false;
         r.message = 'Sincronizado';
+        await persistVault(vault.value);
       } catch (e) {
+        if (before) Object.assign(r, before);
         const code = axios.isAxiosError(e) ? e.response?.status : undefined;
         r.message =
           code === 409
@@ -281,7 +438,6 @@ async function sync() {
         if (!code || [401, 403].includes(code)) break;
         continue;
       }
-      await persistVault(vault.value);
     }
     vault.value = { ...vault.value };
   } catch (e) {
@@ -291,7 +447,7 @@ async function sync() {
   }
 }
 function beforeUnload(e: BeforeUnloadEvent) {
-  if (editing.value || busy.value) {
+  if (editing.value || reviewing.value || busy.value) {
     e.preventDefault();
     e.returnValue = '';
   }
@@ -299,7 +455,7 @@ function beforeUnload(e: BeforeUnloadEvent) {
 onBeforeRouteLeave(
   async () =>
     !busy.value &&
-    (!editing.value ||
+    (!(editing.value || reviewing.value) ||
       (await alerts.confirm(
         'Cambios sin guardar',
         'Guarda en el dispositivo antes de salir para conservar la edición.',

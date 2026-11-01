@@ -10,40 +10,68 @@
         v-model="type"
         :options="[
           { label: 'Cliente', value: 'client' },
-          { label: 'Personal', value: 'staff' },
+          { label: 'Colaboradores', value: 'staff' },
         ]"
         :disable="busy"
         no-caps
         toggle-color="primary"
       />
-      <q-input
-        v-model="search"
-        label="Buscar por nombre, folio o correo"
+      <q-select
+        v-model="branch"
+        :options="branchOptions"
+        option-label="name"
+        use-input
+        clearable
         outlined
-        debounce="350"
-        :disable="busy"
-        hint="Escribe al menos 3 caracteres; se muestran hasta 20 coincidencias."
-      />
-      <q-linear-progress v-if="searching" indeterminate />
-      <q-list bordered separator v-if="options.length"
-        ><q-item
-          v-for="r in options"
-          :key="r.id"
-          clickable
-          :active="recipient?.id === r.id"
-          :disable="busy"
-          @click="recipient = r"
-          ><q-item-section
-            ><q-item-label>{{ r.name }}</q-item-label
-            ><q-item-label caption
-              >{{ r.identifier }} · {{ r.branch || 'Acceso general' }}</q-item-label
-            ></q-item-section
-          ><q-item-section side
-            ><q-icon
-              v-if="recipient?.id === r.id"
-              name="check_circle"
-              color="primary" /></q-item-section></q-item
-      ></q-list>
+        label="Sucursal"
+        :loading="loadingBranches"
+        :disable="busy || loadingBranches"
+        :rules="[(v) => type !== 'client' || !!v || 'Selecciona una sucursal']"
+        @filter="filterBranches"
+      >
+        <template #no-option
+          ><q-item
+            ><q-item-section>No hay sucursales disponibles.</q-item-section></q-item
+          ></template
+        >
+      </q-select>
+      <q-btn v-if="branchError" flat label="Reintentar carga de sucursales" @click="loadBranches" />
+      <q-select
+        v-model="recipient"
+        :options="options"
+        option-label="name"
+        use-input
+        fill-input
+        hide-selected
+        clearable
+        outlined
+        :input-debounce="350"
+        :label="type === 'client' ? 'Cliente' : 'Colaborador'"
+        :disable="busy || (type === 'client' && !branch)"
+        :loading="searching"
+        hint="Escribe desde la primera letra del nombre. Hasta 20 coincidencias; escribe más letras para precisar."
+        @filter="filterRecipients"
+        @filter-abort="cancelSearch"
+      >
+        <template #option="scope"
+          ><q-item v-bind="scope.itemProps"
+            ><q-item-section
+              ><q-item-label>{{ scope.opt.name }}</q-item-label
+              ><q-item-label caption
+                >{{ scope.opt.identifier }} ·
+                {{ scope.opt.branch || 'Acceso general' }}</q-item-label
+              ></q-item-section
+            ></q-item
+          ></template
+        >
+        <template #no-option
+          ><q-item
+            ><q-item-section
+              >Escribe el inicio del nombre o prueba con otras letras.</q-item-section
+            ></q-item
+          ></template
+        >
+      </q-select>
       <p v-if="recipient"><b>Para:</b> {{ recipient.name }} · {{ recipient.identifier }}</p>
       <q-input
         v-model="title"
@@ -81,7 +109,8 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue';
+import { ref, watch, onUnmounted, onMounted } from 'vue';
+import { useAuthStore } from '../stores/auth.store';
 import Swal from 'sweetalert2';
 import { api } from '../services/http';
 interface Recipient {
@@ -91,7 +120,6 @@ interface Recipient {
   branch: string | null;
 }
 const type = ref<'client' | 'staff'>('client'),
-  search = ref(''),
   title = ref(''),
   body = ref(''),
   recipient = ref<Recipient | null>(null),
@@ -99,39 +127,93 @@ const type = ref<'client' | 'staff'>('client'),
   busy = ref(false),
   searching = ref(false),
   error = ref('');
+interface Branch {
+  id: string;
+  name: string;
+}
+const auth = useAuthStore();
+const branch = ref<Branch | null>(null),
+  branches = ref<Branch[]>([]),
+  branchOptions = ref<Branch[]>([]),
+  loadingBranches = ref(false),
+  branchError = ref(false);
+async function loadBranches() {
+  loadingBranches.value = true;
+  branchError.value = false;
+  try {
+    const { data } = await api.get<{ data: Branch[] }>('/messaging/branches');
+    branches.value = data.data;
+    branchOptions.value = data.data;
+    branch.value =
+      data.data.find((b) => b.id === auth.user?.branch_id) ??
+      (data.data.length === 1 ? data.data[0]! : null);
+    error.value = '';
+  } catch {
+    branchError.value = true;
+    error.value = 'No fue posible cargar las sucursales. Reintenta la consulta.';
+  } finally {
+    loadingBranches.value = false;
+  }
+}
+function filterBranches(value: string, update: (fn: () => void) => void) {
+  update(() => {
+    branchOptions.value = branches.value.filter((b) =>
+      b.name.toLocaleLowerCase().includes(value.trim().toLocaleLowerCase()),
+    );
+  });
+}
+onMounted(loadBranches);
 let version = 0,
   requestId = crypto.randomUUID();
 watch([type, title, body, recipient], () => {
   requestId = crypto.randomUUID();
 });
-watch(type, () => {
-  search.value = '';
+function cancelSearch() {
+  version++;
+  searching.value = false;
+}
+watch([type, branch], () => {
   recipient.value = null;
   options.value = [];
-  version++;
+  cancelSearch();
 });
-watch(search, async (value) => {
+async function filterRecipients(
+  value: string,
+  update: (fn: () => void) => void,
+  abort: () => void,
+) {
   const current = ++version;
   recipient.value = null;
   options.value = [];
-  if (value.trim().length < 3) {
+  if (!value.trim() || (type.value === 'client' && !branch.value)) {
     searching.value = false;
+    abort();
     return;
   }
   searching.value = true;
   error.value = '';
   try {
     const { data } = await api.get<{ data: Recipient[] }>('/messaging/recipients', {
-      params: { type: type.value, search: value.trim() },
+      params: {
+        type: type.value,
+        search: value.trim(),
+        match: 'prefix',
+        ...(branch.value ? { branch_id: branch.value.id } : {}),
+      },
     });
-    if (current === version) options.value = data.data;
-  } catch {
     if (current === version)
+      update(() => {
+        options.value = data.data;
+      });
+  } catch {
+    if (current === version) {
       error.value = 'No fue posible buscar destinatarios. Revisa conexión y permisos.';
+      abort();
+    }
   } finally {
     if (current === version) searching.value = false;
   }
-});
+}
 onUnmounted(() => version++);
 async function send() {
   if (!recipient.value || busy.value) return;

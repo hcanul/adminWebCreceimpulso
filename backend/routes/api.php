@@ -44,6 +44,7 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class])->group(function 
 Route::middleware(['auth:sanctum', RequireStaffAccount::class, RequireIntakeAccess::class])->prefix('intake')->group(function () {
     $controller = IntakeController::class;
     Route::get('/options', [$controller, 'options']);
+    Route::post('/offline/corrections', [$controller, 'syncCorrection'])->middleware('throttle:60,1');
     Route::post('/promoters', [$controller, 'registerPromoter']);
     Route::get('/team-search', [$controller, 'searchTeams'])->middleware('throttle:120,1');
     Route::get('/teams', [$controller, 'teams']);
@@ -149,6 +150,7 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class])->group(function 
     Route::get('/messages', [\App\Http\Controllers\Api\AppMessageController::class, 'inbox']);
     Route::post('/messages/{id}/read', [\App\Http\Controllers\Api\AppMessageController::class, 'read'])->whereUuid('id');
     Route::get('/messaging/recipients', [\App\Http\Controllers\Api\AppMessageController::class, 'recipients'])->middleware('throttle:60,1');
+    Route::get('/messaging/branches', [\App\Http\Controllers\Api\AppMessageController::class, 'branches'])->middleware('throttle:60,1');
     Route::post('/messaging/send', [\App\Http\Controllers\Api\AppMessageController::class, 'send'])->middleware('throttle:10,1');
     Route::get('/push-device', [\App\Http\Controllers\Api\StaffPushController::class, 'show']);
     Route::post('/push-device', [\App\Http\Controllers\Api\StaffPushController::class, 'store'])->middleware('throttle:20,1');

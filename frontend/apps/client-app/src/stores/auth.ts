@@ -1,30 +1,36 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { authService, type ClientProfile } from '../services/auth.service';
-import { sessionKey } from '../services/http';
+import { readSession, writeSession, removeSession } from '../services/session';
 export const useClientAuth = defineStore('client-auth', () => {
   const profile = ref<ClientProfile | null>(null);
-  function clear() {
-    sessionStorage.removeItem(sessionKey);
+  let generation = 0;
+  async function clear() {
+    generation++;
     profile.value = null;
+    await removeSession();
   }
-  window.addEventListener('client-session-expired', clear);
+  window.addEventListener('client-session-expired', () => {
+    void clear().catch(() => undefined);
+  });
   async function restore() {
-    if (!sessionStorage.getItem(sessionKey)) {
+    const attempt = generation;
+    if (!(await readSession())) {
       profile.value = null;
       return;
     }
-    profile.value = await authService.me();
+    const restored = await authService.me();
+    if (attempt === generation) profile.value = restored;
   }
   async function login(identifier: string, password: string) {
-    clear();
+    await clear();
     const result = await authService.login(identifier, password);
-    sessionStorage.setItem(sessionKey, result.token);
+    await writeSession(result.token);
     await restore();
   }
   async function logout() {
     await authService.logout();
-    clear();
+    await clear();
   }
   return { profile, restore, login, logout, clear };
 });

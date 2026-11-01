@@ -1,22 +1,28 @@
 import axios from 'axios';
 import { getServerAddress } from './server-settings';
-export const sessionKey = 'crece.client.session';
+export { sessionKey } from './session';
+import { readSession, removeSession } from './session';
 export const api = axios.create({
   baseURL: getServerAddress(),
   timeout: 15000,
   headers: { Accept: 'application/json' },
 });
-api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem(sessionKey);
+api.interceptors.request.use(async (config) => {
+  const token = await readSession();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 api.interceptors.response.use(
   (response) => response,
-  (error: unknown) => {
+  async (error: unknown) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      sessionStorage.removeItem(sessionKey);
-      window.dispatchEvent(new Event('client-session-expired'));
+      const sent = error.config?.headers.Authorization;
+      if (
+        typeof sent === 'string' &&
+        sent.startsWith('Bearer ') &&
+        (await removeSession(sent.slice(7)))
+      )
+        window.dispatchEvent(new Event('client-session-expired'));
     }
     return Promise.reject(error instanceof Error ? error : new Error('Error de conexión'));
   },

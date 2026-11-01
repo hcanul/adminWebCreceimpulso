@@ -59,6 +59,10 @@ const assert = require('node:assert/strict');
           },
         });
       }
+      if (p.endsWith('/messaging/branches'))
+        return r.fulfill({
+          json: { data: [{ id: '44444444-4444-4444-8444-444444444444', name: 'Prueba' }] },
+        });
       if (p.endsWith('/messaging/recipients'))
         return r.fulfill({
           json: {
@@ -123,7 +127,7 @@ const assert = require('node:assert/strict');
     await page.getByRole('button', { name: 'Marcar leído' }).click();
     await page.getByRole('button', { name: 'Marcar leído' }).waitFor({ state: 'detached' });
     await page.goto('http://localhost:9001/#/mensajes/enviar');
-    await page.getByLabel('Buscar por nombre, folio o correo', { exact: true }).fill('Cliente');
+    await page.getByRole('combobox', { name: 'Cliente', exact: true }).fill('Cliente');
     await page.getByText('Cliente QA', { exact: true }).click();
     await page.getByLabel('Asunto', { exact: true }).fill('Aviso de prueba');
     await page.getByLabel('Mensaje', { exact: true }).fill('Acude a sucursal.');

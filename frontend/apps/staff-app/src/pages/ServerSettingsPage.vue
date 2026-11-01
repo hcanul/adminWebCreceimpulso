@@ -137,7 +137,7 @@ async function save() {
   if (!confirmation.isConfirmed) return;
   saving.value = true;
   try {
-    saveServerAddress(normalized);
+    await saveServerAddress(normalized);
   } catch {
     await Swal.fire({
       icon: 'error',

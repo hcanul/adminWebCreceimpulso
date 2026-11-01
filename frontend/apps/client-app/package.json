@@ -19,6 +19,7 @@
     "android:apk": "node scripts/build-android-demo.mjs"
   },
   "dependencies": {
+    "@aparajita/capacitor-secure-storage": "^8.0.1",
     "@capacitor/core": "^8.5.3",
     "@capacitor/push-notifications": "^8.1.3",
     "@quasar/extras": "^2.1.0",
