@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if [ ! -x "$project_root/.tools/node/bin/node" ] || [ ! -x "$project_root/.tools/pnpm/node_modules/.bin/pnpm" ]; then
+    echo 'Ejecuta bash ci/setup-tools para instalar Node y pnpm.' >&2
+    exit 1
+fi
+export PATH="$project_root/.tools/node/bin:$PATH"
+exec "$project_root/.tools/pnpm/node_modules/.bin/pnpm" "$@"

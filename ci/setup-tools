@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+crece_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+crece_version=24.22.2
+case "$(uname -s)" in
+  Darwin) crece_os=darwin ;;
+  Linux) crece_os=linux ;;
+  *) echo 'Use Node 24.22.2 and pnpm 12.10.1 on this platform.' >&2; exit 1 ;;
+esac
+case "$(uname -m)" in
+  arm64|aarch64) crece_arch=arm64 ;;
+  x86_64) crece_arch=x64 ;;
+  *) echo 'Unsupported CPU architecture.' >&2; exit 1 ;;
+esac
+crece_name="node-v${crece_version}-${crece_os}-${crece_arch}"
+crece_base="https://nodejs.org/dist/v${crece_version}"
+mkdir -p "$crece_root/.tools/downloads"
+if [[ ! -x "$crece_root/.tools/$crece_name/bin/node" ]]; then
+  curl --fail --silent --show-error --location "$crece_base/SHASUMS256.txt" \
+    --output "$crece_root/.tools/downloads/SHASUMS256.txt"
+  curl --fail --silent --show-error --location "$crece_base/$crece_name.tar.gz" \
+    --output "$crece_root/.tools/downloads/$crece_name.tar.gz"
+  crece_expected="$(awk -v filename="$crece_name.tar.gz" '$2 == filename { print $1 }' "$crece_root/.tools/downloads/SHASUMS256.txt")"
+  crece_actual="$(shasum -a 256 "$crece_root/.tools/downloads/$crece_name.tar.gz" | awk '{print $1}')"
+  [[ -n "$crece_expected" && "$crece_expected" == "$crece_actual" ]] || { echo 'Node checksum failed.' >&2; exit 1; }
+  tar -xzf "$crece_root/.tools/downloads/$crece_name.tar.gz" -C "$crece_root/.tools"
+fi
+if [[ ! -e "$crece_root/.tools/node" ]]; then
+  ln -s "$crece_name" "$crece_root/.tools/node"
+fi
+export PATH="$crece_root/.tools/node/bin:$PATH"
+node --version
+npm install --prefix "$crece_root/.tools/pnpm" --ignore-scripts --no-audit --no-fund pnpm@12.10.1
+"$crece_root/ci/pnpm" --version

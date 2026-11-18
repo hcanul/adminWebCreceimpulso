@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+project_root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$project_root"
+mkdir -p artifacts
+for app in admin-web client-app staff-app; do
+    test -f "frontend/apps/$app/dist/spa/index.html"
+    tar -czf "artifacts/$app-web.tar.gz" -C "frontend/apps/$app/dist/spa" .
+done
+(cd artifacts && sha256sum *-web.tar.gz > SHA256SUMS)
