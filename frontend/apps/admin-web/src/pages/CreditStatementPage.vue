@@ -12,6 +12,13 @@
         <q-btn
           flat
           no-caps
+          icon="description"
+          label="Formato de referencia"
+          :to="{ path: '/reportes', query: { credit: id } }"
+        />
+        <q-btn
+          flat
+          no-caps
           icon="refresh"
           label="Actualizar"
           :disable="loading"

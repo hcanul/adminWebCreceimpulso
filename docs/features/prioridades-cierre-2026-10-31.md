@@ -5,7 +5,7 @@ El propietario autorizó avanzar en este orden. Implementado no equivale a acept
 | Orden | Trabajo | Estado |
 |---|---|---|
 | 1 | Sesión persistente protegida en ambas apps | Implementada y probada con adaptador simulado; builds iOS/instalación realizados. Pendiente recorrido físico autenticado y Android. Ver sesion-movil-segura.md. |
-| 2 | Completar offline de personal | En desarrollo. Correcciones cifradas, reintentos idempotentes y conciliación por campo implementados. Faltan altas de clientes/grupos, contexto autorizado descargable y conciliación de coincidencias CURP. No cobros offline. |
+| 2 | Completar offline de personal | En desarrollo. Correcciones cifradas, reintentos idempotentes y conciliación por campo implementados. El 3/11 se implementaron altas de grupos/integrantes, contexto descargable y vinculación explícita de CURP existente. Pendientes migraciones en destino correcto y pruebas físicas de esta actualización. No cobros offline. |
 | 3 | Notificaciones | Android configurado y validado sin envío real. Recepción física pendiente. iPhone bloqueado por membresía Apple/APNs; registro Firebase hecho, FCM nativo pendiente. |
 | 4 | Documentos definitivos | Perfiles generales/por sucursal implementados. Datos finales y aprobación legal pendientes del titular. |
 | 5 | Aceptación de inicio a fin | Pendiente con oficina, impresoras y teléfonos; no sustituida por pruebas automatizadas. |

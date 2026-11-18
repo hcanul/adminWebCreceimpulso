@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 final class SaveApplicationAction
 {
-    public function execute(User $actor, SaveApplicationData $dto): ClientApplication
+    public function execute(User $actor, SaveApplicationData $dto, ?string $proposedClientId = null): ClientApplication
     {
         $data = $dto->toArray();
         abort_if($data['submit'] && ! ($actor->hasRole('Super Admin') || $actor->can('intake.submit')), 403, 'El gerente debe enviar el expediente a Gestión.');
@@ -33,7 +33,7 @@ final class SaveApplicationAction
         $fields['curp'] = $data['curp'];
         $fields = app(ApplicationFields::class)->validate($fields, $data['submit']);
         try {
-            return DB::transaction(function () use ($actor, $data, $access, $team, $fields) {
+            return DB::transaction(function () use ($actor, $data, $access, $team, $fields, $proposedClientId) {
                 Team::whereKey($team->id)->lockForUpdate()->firstOrFail();
                 $client = Client::withTrashed()->where('curp', $data['curp'])->lockForUpdate()->first();
                 if ($client) {
@@ -43,6 +43,10 @@ final class SaveApplicationAction
                 } else {
                     abort_if(! empty($data['client_id']), 409, 'La identidad cambió. Consulta nuevamente la CURP.');
                     $client = new Client(['branch_id' => $team->branch_id, 'curp' => $data['curp'], 'version' => 0]);
+                    if ($proposedClientId) {
+                        abort_if(Client::withTrashed()->whereKey($proposedClientId)->exists(), 409, 'Identificador de cliente ya registrado.');
+                        $client->id = $proposedClientId;
+                    }
                 }
                 $application = ClientApplication::whereKey($data['id'])->lockForUpdate()->first();
                 if ($application) {

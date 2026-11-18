@@ -6,8 +6,10 @@ use App\Domains\Credit\Services\CreditCalculator;
 use App\Domains\Credit\Services\CreditDisbursement;
 use App\Domains\Documents\Services\DocumentAccess;
 use App\Domains\Documents\Services\DocumentProfiles;
+use App\Domains\Documents\Services\ReferenceContract;
 use App\Domains\Intake\Services\ApplicationFields;
 use App\Domains\LateFees\Services\LateFeeLedger;
+use App\Models\Client;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -19,13 +21,14 @@ final class IssueDocumentAction
     {
         return DB::transaction(function () use ($actor, $type, $sourceId, $kind) {
             $source = app(DocumentAccess::class)->source($actor, $type, $sourceId, true);
-            abort_unless(in_array($kind, $type === 'file' ? ['dossier', 'installation'] : ['authorization', 'schedule', 'contract_review', 'promissory_review'], true), 422, 'Formato no disponible para este registro.');
+            abort_unless(in_array($kind, $type === 'file' ? ['dossier', 'installation'] : ['authorization', 'schedule', 'contract_review', 'promissory_review', 'contract_reference', 'promissory_reference'], true), 422, 'Formato no disponible para este registro.');
             if ($type === 'credit') {
                 abort_unless($source->approved_snapshot && $source->approved_at, 409, 'Primero autoriza el crédito.');
             }
             $version = $type === 'file' ? $source->version : $source->authorization_version;
             $key = ['source_type' => $type, 'source_id' => $sourceId, 'kind' => $kind, 'source_version' => $version, 'template_version' => match ($kind) {
-                'promissory_review' => 3, 'contract_review' => 2, default => 1
+                'promissory_review' => 3, 'contract_review' => 2, 'contract_reference', 'promissory_reference' => 1,
+                'dossier', 'installation', 'authorization' => 2, default => 1
             }];
             $existing = DB::table('document_versions')->where($key)->value('id');
             if ($existing) {
@@ -52,12 +55,13 @@ final class IssueDocumentAction
                         }
                     }
                     $sections[$field['section']][] = ['label' => $field['label'], 'value' => $value];
+                    $displayFields[$field['name']] = $value;
                 }
-                $snapshot += ['fields' => $fields, 'sections' => $sections, 'client' => trim(($fields['pNombre'] ?? '').' '.($fields['sNombre'] ?? '').' '.($fields['aPaterno'] ?? '').' '.($fields['aMaterno'] ?? '')), 'folio' => $source->client?->folio];
+                $snapshot += ['fields' => $fields, 'display_fields' => $displayFields ?? [], 'sections' => $sections, 'client' => trim(($fields['pNombre'] ?? '').' '.($fields['sNombre'] ?? '').' '.($fields['aPaterno'] ?? '').' '.($fields['aMaterno'] ?? '')), 'folio' => $source->client?->folio];
             } else {
-                $snapshot += ['terms' => $source->approved_snapshot, 'folio' => $source->folio, 'approved_at' => $source->approved_at->timezone('America/Cancun')->toDateTimeString()];
+                $snapshot += ['terms' => $source->approved_snapshot, 'folio' => $source->folio, 'approved_at' => $source->approved_at->timezone('America/Cancun')->toDateTimeString(), 'requested_total' => $source->total_requested, 'requested_at' => $source->requested_at?->timezone('America/Cancun')->toDateString()];
             }
-            if (in_array($kind, ['schedule', 'contract_review', 'promissory_review'], true)) {
+            if (in_array($kind, ['schedule', 'contract_review', 'promissory_review', 'contract_reference', 'promissory_reference'], true)) {
                 $firstDue = $source->approved_snapshot['first_due_on'] ?? null;
                 abort_unless($firstDue, 409, 'La autorización histórica no contiene la fecha del primer pago. Consulta el estado de cuenta del crédito.');
                 $rows = app(CreditDisbursement::class)->schedule($source->approved_snapshot, $firstDue);
@@ -74,7 +78,7 @@ final class IssueDocumentAction
                 unset($week);
                 $snapshot['schedule'] = array_values($weeks);
             }
-            if (in_array($kind, ['contract_review', 'promissory_review'], true)) {
+            if (in_array($kind, ['contract_review', 'promissory_review', 'contract_reference', 'promissory_reference'], true)) {
                 app(LateFeeLedger::class)->enabled($source);
                 $snapshot['company'] = 'PROMOTORA PENINSULAR CRECEIMPULSO LEAL S.A. DE C.V.';
                 $snapshot['document_status'] = 'review_only';
@@ -88,11 +92,19 @@ final class IssueDocumentAction
                     'due_on' => $snapshot['schedule'][15]['due_on'],
                 ];
             }
+            if (in_array($kind, ['contract_reference', 'promissory_reference'], true)) {
+                $snapshot['reference_contract'] = app(ReferenceContract::class)->payload($snapshot);
+                $snapshot['member_addresses'] = Client::withTrashed()->whereIn('id', array_column($snapshot['terms']['members'], 'client_id'))->pluck('address', 'id')->all();
+            }
             $id = (string) Str::uuid();
             $issued = now('America/Cancun')->toDateTimeString();
             $template = match ($kind) {
                 'contract_review' => 'documents.contract-review',
                 'promissory_review' => 'documents.promissory-review',
+                'contract_reference', 'promissory_reference' => 'documents.reference.contract',
+                'dossier' => 'documents.reference.dossier',
+                'installation' => 'documents.reference.installation',
+                'authorization' => 'documents.reference.authorization',
                 default => 'documents.record',
             };
             $html = view($template, ['snapshot' => $snapshot, 'kind' => $kind, 'id' => $id, 'issued' => $issued])->render();

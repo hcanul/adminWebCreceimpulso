@@ -1,0 +1,67 @@
+{
+  "sources": [
+    {
+      "source_id": "carrillo",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "legacy_carrillo",
+      "user_env": "LEGACY_DB_USER",
+      "password_env": "LEGACY_DB_PASSWORD",
+      "branches": {}
+    },
+    {
+      "source_id": "tulum",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "legacy_tulum",
+      "user_env": "LEGACY_DB_USER",
+      "password_env": "LEGACY_DB_PASSWORD",
+      "branches": {}
+    },
+    {
+      "source_id": "morelos",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "legacy_morelos",
+      "user_env": "LEGACY_DB_USER",
+      "password_env": "LEGACY_DB_PASSWORD",
+      "branches": {}
+    },
+    {
+      "source_id": "playa_1",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "legacy_playa_1",
+      "user_env": "LEGACY_DB_USER",
+      "password_env": "LEGACY_DB_PASSWORD",
+      "branches": {}
+    },
+    {
+      "source_id": "playa_2",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "legacy_playa_2",
+      "user_env": "LEGACY_DB_USER",
+      "password_env": "LEGACY_DB_PASSWORD",
+      "branches": {}
+    },
+    {
+      "source_id": "cancun_1",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "legacy_cancun_1",
+      "user_env": "LEGACY_DB_USER",
+      "password_env": "LEGACY_DB_PASSWORD",
+      "branches": {}
+    },
+    {
+      "source_id": "cancun_2",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "legacy_cancun_2",
+      "user_env": "LEGACY_DB_USER",
+      "password_env": "LEGACY_DB_PASSWORD",
+      "branches": {}
+    }
+  ]
+}

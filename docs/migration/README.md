@@ -137,3 +137,7 @@ Referencias: [OWASP — autorización de transacciones](https://cheatsheetseries
 ## Información necesaria para el siguiente incremento
 
 Exportaciones anonimizadas iniciales y esquemas reales de las siete bases, mapa base/citys/sucursal, fechas/zona horaria y ejemplos conciliados de crédito activo, liquidado, atrasado, pago parcial y anulado. No entregar contraseñas en el chat. Las copias completas para migración se manejarán por una ruta local protegida cuando se acuerde el procedimiento.
+
+## Actualización del 3 de noviembre de 2026
+
+Ya están preparados extracción local de solo lectura y staging privado con manifiestos, recuentos y hashes. Ver [procedimiento actualizado](operacion-local.md) y `local-sources.example.json`. La importación financiera real sigue pendiente de las bases restauradas y de su conciliación; no se declara finalizada por pasar las comprobaciones de estructura.

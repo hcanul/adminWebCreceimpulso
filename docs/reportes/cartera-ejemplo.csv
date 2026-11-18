@@ -1,0 +1,6 @@
+﻿EJEMPLO FICTICIO - NO ES CARTERA REAL
+Corte,2026-11-19
+Folio,Grupo,Sucursal,Cuotas pendientes,Mora pendiente,Saldo total,Exigible,Vence hoy,En atraso,Dias de atraso,Proxima cuota
+CRE-DEMO-000001,Las Flores DEMO,Carrillo,"35,700.00",30.00,"35,730.00",330.00,0.00,330.00,1,2026-11-25
+CRE-DEMO-000002,Horizonte DEMO,Tulum,"12,800.00",0.00,"12,800.00",0.00,0.00,0.00,0,2026-11-25
+TOTAL,,,48500.00,30.00,48530.00,330.00,0.00,330.00,,

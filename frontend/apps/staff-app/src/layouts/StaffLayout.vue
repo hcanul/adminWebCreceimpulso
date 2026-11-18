@@ -37,7 +37,7 @@
           ><q-item-section>Roles y permisos</q-item-section> </q-item
         ><q-item v-if="auth.canIntake" clickable to="/sin-conexion" @click="drawer = false"
           ><q-item-section avatar><q-icon name="offline_pin" /></q-item-section
-          ><q-item-section>Correcciones sin conexión</q-item-section></q-item
+          ><q-item-section>Trabajo sin conexión</q-item-section></q-item
         ><q-separator spaced />
         <q-item
           v-for="link in operationalLinks"
@@ -48,7 +48,13 @@
           ><q-item-section avatar><q-icon :name="link.icon" /></q-item-section
           ><q-item-section>{{ link.label }}</q-item-section></q-item
         >
-        <q-item clickable to="/mensajes"><q-item-section avatar><q-icon name="mail" /></q-item-section><q-item-section>Mis mensajes</q-item-section></q-item><q-item v-if="auth.can('messages.send')" clickable to="/mensajes/enviar"><q-item-section avatar><q-icon name="send" /></q-item-section><q-item-section>Enviar mensaje</q-item-section></q-item><q-item clickable to="/mi-acceso" @click="drawer = false">
+        <q-item clickable to="/mensajes"
+          ><q-item-section avatar><q-icon name="mail" /></q-item-section
+          ><q-item-section>Mis mensajes</q-item-section></q-item
+        ><q-item v-if="auth.can('messages.send')" clickable to="/mensajes/enviar"
+          ><q-item-section avatar><q-icon name="send" /></q-item-section
+          ><q-item-section>Enviar mensaje</q-item-section></q-item
+        ><q-item clickable to="/mi-acceso" @click="drawer = false">
           <q-item-section avatar><q-icon name="badge" /></q-item-section
           ><q-item-section>Mi acceso</q-item-section> </q-item
         ><q-item clickable to="/configuracion"
@@ -62,7 +68,7 @@
     >
     <q-page-container
       ><q-banner v-if="!online" class="bg-orange-1 text-dark"
-        >Sin conexión. Abre Correcciones sin conexión para editar expedientes preparados. Los demás
+        >Sin conexión. Abre Trabajo sin conexión para editar expedientes preparados. Los demás
         módulos requieren internet.</q-banner
       ><router-view :key="$route.fullPath" /></q-page-container
   ></q-layout>

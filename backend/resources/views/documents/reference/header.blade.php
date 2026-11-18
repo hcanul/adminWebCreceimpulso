@@ -1,0 +1,1 @@
+<header><img alt="Crece Impulso" src="data:image/png;base64,{{ base64_encode(file_get_contents(resource_path('images/crece-impulso-logo.png'))) }}"><div style="flex:1"><h1>CRECEIMPULSO</h1><h2>{{ $title }}</h2></div></header>

@@ -714,6 +714,54 @@ final class CreditWorkflowTest extends TestCase
         $this->postJson($f['base'].'/disbursement', $p)->assertOk()->assertJsonPath('record.first_due_on', $p['first_due_on']);
     }
 
+    public function test_reference_contracts_preserve_supplied_clauses_and_do_not_change_finance(): void
+    {
+        $f = $this->deliveryFixture();
+        $url = '/api/documents/sources/credit/'.$f['loan']['id'];
+        foreach (['contract_reference', 'promissory_reference'] as $kind) {
+            $id = $this->postJson($url, ['kind' => $kind])->assertOk()->json('id');
+            $row = DB::table('document_versions')->where('id', $id)->first();
+            $this->assertSame(hash('sha256', $row->html), $row->sha256);
+            $this->assertStringContainsString('NO UTILIZAR PARA FIRMA', $row->html);
+            $this->assertStringContainsString($kind === 'contract_reference' ? 'LA COMISION POR APERTURA DE CREDITO SE MANEJA EL 10%DEL CREDITO.' : '10% MENSUAL', $row->html);
+            $this->assertStringNotContainsString('PRIMAVERA CP', $row->html);
+            $this->assertStringNotContainsString(':amount', $row->html);
+            $this->postJson($url, ['kind' => $kind])->assertOk()->assertJsonPath('id', $id);
+            $this->postJson('/api/documents/versions/'.$id.'/signed', [])->assertUnprocessable();
+        }
+        $this->assertDatabaseCount('credit_payments', 0);
+        $this->assertDatabaseCount('credit_disbursements', 0);
+        $this->assertDatabaseCount('client_accounts', 0);
+        $this->assertDatabaseCount('document_versions', 2);
+    }
+
+    public function test_reference_reports_are_scoped_and_exclude_reversed_deposits(): void
+    {
+        $f = $this->collectionFixture();
+        $this->postJson($f['base'].'/payments', $f['payment'])->assertOk();
+        $url = '/api/credit/reports/';
+        foreach (['portfolio', 'agenda', 'statement', 'deposits', 'collection_log'] as $kind) {
+            $response = $this->getJson($url.$kind.'?credit_id='.$f['loan']['id'].'&client_id='.$f['clients'][0]->id)->assertOk();
+            $this->assertNotEmpty($response->json('html'));
+            $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        }
+        $this->getJson($url.'statement')->assertUnprocessable();
+        $this->getJson($url.'statement?credit_id='.$f['loan']['id'].'&client_id='.Str::uuid())->assertUnprocessable();
+        $this->getJson($url.'deposits?credit_id='.$f['loan']['id'])->assertOk()->assertJson(fn ($json) => $json->where('html', fn ($html) => str_contains($html, 'FOLIO-001')));
+        Sanctum::actingAs($f['manager']);
+        $this->postJson('/api/credit/receipts/'.$f['payment']['id'].'/reverse', $this->reversalInput($f))->assertOk();
+        $html = $this->getJson($url.'deposits?credit_id='.$f['loan']['id'])->assertOk()->json('html');
+        $this->assertStringNotContainsString('FOLIO-001', $html);
+        $this->assertDatabaseCount('credit_payments', 1);
+        $this->assertDatabaseCount('credit_payment_reversals', 1);
+        $this->assertDatabaseCount('cash_closings', 0);
+        $other = User::factory()->create(['branch_id' => Branch::create(['name' => 'Ajena', 'is_active' => true])->id, 'is_active' => true]);
+        $other->assignRole('Gerente');
+        Sanctum::actingAs($other);
+        $this->getJson($url.'statement?credit_id='.$f['loan']['id'])->assertNotFound();
+        $this->getJson($url.'portfolio')->assertOk()->assertJson(fn ($json) => $json->where('html', fn ($html) => ! str_contains($html, $f['loan']['folio'])));
+    }
+
     private function deliveryFixture(string $method = 'cash_branch', string $repayment = 'bank_deposit'): array
     {
         $f = $this->authorizationFixture();

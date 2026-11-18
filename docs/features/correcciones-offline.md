@@ -21,3 +21,15 @@ Cuando aparece un conflicto, pulsa **Revisar conflicto con oficina** con conexi�
 Verificación: recorrido de navegador simulado que conserva la copia al perder la red, restaura tras reapertura, bloquea otras cuentas y concilia campo por campo antes de sincronizar. La suite backend de 156 casos pasó en SQLite antes de esta actualización de interfaz. La verificación adicional de MySQL está pendiente porque el servicio local no responde en 3306; no se modificó la base operativa para probar.
 
 Si la escritura del estado local falla después de que el servidor aceptó el cambio, la pantalla conserva la corrección pendiente y su mismo UUID. Antes de enviar cualquier intento se comprueba que el archivo local se haya guardado. No se marca éxito hasta persistir la confirmación.
+
+## Altas offline — 3 de noviembre de 2026
+
+En **Trabajo sin conexión**, con sesión válida y red, escribir y confirmar una clave local y pulsar **Preparar espacio de trabajo con conexión**. Se descargan únicamente las sucursales/promotores autorizados, conservados dentro del archivo cifrado. Los espacios anteriores pueden usar **Actualizar sucursales y promotores con conexión**.
+
+Sin red: guardar primero un grupo con nombre, sucursal y promotor; después elegir ese grupo y capturar CURP, nombre y apellido del nuevo integrante. Los nombres de grupo pueden repetirse; cada captura tiene UUID propio. Abrir **Corregir información** para completar los campos del expediente. No se incluye monto de préstamo en el alta de cliente.
+
+Al sincronizar se envían primero los grupos y después los integrantes. Los grupos y los clientes nuevos conservan sus UUID propuestos. El servidor asigna el número de cliente al guardar y vuelve a comprobar permisos, sucursal, promotor, campos y CURP. Los reintentos usan correspondencias persistidas y no duplican grupos, clientes ni expedientes.
+
+Si la CURP existe, la captura se conserva con conflicto. **Verificar CURP en oficina** permite consultar los datos permitidos y confirmar expresamente la vinculación a la persona existente; se conserva la correspondencia entre la propuesta y el cliente real, sin cambiar el UUID del cliente existente. Si ya tiene un expediente en el mismo grupo, se detiene para revisión en oficina. No se fusionan identidades silenciosamente ni se envía nada a Gestión.
+
+Esta actualización requiere las migraciones `2026_11_03_010000_create_offline_group_creations.php` y `2026_11_03_020000_create_offline_client_creations.php`, además de actualizar la app instalada. Hasta aplicar y verificar las migraciones en el destino correcto no deben usarse estas altas contra ese servidor. La validación local de CURP es preliminar: no certifica RENAPO ni garantiza unicidad global sin conexión.

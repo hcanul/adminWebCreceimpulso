@@ -87,6 +87,22 @@ export interface SaveApplication {
   fields: Record<string, string | null>;
 }
 export const intakeService = {
+  async createOfflineClient(data: SaveApplication, proposed: string) {
+    return (
+      await api.post<Application>('/intake/offline/clients', {
+        ...data,
+        proposed_client_id: proposed,
+      })
+    ).data;
+  },
+  async createOfflineTeam(data: {
+    id: string;
+    name: string;
+    branch_id: string;
+    promoter_id: string;
+  }) {
+    return (await api.post<Team>('/intake/offline/teams', data)).data;
+  },
   async options() {
     return (
       await api.get<{

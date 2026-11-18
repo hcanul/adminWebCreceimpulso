@@ -16,7 +16,7 @@ final class PrintContractAccessAction
             $access = app(DocumentAccess::class);
             $document = $access->document($actor, $id);
             abort_unless(hash_equals($document->sha256, hash('sha256', $document->html)), 409, 'Documento inválido.');
-            if ($document->kind !== 'contract_review') {
+            if (! in_array($document->kind, ['contract_review', 'contract_reference'], true)) {
                 return $document->html;
             }
             $loan = $access->source($actor, 'credit', $document->source_id, true);

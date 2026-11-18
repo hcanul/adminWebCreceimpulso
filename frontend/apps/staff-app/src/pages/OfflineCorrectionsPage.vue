@@ -1,10 +1,10 @@
 <template>
   <main class="page-shell">
     <q-btn flat no-caps label="Volver al inicio" to="/" />
-    <h1>Correcciones sin conexión</h1>
+    <h1>Trabajo sin conexión</h1>
     <p>
-      Solo expedientes preparados. Los documentos se generan en admin-web. Guarda antes de cerrar
-      esta pantalla.
+      Altas de grupos e integrantes y correcciones de expedientes preparados. Los documentos se
+      generan en admin-web. Guarda antes de cerrar esta pantalla.
     </p>
     <q-banner v-if="error" role="alert" class="bg-red-1 q-my-md">{{ error }}</q-banner>
     <template v-if="!vault"
@@ -38,6 +38,19 @@
         :disable="!space"
         @click="unlock"
       />
+      <q-input
+        v-model="passwordConfirmation"
+        type="password"
+        outlined
+        label="Repite la clave local para un espacio nuevo"
+        autocomplete="off"
+      />
+      <q-btn
+        outline
+        label="Preparar espacio de trabajo con conexión"
+        :loading="busy"
+        @click="prepareSpace"
+      />
       <p v-if="!spaces.length">
         Con conexión, entra a Grupos y prepara el expediente de cada integrante.
       </p></template
@@ -57,10 +70,111 @@
           @click="sync"
         />
       </div>
+      <q-btn
+        outline
+        label="Actualizar sucursales y promotores con conexión"
+        :disable="busy"
+        @click="refreshContext"
+      />
+      <q-card v-if="vault.data.context" flat bordered class="q-pa-md q-my-md">
+        <h2>Nuevo grupo sin conexión</h2>
+        <q-form @submit="addGroup" class="q-gutter-md">
+          <q-input
+            v-model="groupName"
+            outlined
+            label="Nombre del nuevo grupo"
+            maxlength="150"
+            :disable="busy"
+            :rules="[(v) => !!v?.trim() || 'Escribe el nombre']"
+          />
+          <FilterSelect
+            v-model="groupBranch"
+            label="Sucursal del nuevo grupo"
+            :options="vault.data.context.branches.map((b) => ({ label: b.name, value: b.id }))"
+            emit-value
+            map-options
+            outlined
+            :disable="busy"
+          />
+          <FilterSelect
+            v-model="groupPromoter"
+            label="Promotor del nuevo grupo"
+            :options="
+              vault.data.context.promoters
+                .filter((p) => p.branch_id === groupBranch)
+                .map((p) => ({ label: p.name || p.id, value: p.id }))
+            "
+            emit-value
+            map-options
+            outlined
+            :disable="busy"
+          />
+          <q-btn
+            type="submit"
+            label="Guardar grupo en dispositivo"
+            color="primary"
+            :loading="busy"
+            :disable="!groupBranch || !groupPromoter"
+          />
+        </q-form>
+      </q-card>
+      <q-card
+        v-for="group in vault.data.groups || []"
+        :key="group.id"
+        flat
+        bordered
+        class="q-pa-md q-my-md"
+        ><h3>{{ group.name }}</h3>
+        <p>{{ group.message }}</p>
+        <small>{{ group.id }}</small></q-card
+      >
       <p class="text-caption">
         Para sincronizar inicia sesión con la misma cuenta y servidor. Ante errores o conflictos,
         los datos locales se conservan. No se envía nada a Gestión.
       </p>
+      <q-card v-if="vault.data.groups?.length" flat bordered class="q-pa-md q-my-md">
+        <h2>Nuevo integrante sin conexión</h2>
+        <p>
+          Primero selecciona el grupo. La identidad y el número de cliente quedarán confirmados al
+          sincronizar.
+        </p>
+        <q-form @submit="addClient" class="q-gutter-md">
+          <FilterSelect
+            v-model="clientGroup"
+            label="Grupo del nuevo integrante"
+            :options="vault.data.groups.map((g) => ({ label: g.name, value: g.id }))"
+            emit-value
+            map-options
+            outlined
+            :disable="busy"
+          />
+          <q-input
+            v-model="clientCurp"
+            outlined
+            label="CURP del nuevo integrante"
+            maxlength="18"
+            :disable="busy"
+          />
+          <q-input
+            v-model="clientFirst"
+            outlined
+            label="Nombre del nuevo integrante"
+            :disable="busy"
+          />
+          <q-input
+            v-model="clientLast"
+            outlined
+            label="Apellido paterno del nuevo integrante"
+            :disable="busy"
+          />
+          <q-btn
+            type="submit"
+            label="Guardar integrante en dispositivo"
+            color="primary"
+            :loading="busy"
+          />
+        </q-form>
+      </q-card>
       <q-card v-for="record in vault.data.records" :key="record.id" flat bordered class="q-my-md"
         ><q-card-section>
           <h3>{{ record.name }}</h3>
@@ -74,7 +188,18 @@
             @click="edit(record)"
           />
           <q-btn
-            v-if="record.message.startsWith('Conflicto:')"
+            v-if="
+              record.newClientId &&
+              record.payload.version === 0 &&
+              record.message.startsWith('Conflicto:')
+            "
+            flat
+            label="Verificar CURP en oficina"
+            :disable="busy"
+            @click="resolveNewClient(record)"
+          />
+          <q-btn
+            v-if="record.payload.version > 0 && record.message.startsWith('Conflicto:')"
             flat
             no-caps
             color="primary"
@@ -198,6 +323,9 @@ import FilterSelect from '../components/FilterSelect.vue';
 import schema from '../../../admin-web/src/domain/intake-fields.json';
 import {
   localSpaces,
+  prepareContext,
+  createLocalGroup,
+  createLocalClient,
   unlockVault,
   persistVault,
   scopeFor,
@@ -309,6 +437,133 @@ async function applyReview() {
   }
 }
 const sections = computed(() => [...new Set(fields.map((f) => f.section))]);
+const passwordConfirmation = ref('');
+const groupName = ref(''),
+  groupBranch = ref(''),
+  groupPromoter = ref('');
+async function prepareSpace() {
+  if (busy.value) return;
+  busy.value = true;
+  error.value = '';
+  try {
+    await auth.restore();
+    if (!auth.user || !auth.canIntake) throw new Error('Inicia sesión con permisos de captura.');
+    if (password.value.length < 8)
+      throw new Error('Escribe una clave local de al menos ocho caracteres.');
+    if (
+      !(await localSpaces()).includes(scopeFor(auth.user)) &&
+      password.value !== passwordConfirmation.value
+    )
+      throw new Error(
+        'Las claves locales no coinciden. Repite la clave antes de crear el espacio.',
+      );
+    const prepared = await unlockVault(scopeFor(auth.user), password.value, auth.user);
+    await prepareContext(prepared, auth.user);
+    vault.value = prepared;
+  } catch (e) {
+    error.value = message(e);
+  } finally {
+    password.value = passwordConfirmation.value = '';
+    busy.value = false;
+  }
+}
+async function refreshContext() {
+  if (!vault.value || busy.value) return;
+  busy.value = true;
+  error.value = '';
+  try {
+    await auth.restore();
+    if (!auth.user || !auth.canIntake) throw new Error('Inicia sesión con permisos de captura.');
+    await prepareContext(vault.value, auth.user);
+    vault.value = { ...vault.value };
+  } catch (e) {
+    error.value = message(e);
+  } finally {
+    busy.value = false;
+  }
+}
+const clientGroup = ref(''),
+  clientCurp = ref(''),
+  clientFirst = ref(''),
+  clientLast = ref('');
+async function addClient() {
+  if (!vault.value || busy.value) return;
+  busy.value = true;
+  error.value = '';
+  try {
+    await createLocalClient(
+      vault.value,
+      clientGroup.value,
+      clientCurp.value,
+      clientFirst.value,
+      clientLast.value,
+    );
+    clientCurp.value = clientFirst.value = clientLast.value = '';
+    vault.value = { ...vault.value };
+  } catch (e) {
+    error.value = message(e);
+  } finally {
+    busy.value = false;
+  }
+}
+async function resolveNewClient(record: OfflineRecord) {
+  if (!vault.value || busy.value) return;
+  busy.value = true;
+  error.value = '';
+  try {
+    await auth.restore();
+    if (!auth.user || !auth.canIntake || scopeFor(auth.user) !== vault.value.id)
+      throw new Error('Inicia sesión con la cuenta del espacio.');
+    const remote = await intakeService.lookup(record.payload.curp, record.payload.team_id);
+    if (!remote.found || !remote.can_edit || !remote.client?.version)
+      throw new Error(
+        'No se puede vincular esta identidad. Consulta con la sucursal; la captura local se conserva.',
+      );
+    if (remote.application)
+      throw new Error(
+        'Esta persona ya tiene un expediente en el grupo. Revisa ese expediente con oficina antes de continuar; no se creará otro automáticamente.',
+      );
+    if (
+      !(await alerts.confirm(
+        'CURP ya registrada',
+        `Cliente: ${remote.client.name}. Sucursal: ${remote.client.branch || 'No disponible'}. Créditos activos: ${remote.active_credits?.length || 0}. Último crédito: ${remote.last_credit?.folio || 'Sin registros'}. Se vinculará el expediente nuevo a esta persona y se aplicarán los datos capturados. Revisa su identidad antes de confirmar.`,
+        'Vincular persona existente',
+      ))
+    )
+      return;
+    const before = structuredClone(record);
+    record.payload.fields = { ...(remote.profile || {}), ...record.payload.fields };
+    record.payload.client_id = remote.client.id;
+    record.payload.client_version = remote.client.version;
+    record.payload.confirm_existing = true;
+    record.message = 'Identidad vinculada; pendiente de sincronizar';
+    try {
+      await persistVault(vault.value);
+      vault.value = { ...vault.value };
+    } catch (e) {
+      Object.assign(record, before);
+      throw e;
+    }
+  } catch (e) {
+    error.value = message(e);
+  } finally {
+    busy.value = false;
+  }
+}
+async function addGroup() {
+  if (!vault.value || busy.value) return;
+  busy.value = true;
+  error.value = '';
+  try {
+    await createLocalGroup(vault.value, groupName.value, groupBranch.value, groupPromoter.value);
+    groupName.value = '';
+    vault.value = { ...vault.value };
+  } catch (e) {
+    error.value = message(e);
+  } finally {
+    busy.value = false;
+  }
+}
 async function unlock() {
   busy.value = true;
   error.value = '';
@@ -317,7 +572,7 @@ async function unlock() {
   } catch (e) {
     error.value = message(e);
   } finally {
-    password.value = '';
+    password.value = passwordConfirmation.value = '';
     busy.value = false;
   }
 }
@@ -407,6 +662,29 @@ async function sync() {
       throw new Error(
         'Inicia sesión con la cuenta que preparó estos expedientes y conserva su sucursal y servidor.',
       );
+    for (const group of (vault.value.data.groups || []).filter((g) => g.pending)) {
+      try {
+        await persistVault(vault.value);
+        await intakeService.createOfflineTeam({
+          id: group.id,
+          name: group.name,
+          branch_id: group.branch_id,
+          promoter_id: group.promoter_id,
+        });
+        group.pending = false;
+        group.message = 'Grupo sincronizado';
+        try {
+          await persistVault(vault.value);
+        } catch (e) {
+          group.pending = true;
+          throw e;
+        }
+      } catch (e) {
+        group.message = intakeError(e).message;
+        await persistVault(vault.value);
+        throw e;
+      }
+    }
     for (const r of vault.value.data.records.filter((x) => x.pending)) {
       let before: OfflineRecord | undefined;
       try {
@@ -414,13 +692,17 @@ async function sync() {
         // The operation must be durable before any request, including after a failed local write.
         await persistVault(vault.value);
         before = structuredClone(r);
-        const result = await intakeService.syncCorrection(
-          { ...r.payload, submit: false },
-          r.operationId,
-        );
+        const result =
+          r.newClientId && r.payload.version === 0
+            ? await intakeService.createOfflineClient(
+                { ...r.payload, submit: false },
+                r.newClientId,
+              )
+            : await intakeService.syncCorrection({ ...r.payload, submit: false }, r.operationId);
         r.payload = {
           ...r.payload,
           version: result.version,
+          client_id: result.client_id,
           client_version: result.client!.version,
           fields: result.fields,
         };

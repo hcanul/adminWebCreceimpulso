@@ -44,6 +44,8 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class])->group(function 
 Route::middleware(['auth:sanctum', RequireStaffAccount::class, RequireIntakeAccess::class])->prefix('intake')->group(function () {
     $controller = IntakeController::class;
     Route::get('/options', [$controller, 'options']);
+    Route::post('/offline/clients', [$controller, 'createOfflineClient'])->middleware('throttle:60,1');
+    Route::post('/offline/teams', [$controller, 'createOfflineTeam'])->middleware('throttle:60,1');
     Route::post('/offline/corrections', [$controller, 'syncCorrection'])->middleware('throttle:60,1');
     Route::post('/promoters', [$controller, 'registerPromoter']);
     Route::get('/team-search', [$controller, 'searchTeams'])->middleware('throttle:120,1');
@@ -73,6 +75,7 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class, RequireSuperAdmin
 
 Route::middleware(['auth:sanctum', RequireStaffAccount::class, RequireCreditAccess::class])->prefix('credit')->group(function () {
     $controller = CreditController::class;
+    Route::get('/reports/{kind}', \App\Http\Controllers\Api\OperationalReportController::class)->middleware('throttle:10,1');
     Route::get('/portfolio/export', [CreditPortfolioController::class, 'export'])->middleware('throttle:5,1');
     Route::get('/portfolio', CreditPortfolioController::class)->middleware('throttle:60,1');
     Route::post('/receipts/{id}/reverse', PaymentReversalController::class)->whereUuid('id')->middleware('throttle:10,1');

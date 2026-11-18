@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domains\ClientAccess\Actions\PrintContractAccessAction;
 use App\Domains\Documents\Actions\IssueDocumentAction;
 use App\Domains\Documents\Services\DocumentAccess;
 use App\Http\Controllers\Controller;
@@ -26,7 +27,7 @@ final class DocumentController extends Controller
 
     public function issue(Request $request, IssueDocumentAction $action, string $type, string $source)
     {
-        $v = $request->validate(['kind' => 'required|in:dossier,installation,authorization,schedule,contract_review,promissory_review']);
+        $v = $request->validate(['kind' => 'required|in:dossier,installation,authorization,schedule,contract_review,promissory_review,contract_reference,promissory_reference']);
 
         return response()->json(['id' => $action->execute($request->user(), $type, $source, $v['kind'])]);
     }
@@ -39,7 +40,7 @@ final class DocumentController extends Controller
         return response()->json(['html' => $row->html, 'sha256' => $row->sha256])->header('Cache-Control', 'private, no-store');
     }
 
-    public function print(Request $request, \App\Domains\ClientAccess\Actions\PrintContractAccessAction $action, string $id)
+    public function print(Request $request, PrintContractAccessAction $action, string $id)
     {
         return response()->json(['html' => $action->execute($request->user(), $id)])->header('Cache-Control', 'private, no-store');
     }
@@ -47,7 +48,7 @@ final class DocumentController extends Controller
     public function attach(Request $request, DocumentAccess $access, string $id)
     {
         $document = $access->document($request->user(), $id);
-        abort_if(in_array($document->kind, ['contract_review', 'promissory_review'], true), 422, 'Este documento está en revisión; no admite archivos firmados.');
+        abort_if(in_array($document->kind, ['contract_review', 'promissory_review', 'contract_reference', 'promissory_reference'], true), 422, 'Este documento está en revisión; no admite archivos firmados.');
         $request->validate(['file' => 'required|file|mimetypes:application/pdf|max:10240']);
         $file = $request->file('file');
         abort_unless(str_starts_with(file_get_contents($file->getRealPath(), false, null, 0, 5), '%PDF-'), 422, 'Adjunta un PDF válido.');

@@ -54,6 +54,11 @@ const routes: RouteRecordRaw[] = [
       { path: 'documentos', component: () => import('@/pages/DocumentsPage.vue') },
       { path: 'documentos/:type/:id', component: () => import('@/pages/DocumentsPage.vue') },
       {
+        path: 'reportes',
+        component: () => import('@/pages/OperationalReportsPage.vue'),
+        meta: { credit: true },
+      },
+      {
         path: 'cartera',
         component: () => import('@/pages/CreditPortfolioPage.vue'),
         meta: { credit: true },

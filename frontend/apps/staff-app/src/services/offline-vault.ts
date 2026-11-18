@@ -1,8 +1,15 @@
 import { getServerAddress } from './server-settings';
-import { intakeService, type SaveApplication, type Team } from './intake.service';
+import {
+  intakeService,
+  type SaveApplication,
+  type Team,
+  type BranchOption,
+  type PromoterOption,
+} from './intake.service';
 import type { StaffUser } from './auth.service';
 export interface OfflineRecord {
   operationId?: string;
+  newClientId?: string;
   id: string;
   name: string;
   group: string;
@@ -11,7 +18,17 @@ export interface OfflineRecord {
   message: string;
   preparedAt: string;
 }
+export interface OfflineGroup {
+  id: string;
+  name: string;
+  branch_id: string;
+  promoter_id: string;
+  pending: boolean;
+  message: string;
+}
 interface VaultData {
+  groups?: OfflineGroup[];
+  context?: { branches: BranchOption[]; promoters: PromoterOption[]; downloadedAt: string };
   owner: string;
   branch: string | null;
   server: string;
@@ -186,6 +203,108 @@ export async function prepareRecord(vault: Vault, team: Team, curp: string) {
       ),
     },
   };
+  vault.data.records.push(record);
+  try {
+    await persistVault(vault);
+  } catch (e) {
+    vault.data.records.pop();
+    throw e;
+  }
+}
+
+export async function prepareContext(vault: Vault, user: StaffUser) {
+  if (scopeFor(user) !== vault.id)
+    throw new Error('El espacio pertenece a otra cuenta o servidor.');
+  const options = await intakeService.options();
+  const before = vault.data.context;
+  vault.data.context = {
+    branches: options.branches,
+    promoters: options.promoters,
+    downloadedAt: new Date().toISOString(),
+  };
+  try {
+    await persistVault(vault);
+  } catch (e) {
+    if (before) vault.data.context = before;
+    else delete vault.data.context;
+    throw e;
+  }
+}
+export async function createLocalGroup(
+  vault: Vault,
+  name: string,
+  branch: string,
+  promoter: string,
+) {
+  const context = vault.data.context;
+  if (
+    !name.trim() ||
+    name.trim().length > 150 ||
+    !context?.branches.some((b) => b.id === branch) ||
+    !context.promoters.some((p) => p.id === promoter && p.branch_id === branch)
+  )
+    throw new Error(
+      'Selecciona una sucursal y promotor del contexto descargado y escribe el nombre.',
+    );
+  const group: OfflineGroup = {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    branch_id: branch,
+    promoter_id: promoter,
+    pending: true,
+    message: 'Pendiente de sincronizar',
+  };
+  vault.data.groups ??= [];
+  vault.data.groups.push(group);
+  try {
+    await persistVault(vault);
+  } catch (e) {
+    vault.data.groups.pop();
+    throw e;
+  }
+}
+
+export async function createLocalClient(
+  vault: Vault,
+  groupId: string,
+  curpInput: string,
+  firstName: string,
+  lastName: string,
+) {
+  const group = vault.data.groups?.find((g) => g.id === groupId),
+    curp = curpInput.trim().toUpperCase();
+  if (
+    !group ||
+    !/^[A-Z][AEIOUX][A-Z]{2}[0-9]{6}[HM][A-Z]{5}[A-Z0-9][0-9]$/.test(curp) ||
+    !firstName.trim() ||
+    !lastName.trim()
+  )
+    throw new Error(
+      'Selecciona un grupo y completa CURP, nombre y apellido. La CURP se verificará también al sincronizar.',
+    );
+  if (vault.data.records.some((r) => r.payload.curp === curp))
+    throw new Error('Esta CURP ya está capturada en este espacio. Revisa el expediente existente.');
+  const record: OfflineRecord = {
+    id: crypto.randomUUID(),
+    newClientId: crypto.randomUUID(),
+    name: `${firstName.trim()} ${lastName.trim()}`,
+    group: group.name,
+    preparedAt: new Date().toISOString(),
+    pending: true,
+    message: 'Alta pendiente de validar en servidor',
+    payload: {
+      id: '',
+      version: 0,
+      team_id: group.id,
+      curp,
+      client_id: null,
+      client_version: null,
+      confirm_existing: false,
+      submit: false,
+      fields: { pNombre: firstName.trim(), aPaterno: lastName.trim() },
+    },
+  };
+  record.payload.id = record.id;
   vault.data.records.push(record);
   try {
     await persistVault(vault);

@@ -1,55 +1,62 @@
 {
   "version": 1,
-  "status": "source_mappings_pending_verification",
+  "status": "database_and_catalog_mappings_verified_row_anomalies_pending",
   "branches": [
     {
       "code": "carrillo",
       "name": "Carrillo",
-      "source_id": null,
-      "legacy_city_id": null,
-      "target_branch_uuid": null
+      "source_id": "creceimp_creceimpulso",
+      "legacy_city_id": "1",
+      "target_branch_uuid": "01a11cfe-2867-7225-8dd7-f388c81ffb5a",
+      "source_database": "creceimp_creceimpulso"
     },
     {
       "code": "tulum",
       "name": "Tulum",
-      "source_id": null,
-      "legacy_city_id": null,
-      "target_branch_uuid": null
+      "source_id": "creceimp_tulum",
+      "legacy_city_id": "3",
+      "target_branch_uuid": "01a11cfe-286b-72ae-937f-9ee46fdb40e0",
+      "source_database": "creceimp_tulum"
     },
     {
       "code": "morelos",
       "name": "Morelos",
-      "source_id": null,
-      "legacy_city_id": null,
-      "target_branch_uuid": null
+      "source_id": "creceimp_morelos",
+      "legacy_city_id": "2",
+      "target_branch_uuid": "01a11cfe-286d-70c9-9edd-b88b18188ead",
+      "source_database": "creceimp_morelos"
     },
     {
       "code": "playa-1",
       "name": "Playa 1",
-      "source_id": null,
-      "legacy_city_id": null,
-      "target_branch_uuid": null
+      "source_id": "creceimp_playa",
+      "legacy_city_id": "4",
+      "target_branch_uuid": "01a11cfe-286e-733b-8be5-c7a0e86b3375",
+      "source_database": "creceimp_playa"
     },
     {
       "code": "playa-2",
       "name": "Playa 2",
-      "source_id": null,
-      "legacy_city_id": null,
-      "target_branch_uuid": null
+      "source_id": "creceimp_playa2",
+      "legacy_city_id": "5",
+      "target_branch_uuid": "01a11cfe-286e-733b-8be5-c7a0e8fc8fb6",
+      "source_database": "creceimp_playa2"
     },
     {
       "code": "cancun-1",
       "name": "Cancún 1",
-      "source_id": null,
-      "legacy_city_id": null,
-      "target_branch_uuid": null
+      "source_id": "creceimp_cancun",
+      "legacy_city_id": "6",
+      "target_branch_uuid": "01a11cfe-286f-71ee-b4f8-d3e844436fe7",
+      "source_database": "creceimp_cancun"
     },
     {
       "code": "cancun-2",
       "name": "Cancún 2",
-      "source_id": null,
-      "legacy_city_id": null,
-      "target_branch_uuid": null
+      "source_id": "creceimp_cancun2",
+      "legacy_city_id": "7",
+      "target_branch_uuid": "01a11cfe-2870-7123-b19d-3452a388982a",
+      "source_database": "creceimp_cancun2"
     }
   ]
 }

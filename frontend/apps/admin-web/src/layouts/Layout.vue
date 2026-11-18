@@ -46,7 +46,15 @@
         <router-link to="/" class="brand-link" aria-label="Crece Impulso, inicio"
           ><img :src="logoUrl" alt="Crece Impulso"
         /></router-link>
-        <q-list><q-item clickable to="/mensajes"><q-item-section avatar><q-icon name="mail" /></q-item-section><q-item-section>Mis mensajes</q-item-section></q-item><q-item v-if="auth.can('messages.send')" clickable to="/mensajes/enviar"><q-item-section avatar><q-icon name="send" /></q-item-section><q-item-section>Enviar mensaje</q-item-section></q-item></q-list>
+        <q-list
+          ><q-item clickable to="/mensajes"
+            ><q-item-section avatar><q-icon name="mail" /></q-item-section
+            ><q-item-section>Mis mensajes</q-item-section></q-item
+          ><q-item v-if="auth.can('messages.send')" clickable to="/mensajes/enviar"
+            ><q-item-section avatar><q-icon name="send" /></q-item-section
+            ><q-item-section>Enviar mensaje</q-item-section></q-item
+          ></q-list
+        >
         <div class="nav-caption">OPERACIÓN</div>
         <q-list padding
           ><q-item clickable v-ripple to="/" exact active-class="nav-active" class="nav-item"
@@ -185,7 +193,10 @@ const operations = computed(() => [
     : []),
   ...(canCapture.value ? [{ label: 'Promotores', icon: 'badge', to: '/promotores' }] : []),
   ...(auth.can('credit.view')
-    ? [{ label: 'Cartera y vencimientos', icon: 'account_balance_wallet', to: '/cartera' }]
+    ? [
+        { label: 'Cartera y vencimientos', icon: 'account_balance_wallet', to: '/cartera' },
+        { label: 'Reportes para impresión', icon: 'print', to: '/reportes' },
+      ]
     : []),
   { label: 'Cobros y depósitos', icon: 'payments' },
   ...(auth.can('cash.view')

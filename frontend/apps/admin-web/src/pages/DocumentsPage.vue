@@ -77,7 +77,14 @@
               :disable="busy"
               @click="view(doc.id)" />
             <div
-              v-if="!['contract_review', 'promissory_review'].includes(doc.kind)"
+              v-if="
+                ![
+                  'contract_review',
+                  'promissory_review',
+                  'contract_reference',
+                  'promissory_reference',
+                ].includes(doc.kind)
+              "
               class="row items-center q-gutter-md q-mt-md"
             >
               <q-file
@@ -98,7 +105,14 @@
               />
             </div>
             <p
-              v-if="!['contract_review', 'promissory_review'].includes(doc.kind)"
+              v-if="
+                ![
+                  'contract_review',
+                  'promissory_review',
+                  'contract_reference',
+                  'promissory_reference',
+                ].includes(doc.kind)
+              "
               class="text-caption"
             >
               Adjuntar no valida la firma ni sustituye la revisión de Gestión. Para una corrección,
@@ -129,7 +143,8 @@
             :disable="!frameReady || busy"
             @click="print"
           /><q-btn flat label="Cerrar" v-close-popup /><span
-            >El contrato conserva su versión; las claves temporales solo aparecen en esta impresión.</span
+            >El contrato conserva su versión; las claves temporales solo aparecen en esta
+            impresión.</span
           ></q-card-section
         ><iframe
           ref="frame"
@@ -163,11 +178,13 @@ const labels: Record<string, string> = {
   schedule: 'Calendario de pagos',
   contract_review: 'Contrato para revisión',
   promissory_review: 'Pagaré grupal para revisión',
+  contract_reference: 'Contrato y anexos de referencia para revisión',
+  promissory_reference: 'Pagaré grupal de referencia para revisión',
 };
 const kinds = computed(() =>
   (type.value === 'file'
     ? ['dossier', 'installation']
-    : ['authorization', 'schedule', 'contract_review', 'promissory_review']
+    : ['authorization', 'schedule', 'contract_reference', 'promissory_reference']
   ).map((value) => ({
     value,
     label: labels[value],
@@ -250,7 +267,10 @@ async function download(fileId: string) {
   });
 }
 async function print() {
-  if (printPrepared.value) { frame.value?.contentWindow?.print(); return; }
+  if (printPrepared.value) {
+    frame.value?.contentWindow?.print();
+    return;
+  }
   await run(async () => {
     const result = await documentsService.print(previewId.value);
     if (disposed || !preview.value) return;
@@ -264,8 +284,16 @@ async function print() {
     html.value = result.html;
   });
 }
-watch(frameReady, (ready) => { if (ready && printPrepared.value && preview.value) frame.value?.contentWindow?.print(); });
-watch(preview, (open) => { if (!open) { html.value = ''; previewId.value = ''; printPrepared.value = false; } });
+watch(frameReady, (ready) => {
+  if (ready && printPrepared.value && preview.value) frame.value?.contentWindow?.print();
+});
+watch(preview, (open) => {
+  if (!open) {
+    html.value = '';
+    previewId.value = '';
+    printPrepared.value = false;
+  }
+});
 watch(
   () => route.fullPath,
   () => {

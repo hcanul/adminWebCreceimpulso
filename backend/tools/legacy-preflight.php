@@ -9,7 +9,7 @@ use App\Domains\LegacyMigration\Actions\BuildConsolidationPlanAction;
 use App\Domains\LegacyMigration\DTOs\SourceSnapshot;
 
 try {
-    if ($argc !== 2 || ! is_file($argv[1])) {
+    if (! in_array($argc, [2, 3], true) || ($argc === 3 && $argv[2] !== '--summary') || ! is_file($argv[1])) {
         throw new InvalidArgumentException('Usage: php tools/legacy-preflight.php /path/to/snapshot.json');
     }
     if (filesize($argv[1]) > 50 * 1024 * 1024) {
@@ -27,6 +27,10 @@ try {
         $sources[] = new SourceSnapshot($source['source_id'], $source['branches'], $source['tables']);
     }
     $report = (new BuildConsolidationPlanAction)->execute($sources);
+    if ($argc === 3) {
+        $report['identity_candidate_count'] = count($report['identity_candidates']);
+        unset($report['identity_candidates']);
+    }
     echo json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).PHP_EOL;
     exit($report['structural_checks_passed'] ? 0 : 2);
 } catch (Throwable $error) {

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 final class SaveTeamAction
 {
-    public function execute(User $actor, SaveTeamData $dto, ?Team $team = null): Team
+    public function execute(User $actor, SaveTeamData $dto, ?Team $team = null, ?string $creationId = null): Team
     {
         $data = $dto->toArray();
         $access = app(IntakeAccess::class);
@@ -20,7 +20,7 @@ final class SaveTeamAction
         abort_unless($access->global($actor) || $data['branch_id'] === $actor->branch_id, 403);
         abort_unless(Branch::whereKey($data['branch_id'])->where('is_active', true)->exists(), 422, 'Sucursal no disponible.');
 
-        return DB::transaction(function () use ($team, $data, $actor, $access) {
+        return DB::transaction(function () use ($team, $data, $actor, $access, $creationId) {
             // Share the user lock with account edits so eligibility cannot change during assignment.
             User::whereKey($data['promoter_id'])->lockForUpdate()->firstOrFail();
             $promoter = Promoter::assignable()->whereKey($data['promoter_id'])->first();
@@ -32,7 +32,11 @@ final class SaveTeamAction
                 abort_if($team->branch_id !== $data['branch_id'], 422, 'No se puede trasladar un grupo a otra sucursal desde edición.');
                 $team->update(['name' => $data['name'], 'promoter_id' => $data['promoter_id']]);
             } else {
-                $team = Team::create($data + ['created_by' => $actor->id]);
+                $team = new Team($data + ['created_by' => $actor->id]);
+                if ($creationId) {
+                    $team->id = $creationId;
+                }
+                $team->save();
             }
 
             return $team->load(['branch:id,name', 'promoter:id,branch_id'])->loadCount('memberships');

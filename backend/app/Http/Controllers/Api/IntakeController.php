@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domains\Intake\Actions\AssignCommitteeAction;
+use App\Domains\Intake\Actions\CreateOfflineClientAction;
+use App\Domains\Intake\Actions\CreateOfflineTeamAction;
 use App\Domains\Intake\Actions\LookupClientAction;
 use App\Domains\Intake\Actions\RegisterPromoterAction;
 use App\Domains\Intake\Actions\SaveApplicationAction;
@@ -79,6 +81,13 @@ final class IntakeController extends Controller
         return response()->json($access->teams($request->user())->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->string('search').'%'))->with(['branch:id,name', 'promoter:id,branch_id'])->withCount('memberships')->latest()->paginate(20));
     }
 
+    public function createOfflineTeam(Request $request, CreateOfflineTeamAction $action)
+    {
+        $data = $request->validate(['id' => 'required|uuid', 'name' => 'required|string|max:150', 'branch_id' => 'required|uuid', 'promoter_id' => 'required|uuid']);
+
+        return response()->json($action->execute($request->user(), $data['id'], new SaveTeamData($data['name'], $data['branch_id'], $data['promoter_id'])), 201);
+    }
+
     public function saveTeam(Request $request, IntakeAccess $access, SaveTeamAction $action, ?string $teamId = null)
     {
         if (! $request->filled('promoter_id') && $request->user()->hasRole('Promotor')) {
@@ -117,6 +126,13 @@ final class IntakeController extends Controller
     public function applications(Request $request, IntakeAccess $access)
     {
         return response()->json(ClientApplication::whereIn('team_id', $access->teams($request->user())->select('id'))->with(['client:id,folio,curp,first_name,last_name', 'team:id,name'])->latest()->paginate(20, ['id', 'team_id', 'client_id', 'status', 'updated_at']));
+    }
+
+    public function createOfflineClient(SaveApplicationRequest $request, CreateOfflineClientAction $action)
+    {
+        $extra = $request->validate(['proposed_client_id' => ['required', 'uuid']]);
+
+        return response()->json($action->execute($request->user(), SaveApplicationData::fromArray($request->validated()), $extra['proposed_client_id']), 201)->header('Cache-Control', 'no-store');
     }
 
     public function syncCorrection(SaveApplicationRequest $request, SyncCorrectionAction $action)

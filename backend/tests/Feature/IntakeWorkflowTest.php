@@ -126,6 +126,55 @@ final class IntakeWorkflowTest extends TestCase
         $this->assertDatabaseCount('client_applications', 0);
     }
 
+    public function test_offline_group_creation_preserves_uuid_and_retry_without_duplicate(): void
+    {
+        $actor = $this->actor();
+        $promoter = $this->promoter($actor);
+        $data = ['id' => (string) Str::uuid(), 'name' => 'Grupo repetido', 'branch_id' => $actor->branch_id, 'promoter_id' => $promoter->id];
+        $this->postJson('/api/intake/offline/teams', $data)->assertCreated()->assertJsonPath('id', $data['id']);
+        $this->postJson('/api/intake/offline/teams', $data)->assertCreated()->assertJsonPath('id', $data['id']);
+        $this->assertDatabaseCount('teams', 1);
+        $this->assertDatabaseCount('offline_group_creations', 1);
+        $changed = $data;
+        $changed['name'] = 'Otra operación';
+        $this->postJson('/api/intake/offline/teams', $changed)->assertConflict();
+        $data['id'] = (string) Str::uuid();
+        $this->postJson('/api/intake/offline/teams', $data)->assertCreated();
+        $this->assertDatabaseCount('teams', 2);
+        $this->actor('Gerente');
+        $this->postJson('/api/intake/offline/teams', $data)->assertConflict();
+        $data['id'] = (string) Str::uuid();
+        $this->postJson('/api/intake/offline/teams', $data)->assertForbidden();
+    }
+
+    public function test_offline_client_preserves_ids_and_requires_explicit_curp_link(): void
+    {
+        $actor = $this->actor();
+        $team = $this->team($actor);
+        $data = $this->data($team);
+        $data['proposed_client_id'] = (string) Str::uuid();
+        $url = '/api/intake/offline/clients';
+        $saved = $this->postJson($url, $data)->assertCreated()->assertJsonPath('id', $data['id'])->assertJsonPath('client_id', $data['proposed_client_id'])->json();
+        $this->postJson($url, $data)->assertCreated()->assertJsonPath('version', 1);
+        $this->assertDatabaseCount('clients', 1);
+        $this->assertDatabaseCount('application_revisions', 1);
+        $secondTeam = $this->team($actor);
+        $second = $data;
+        $second['id'] = (string) Str::uuid();
+        $second['proposed_client_id'] = (string) Str::uuid();
+        $second['team_id'] = $secondTeam->id;
+        $this->postJson($url, $second)->assertConflict();
+        $this->assertDatabaseCount('clients', 1);
+        $second['client_id'] = $saved['client_id'];
+        $second['client_version'] = $saved['client']['version'];
+        $second['confirm_existing'] = true;
+        $linked = $this->postJson($url, $second)->assertCreated()->assertJsonPath('client_id', $saved['client_id'])->json();
+        $this->postJson($url, $second)->assertCreated()->assertJsonPath('id', $linked['id']);
+        $this->assertDatabaseCount('clients', 1);
+        $this->assertDatabaseCount('offline_client_creations', 2);
+        $this->assertDatabaseHas('offline_client_creations', ['id' => $second['id'], 'proposed_client_id' => $second['proposed_client_id'], 'client_id' => $saved['client_id']]);
+    }
+
     public function test_document_versions_preserve_fields_and_signed_files_with_scoped_access(): void
     {
         Storage::fake('local');

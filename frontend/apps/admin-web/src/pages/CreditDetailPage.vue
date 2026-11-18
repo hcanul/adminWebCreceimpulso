@@ -32,6 +32,14 @@
         :to="`/creditos/${loan?.id}/estado-de-cuenta`"
       />
       <q-btn
+        v-if="['entregado', 'pagado'].includes(loan?.status ?? '')"
+        flat
+        no-caps
+        icon="print"
+        label="Formatos de referencia"
+        :to="{ path: '/reportes', query: { credit: loan?.id } }"
+      />
+      <q-btn
         v-if="
           (auth.can('credit.collect') || auth.can('credit.reverse')) &&
           ['entregado', 'pagado'].includes(loan?.status ?? '')
