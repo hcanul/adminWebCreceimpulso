@@ -1,6 +1,6 @@
 # Integración con Jenkins
 
-El Jenkinsfile comprueba Laravel mediante PHPUnit y las tres apps Quasar mediante tipos, ESLint y compilación SPA. Usa Node 24.22.2 y pnpm 12.10.1 en .tools, y los lockfiles de cada aplicación. Para admin-web instala también las dependencias de src-electron sin descargar el ejecutable de escritorio.
+El Jenkinsfile comprueba Laravel mediante PHPUnit y las tres apps Quasar mediante tipos, ESLint y compilación SPA. Usa Node 24.22.2 y pnpm 12.10.1 en .tools, y los lockfiles de cada aplicación. Para admin-web instala también las dependencias de src-electron sin descargar el ejecutable de escritorio. Para client-app y staff-app instala las dependencias de src-capacitor antes de compilar. Los fallos de PHPUnit mantienen el resultado final en FAILURE y permiten verificar también los frontends.
 
 El agente bussix-linux debe disponer de PHP 8.2 o superior, Composer, intl, SQLite, mbstring, XML, cURL y ZIP. La imagen actual de BussiX necesita añadir php-intl para los contratos de Creceimpulso. Durante la preparación se construyó creceimpulso-ci-check:20261118 con esa extensión y se verificaron las pruebas en un contenedor temporal.
 

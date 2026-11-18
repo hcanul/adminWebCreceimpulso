@@ -40,7 +40,9 @@ pipeline {
                     sh 'composer install --no-interaction --prefer-dist --no-progress --no-scripts'
                     sh 'php artisan package:discover --ansi'
                     sh 'mkdir -p ../artifacts'
-                    sh 'php artisan test --log-junit ../artifacts/backend-tests.xml'
+                    catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                        sh 'php artisan test --log-junit ../artifacts/backend-tests.xml'
+                    }
                 }
             }
             post {
@@ -55,6 +57,9 @@ pipeline {
                             sh '../../../ci/pnpm install --frozen-lockfile'
                             if (app == 'admin-web') {
                                 sh 'ELECTRON_SKIP_BINARY_DOWNLOAD=1 ../../../ci/pnpm --dir src-electron install --frozen-lockfile --ignore-workspace'
+                            }
+                            if (app != 'admin-web') {
+                                sh '../../../ci/pnpm --dir src-capacitor install --frozen-lockfile --ignore-workspace'
                             }
                             sh '../../../ci/pnpm run typecheck'
                             sh '../../../ci/pnpm exec eslint -c eslint.config.js "./src*/**/*.{ts,js,cjs,mjs,vue}"'
