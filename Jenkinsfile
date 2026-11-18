@@ -52,7 +52,7 @@ pipeline {
                 script {
                     for (app in ['admin-web', 'client-app', 'staff-app']) {
                         dir("frontend/apps/${app}") {
-                            sh '../../../ci/pnpm install --frozen-lockfile --ignore-workspace'
+                            sh '../../../ci/pnpm install --frozen-lockfile'
                             if (app == 'admin-web') {
                                 sh 'ELECTRON_SKIP_BINARY_DOWNLOAD=1 ../../../ci/pnpm --dir src-electron install --frozen-lockfile --ignore-workspace'
                             }
