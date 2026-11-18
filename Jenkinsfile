@@ -53,12 +53,10 @@ pipeline {
                     for (app in ['admin-web', 'client-app', 'staff-app']) {
                         dir("frontend/apps/${app}") {
                             sh '../../../ci/pnpm install --frozen-lockfile --ignore-workspace'
-                            script {
-                                if (app == 'admin-web') {
-                                    sh 'ELECTRON_SKIP_BINARY_DOWNLOAD=1 ../../../ci/pnpm --dir src-electron install --frozen-lockfile --ignore-workspace'
-                                }
+                            if (app == 'admin-web') {
+                                sh 'ELECTRON_SKIP_BINARY_DOWNLOAD=1 ../../../ci/pnpm --dir src-electron install --frozen-lockfile --ignore-workspace'
                             }
-                            sh '../../../ci/pnpm run typecheck' 
+                            sh '../../../ci/pnpm run typecheck'
                             sh '../../../ci/pnpm exec eslint -c eslint.config.js "./src*/**/*.{ts,js,cjs,mjs,vue}"'
                             sh '../../../ci/pnpm run build'
                         }

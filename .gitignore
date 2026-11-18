@@ -13,3 +13,4 @@ firebase-debug*.log
 # Jenkins tools and output
 .tools/
 artifacts/
+.pnpm-store/

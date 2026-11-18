@@ -1,5 +1,8 @@
 allowBuilds:
   '@parcel/watcher': true
+  core-js: true
+  electron-winstaller: true
+  unrs-resolver: true
   esbuild: true
   lightningcss: true
   rolldown: true
