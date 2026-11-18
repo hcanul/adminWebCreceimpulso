@@ -69,6 +69,15 @@
             icon-right="arrow_forward"
           />
         </q-form>
+        <q-btn
+          v-if="isDesktop"
+          flat
+          no-caps
+          icon="settings"
+          label="Configurar servidor"
+          class="q-mt-md"
+          @click="configureServer"
+        />
         <p class="help">
           ¿Necesitas acceso o recuperar tu cuenta?<br />Comunícate con la administración del
           sistema.
@@ -89,7 +98,8 @@ import { alerts } from '../../services/alerts.service';
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth.store';
-import { apiErrorMessage } from '../../services/http';
+import Swal from 'sweetalert2';
+import { api, isDesktop, apiErrorMessage } from '../../services/http';
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -100,6 +110,40 @@ const showPassword = ref(false);
 const loading = ref(false);
 const errorMessage = ref('');
 const required = (value: string) => !!value.trim() || 'Este campo es obligatorio';
+async function configureServer() {
+  const result = await Swal.fire({
+    title: 'Servidor de Crece Impulso',
+    input: 'text',
+    inputValue: api.defaults.baseURL,
+    inputLabel: 'Dirección de la API, por ejemplo https://servidor/api',
+    showCancelButton: true,
+    confirmButtonText: 'Guardar',
+    cancelButtonText: 'Cancelar',
+    inputValidator: (value) => {
+      try {
+        const url = new URL(value);
+        if (
+          !['http:', 'https:'].includes(url.protocol) ||
+          url.username ||
+          url.password ||
+          url.search ||
+          url.hash
+        )
+          return 'Escribe una dirección HTTP o HTTPS válida.';
+      } catch {
+        return 'Escribe una dirección completa, incluyendo http:// o https://.';
+      }
+    },
+  });
+  if (result.isConfirmed && typeof result.value === 'string') {
+    const url = new URL(result.value);
+    const basePath = url.pathname.replace(/\/+$/, '');
+    url.pathname = basePath.endsWith('/api') ? basePath : `${basePath}/api`;
+    auth.clearSession();
+    localStorage.setItem('crece.desktop.server', url.toString().replace(/\/$/, ''));
+    window.location.reload();
+  }
+}
 async function enter() {
   const target = route.query.redirect;
   const path =

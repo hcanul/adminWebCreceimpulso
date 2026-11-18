@@ -2,7 +2,7 @@
   "name": "admin-web",
   "version": "0.0.1",
   "description": "A Quasar Project",
-  "productName": "admin-web",
+  "productName": "Crece Impulso Admin",
   "author": "hugoCanul <hcanul@avantronics.com.mx>",
   "type": "module",
   "private": true,
@@ -12,7 +12,9 @@
     "dev": "quasar dev",
     "build": "quasar build",
     "typecheck": "vue-tsc --noEmit",
-    "postinstall": "quasar prepare --silent"
+    "postinstall": "quasar prepare --silent",
+    "desktop:dev": "quasar dev -m electron",
+    "desktop:build": "quasar build -m electron"
   },
   "dependencies": {
     "@quasar/extras": "^2.1.0",

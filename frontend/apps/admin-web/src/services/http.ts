@@ -1,8 +1,15 @@
 import axios from 'axios';
 
+export const isDesktop = /Electron\//.test(navigator.userAgent);
+const desktopServer = isDesktop ? localStorage.getItem('crece.desktop.server') : null;
+
 // Todos los servicios comparten esta instancia; la URL incluye /api.
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL:
+    desktopServer ||
+    import.meta.env.QCLI_API_URL ||
+    import.meta.env.VITE_API_URL ||
+    'http://localhost:8000/api',
   timeout: 15000,
   headers: { Accept: 'application/json' },
 });

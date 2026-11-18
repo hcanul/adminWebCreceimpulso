@@ -11,9 +11,7 @@ export default defineConfig((/* ctx */) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: [
-      'axios',
-    ],
+    boot: ['axios'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -210,6 +208,8 @@ export default defineConfig((/* ctx */) => {
       bundler: 'packager', // 'packager' or 'builder'
 
       packager: {
+        appBundleId: 'com.creceimpulso.admin',
+        appCategoryType: 'public.app-category.finance',
         // https://github.com/electron-userland/electron-packager/blob/master/docs/api.md#options
         // OS X / Mac App Store
         // appBundleId: '',
