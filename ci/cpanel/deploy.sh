@@ -66,6 +66,12 @@ for destination in admin clientes personal; do
         exit 1
     fi
 done
+if [ ! -e "$public/crece-impulso-logo.png" ] && [ ! -L "$public/crece-impulso-logo.png" ]; then
+    ln -s '.releases/current/admin/crece-impulso-logo.png' "$public/crece-impulso-logo.png"
+elif [ ! -L "$public/crece-impulso-logo.png" ] || [ "$(readlink "$public/crece-impulso-logo.png")" != '.releases/current/admin/crece-impulso-logo.png' ]; then
+    printf '%s\n' 'Hay un logotipo público ajeno al despliegue.' >&2
+    exit 1
+fi
 ln -s "$release" "$base/current.next"
 mv -Tf "$base/current.next" "$base/current"
 ln -s "$release_id" "$public/.releases/current.next"
