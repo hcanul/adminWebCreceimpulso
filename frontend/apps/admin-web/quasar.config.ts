@@ -67,9 +67,11 @@ export default defineConfig((/* ctx */) => {
         [
           'vite-plugin-checker',
           {
-            vueTsc: true,
+            vueTsc: process.env.CI_WEB_ONLY === 'true' ? { tsconfigPath: 'tsconfig.web.json' } : true,
             eslint: {
-              lintCommand: 'eslint -c ./eslint.config.js "./src*/**/*.{ts,js,mjs,cjs,vue}"',
+              lintCommand: process.env.CI_WEB_ONLY === 'true'
+                ? 'eslint -c ./eslint.config.js "./src/**/*.{ts,js,mjs,cjs,vue}"'
+                : 'eslint -c ./eslint.config.js "./src*/**/*.{ts,js,mjs,cjs,vue}"',
               useFlatConfig: true,
             },
           },

@@ -1,3 +1,7 @@
+# Alcance de la entrega web
+
+El flujo actual compila y entrega únicamente backend Laravel y frontend admin-web. No instala Electron ni Capacitor y no compila las aplicaciones móviles. Los estáticos previos de clientes y personal se copian sin cambios entre entregas para conservar sus enlaces públicos. La validación del ZIP exige solo web/admin-web y su API de pruebas. Los detalles operativos históricos de las tres aplicaciones que siguen describen la preparación inicial; el alcance actual es el indicado aquí.
+
 # Entrega para el hosting de pruebas
 
 Destino: https://pruebas.creceimpulso.com. Carpeta pública: /home/creceimp/pruebas.creceimpulso.com. Administración en /admin/, clientes en /clientes/ y personal en /personal/; la API permanece en /api y los comprobantes en /comprobantes. Las tres apps se compilan en modo SPA; los instaladores nativos se generan por separado.

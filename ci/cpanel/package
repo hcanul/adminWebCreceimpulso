@@ -16,7 +16,7 @@ mkdir -p "$package_dir/backend/bootstrap/cache"
 )
 rm -rf "$package_dir/backend/vendor/bin"
 mkdir -p "$package_dir/web"
-for app in admin-web client-app staff-app; do
+for app in admin-web; do
     test -f "frontend/apps/$app/dist/spa/index.html"
     mkdir -p "$package_dir/web/$app"
     cp -R "frontend/apps/$app/dist/spa/." "$package_dir/web/$app/"

@@ -30,18 +30,18 @@ if ($operation === 'prepare') {
     $zip = new ZipArchive();
     if ($zip->open($base.'/incoming.zip') !== true) throw new RuntimeException('ZIP inválido');
     if (trim($zip->getFromName('REVISION') ?: '') !== $data['revision']) throw new RuntimeException('Revisión incorrecta');
-    $api = array_fill_keys(['admin-web', 'client-app', 'staff-app'], false);
+    $api = array_fill_keys(['admin-web'], false);
     for ($i = 0; $i < $zip->numFiles; $i++) {
         $name = $zip->getNameIndex($i);
         $os = $attr = 0; $zip->getExternalAttributesIndex($i, $os, $attr);
         if (str_starts_with($name, '/') || str_contains($name, '\\') || str_contains($name, "\0") || preg_match('~(^|/)\.\.?(/|$)|(^|/)\.env(?:\.|$)~', $name) || (($attr >> 16) & 0170000) === 0120000 || !(str_starts_with($name, 'backend/') || str_starts_with($name, 'web/') || $name === 'REVISION')) throw new RuntimeException('Ruta de ZIP no permitida');
         if (str_starts_with($name, 'web/') && preg_match('/\.(php[0-9]?|phtml|phar)$/i', $name)) throw new RuntimeException('PHP en archivos estáticos');
-        if (preg_match('~^web/(admin-web|client-app|staff-app)/assets/.+\.js$~', $name, $match) && str_contains($zip->getFromIndex($i), 'https://pruebas.creceimpulso.com/api')) $api[$match[1]] = true;
+        if (preg_match('~^web/(admin-web)/assets/.+\.js$~', $name, $match) && str_contains($zip->getFromIndex($i), 'https://pruebas.creceimpulso.com/api')) $api[$match[1]] = true;
     }
     if (in_array(false, $api, true)) throw new RuntimeException('API de pruebas ausente en una aplicación');
     if (!mkdir($release, 0700, true) || !$zip->extractTo($release)) throw new RuntimeException('No se pudo extraer la entrega');
     $zip->close();
-    foreach (['admin-web', 'client-app', 'staff-app'] as $app) if (!is_file($release.'/web/'.$app.'/index.html')) throw new RuntimeException('Falta una aplicación');
+    foreach (['admin-web'] as $app) if (!is_file($release.'/web/'.$app.'/index.html')) throw new RuntimeException('Falta una aplicación');
     require $release.'/backend/vendor/autoload.php';
     $env = Dotenv\Dotenv::parse(file_get_contents($base.'/shared.env'));
     if (($env['DB_DATABASE'] ?? '') !== 'creceimp_pruebas' || ($env['DB_USERNAME'] ?? '') !== 'creceimp_pruebas' || ($env['DB_HOST'] ?? '') !== 'localhost' || ($env['APP_URL'] ?? '') !== 'https://pruebas.creceimpulso.com' || ($env['APP_ENV'] ?? '') !== 'staging' || ($env['APP_DEBUG'] ?? '') !== 'false') throw new RuntimeException('Configuración fuera del entorno de pruebas');

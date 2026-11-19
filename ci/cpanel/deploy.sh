@@ -42,11 +42,17 @@ rm -f "$base/mysql-client.cnf"
 phase=prepare-public
 mkdir -p "$public/.releases/$release_id"
 chmod 755 "$public/.releases" "$public/.releases/$release_id"
-for pair in admin-web:admin client-app:clientes staff-app:personal; do
+for pair in admin-web:admin; do
     app=${pair%:*}; destination=${pair#*:}
     cp -R "$release/web/$app" "$public/.releases/$release_id/$destination"
     if [ -d "$public/.releases/current/$destination/assets" ]; then
         cp -Rn "$public/.releases/current/$destination/assets/." "$public/.releases/$release_id/$destination/assets/"
+    fi
+done
+# Conservar los estáticos móviles previos sin compilarlos ni actualizarlos.
+for unchanged in clientes personal; do
+    if [ -d "$public/.releases/current/$unchanged" ]; then
+        cp -R "$public/.releases/current/$unchanged" "$public/.releases/$release_id/$unchanged"
     fi
 done
 find "$public/.releases/$release_id" -type d -exec chmod 755 {} +
@@ -61,7 +67,7 @@ cd "$release/backend"
 "$php" artisan config:cache --no-interaction
 phase=activate
 "$php" "$base/deploy-support.php" public-config
-for destination in admin clientes personal; do
+for destination in admin; do
     if [ ! -e "$public/$destination" ] && [ ! -L "$public/$destination" ]; then
         ln -s ".releases/current/$destination" "$public/$destination"
     elif [ ! -L "$public/$destination" ] || [ "$(readlink "$public/$destination")" != ".releases/current/$destination" ]; then

@@ -61,24 +61,14 @@ pipeline {
                 always { junit testResults: 'artifacts/backend-tests.xml', allowEmptyResults: true }
             }
         }
-        stage('Quasar: tipos, lint y compilaciones web') {
+        stage('Frontend web: tipos, lint y compilación') {
             steps {
-                script {
-                    for (app in ['admin-web', 'client-app', 'staff-app']) {
-                        dir("frontend/apps/${app}") {
-                            sh '../../../ci/pnpm install --frozen-lockfile'
-                            if (app == 'admin-web') {
-                                sh 'ELECTRON_SKIP_BINARY_DOWNLOAD=1 ../../../ci/pnpm --dir src-electron install --frozen-lockfile --ignore-workspace'
-                            }
-                            if (app != 'admin-web') {
-                                sh '../../../ci/pnpm --dir src-capacitor install --frozen-lockfile --ignore-workspace'
-                            }
-                            sh '../../../ci/pnpm run typecheck'
-                            sh '../../../ci/pnpm exec eslint -c eslint.config.js "./src*/**/*.{ts,js,cjs,mjs,vue}"'
-                            withEnv(["QCLI_PUBLIC_PATH=${['admin-web': '/admin/', 'client-app': '/clientes/', 'staff-app': '/personal/'][app]}"]) {
-                                sh '../../../ci/pnpm run build'
-                            }
-                        }
+                dir('frontend/apps/admin-web') {
+                    sh '../../../ci/pnpm install --frozen-lockfile'
+                    sh '../../../ci/pnpm exec vue-tsc --noEmit --project tsconfig.web.json'
+                    sh '../../../ci/pnpm exec eslint -c eslint.config.js "./src/**/*.{ts,js,cjs,mjs,vue}"'
+                    withEnv(['CI_WEB_ONLY=true', 'QCLI_PUBLIC_PATH=/admin/']) {
+                        sh '../../../ci/pnpm run build'
                     }
                 }
             }
@@ -101,7 +91,7 @@ pipeline {
         stage('Artefactos web') {
             steps {
                 sh 'bash ci/package-web'
-                archiveArtifacts artifacts: 'artifacts/*-web.tar.gz,artifacts/SHA256SUMS', fingerprint: true
+                archiveArtifacts artifacts: 'artifacts/admin-web-web.tar.gz,artifacts/SHA256SUMS', fingerprint: true
             }
         }
     }
