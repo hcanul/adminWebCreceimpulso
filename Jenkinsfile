@@ -10,6 +10,7 @@ pipeline {
     triggers { pollSCM('H/10 * * * *') }
     environment {
         CI = 'true'
+        QCLI_API_URL = 'https://pruebas.creceimpulso.com/api'
         NODE_OPTIONS = '--max-old-space-size=1536'
         APP_ENV = 'testing'
         DB_CONNECTION = 'sqlite'
@@ -67,6 +68,13 @@ pipeline {
                         }
                     }
                 }
+            }
+        }
+        stage('Paquete cPanel') {
+            when { expression { currentBuild.currentResult == 'SUCCESS' } }
+            steps {
+                sh 'bash ci/cpanel/package'
+                archiveArtifacts artifacts: 'artifacts/creceimpulso-cpanel.zip,artifacts/creceimpulso-cpanel.sha256', fingerprint: true
             }
         }
         stage('Artefactos web') {

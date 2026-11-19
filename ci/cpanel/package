@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(cd "$(dirname "$0")/../.." && pwd)
+cd "$root"
+mkdir -p .tools artifacts
+package_dir=$(mktemp -d "$root/.tools/cpanel.XXXXXX")
+trap 'rm -rf "$package_dir"' EXIT
+# Extraer únicamente código versionado; las credenciales se conservan en el hosting.
+git archive HEAD backend | tar -x -C "$package_dir"
+rm -rf "$package_dir/backend/tests" "$package_dir/backend/storage" "$package_dir/backend/bootstrap/cache"
+find "$package_dir/backend" -name '.env*' -type f -delete
+mkdir -p "$package_dir/backend/bootstrap/cache"
+(
+    cd "$package_dir/backend"
+    composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts --optimize-autoloader
+)
+rm -rf "$package_dir/backend/vendor/bin"
+mkdir -p "$package_dir/web"
+for app in admin-web client-app staff-app; do
+    test -f "frontend/apps/$app/dist/spa/index.html"
+    mkdir -p "$package_dir/web/$app"
+    cp -R "frontend/apps/$app/dist/spa/." "$package_dir/web/$app/"
+done
+git rev-parse HEAD > "$package_dir/REVISION"
+php ci/cpanel/zip-package.php "$package_dir" "$root/artifacts/creceimpulso-cpanel.zip"
+(cd artifacts && sha256sum creceimpulso-cpanel.zip > creceimpulso-cpanel.sha256)
