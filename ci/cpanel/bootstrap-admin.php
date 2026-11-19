@@ -9,7 +9,12 @@ $lock = fopen($base.'/admin-bootstrap.lock', 'c');
 if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) exit;
 if (is_file($base.'/admin-bootstrap.done.json')) exit;
 require $base.'/current/backend/vendor/autoload.php';
-$input = Dotenv\Dotenv::parse(file_get_contents($request));
+try {
+    $input = Dotenv\Dotenv::parse(file_get_contents($request));
+} catch (Throwable) {
+    file_put_contents($base.'/admin-bootstrap-status.json', json_encode(['ok' => false, 'reason' => 'invalid_env_format', 'time' => gmdate('c')]));
+    exit;
+}
 if (($input['ADMIN_CONFIRM'] ?? '') !== 'true') exit;
 $status = ['ok' => false, 'time' => gmdate('c')];
 try {
