@@ -26,7 +26,7 @@ try {
     $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
     if (!app()->environment('staging') || config('database.default') !== 'mysql' || config('database.connections.mysql.database') !== 'creceimp_pruebas' || config('app.url') !== 'https://pruebas.creceimpulso.com') throw new RuntimeException('Entorno no permitido');
     $user = Illuminate\Support\Facades\DB::transaction(function () use ($name, $email, $password) {
-        if (App\Models\User::withTrashed()->count() !== 0) throw new RuntimeException('El entorno ya tiene usuarios; se requiere revisión manual');
+        if (Illuminate\Support\Facades\DB::table('users')->count() !== 0) throw new RuntimeException('El entorno ya tiene usuarios; se requiere revisión manual');
         $role = Spatie\Permission\Models\Role::findOrCreate('Super Admin', 'web');
         $role->syncPermissions(Spatie\Permission\Models\Permission::where('guard_name', 'web')->get());
         $user = new App\Models\User();
