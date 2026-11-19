@@ -7,6 +7,7 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '3'))
         skipDefaultCheckout(true)
     }
+    parameters { booleanParam(name: 'DEPLOY_CPANEL', defaultValue: false, description: 'Publicar en pruebas.creceimpulso.com después de validar y respaldar MySQL') }
     triggers { pollSCM('H/10 * * * *') }
     environment {
         CI = 'true'
@@ -65,7 +66,9 @@ pipeline {
                             }
                             sh '../../../ci/pnpm run typecheck'
                             sh '../../../ci/pnpm exec eslint -c eslint.config.js "./src*/**/*.{ts,js,cjs,mjs,vue}"'
-                            sh '../../../ci/pnpm run build'
+                            withEnv(["QCLI_PUBLIC_PATH=${['admin-web': '/admin/', 'client-app': '/clientes/', 'staff-app': '/personal/'][app]}"]) {
+                                sh '../../../ci/pnpm run build'
+                            }
                         }
                     }
                 }
@@ -76,6 +79,14 @@ pipeline {
             steps {
                 sh 'bash ci/cpanel/package'
                 archiveArtifacts artifacts: 'artifacts/creceimpulso-cpanel.zip,artifacts/creceimpulso-cpanel.sha256', fingerprint: true
+            }
+        }
+        stage('Publicar en cPanel de pruebas') {
+            when { expression { params.DEPLOY_CPANEL && currentBuild.currentResult == 'SUCCESS' } }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'creceimpulso-pruebas-ftps', usernameVariable: 'CPANEL_FTP_USER', passwordVariable: 'CPANEL_FTP_PASSWORD')]) {
+                    sh 'php ci/cpanel/upload.php'
+                }
             }
         }
         stage('Artefactos web') {

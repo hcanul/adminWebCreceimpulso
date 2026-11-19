@@ -49,7 +49,7 @@ export default defineConfig((/* ctx */) => {
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
 
-      // publicPath: '/',
+      publicPath: process.env.QCLI_PUBLIC_PATH || '/',
       // define: {},
       // defineEnv: {}
       // ignorePublicFolder: true,
