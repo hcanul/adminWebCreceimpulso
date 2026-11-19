@@ -7,7 +7,7 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '3'))
         skipDefaultCheckout(true)
     }
-    parameters { booleanParam(name: 'DEPLOY_CPANEL', defaultValue: false, description: 'Publicar en pruebas.creceimpulso.com después de validar y respaldar MySQL') }
+    parameters { booleanParam(name: 'DEPLOY_CPANEL', defaultValue: false, description: 'Forzar publicación manual a pruebas; main se publica automáticamente al pasar CI') }
     triggers { pollSCM('H/10 * * * *') }
     environment {
         CI = 'true'
@@ -82,7 +82,7 @@ pipeline {
             }
         }
         stage('Publicar en cPanel de pruebas') {
-            when { expression { params.DEPLOY_CPANEL && currentBuild.currentResult == 'SUCCESS' } }
+            when { expression { (params.DEPLOY_CPANEL || env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main') && currentBuild.currentResult == 'SUCCESS' } }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'creceimpulso-pruebas-ftps', usernameVariable: 'CPANEL_FTP_USER', passwordVariable: 'CPANEL_FTP_PASSWORD')]) {
                     sh 'php ci/cpanel/upload.php'
