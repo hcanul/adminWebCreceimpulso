@@ -25,3 +25,5 @@ Si falla una migración o la comprobación, Jenkins recibe fallo y el mantenimie
 Se mantienen los bloques de configuración PHP generados por cPanel en .htaccess, php.ini y .user.ini. El backend completo y sus dependencias permanecen fuera de la raíz del dominio; en ella solo hay un controlador PHP fijo y los archivos públicos. No se modifican otros dominios ni bases.
 
 El trabajo sigue en la rama ci/jenkins mientras se valida la integración. DEPLOY_CPANEL es falso por defecto. Cambiar la rama del trabajo y la política de publicación tras integrar los cambios en main; esta configuración no activa despliegues de producción.
+
+El primer intento #5 falló por el motor predeterminado del hosting. Se fijó InnoDB explícitamente y la recuperación del esquema parcial vacío se realizó tras otro respaldo, verificando que solo hubiera users y migrations sin registros. El despliegue #7 completó todas las migraciones y la comprobación local. Se corrigió DirectoryIndex a index.php index.html para permitir las tres SPA en subcarpetas.

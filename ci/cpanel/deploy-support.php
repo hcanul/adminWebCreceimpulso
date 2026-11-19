@@ -89,7 +89,7 @@ if ($operation === 'public-config') {
 
 # BEGIN Jenkins Creceimpulso Pruebas
 Options -Indexes
-DirectoryIndex index.php
+DirectoryIndex index.php index.html
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteRule ^\.well-known/ - [L]
