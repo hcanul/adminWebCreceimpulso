@@ -52,6 +52,7 @@ phase=migrate
 # El mantenimiento permanece activo si falla una migración o la comprobación.
 touch "$public/.jenkins-maintenance"
 cd "$release/backend"
+"$php" "$base/deploy-support.php" repair-empty-initial-schema
 "$php" artisan package:discover --no-interaction
 "$php" artisan migrate --force --no-interaction
 "$php" artisan config:cache --no-interaction

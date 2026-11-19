@@ -53,6 +53,24 @@ if ($operation === 'prepare') {
     file_put_contents($base.'/release-id', $id."\n");
     exit;
 }
+if ($operation === 'repair-empty-initial-schema') {
+    // Reparación única del primer intento fallido, siempre después del respaldo.
+    $marker = $base.'/repair-empty-initial-schema';
+    if (!is_file($marker)) exit;
+    require $release.'/backend/vendor/autoload.php';
+    $env = Dotenv\Dotenv::parse(file_get_contents($base.'/shared.env'));
+    if (($env['DB_DATABASE'] ?? '') !== 'creceimp_pruebas' || ($env['DB_USERNAME'] ?? '') !== 'creceimp_pruebas') throw new RuntimeException('Fuera de pruebas');
+    $pdo = new PDO('mysql:host=localhost;dbname=creceimp_pruebas;charset=utf8mb4', 'creceimp_pruebas', $env['DB_PASSWORD'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+    sort($tables);
+    if ($tables !== ['migrations', 'users']) throw new RuntimeException('Revisión manual de esquema inicial requerida');
+    foreach ($tables as $table) if ((int)$pdo->query('SELECT COUNT(*) FROM `'.$table.'`')->fetchColumn() !== 0) throw new RuntimeException('Hay registros: no se modifica la tabla');
+    $pdo->exec('DROP TABLE `users`');
+    $pdo->exec('ALTER TABLE `migrations` ENGINE=InnoDB');
+    rename($marker, $marker.'.done');
+    echo "Esquema parcial vacío reparado después del respaldo.\n";
+    exit;
+}
 if ($operation === 'compress-backup') {
     $input = $base.'/backups/'.$id.'.sql';
     $source = fopen($input, 'rb'); $target = gzopen($input.'.gz', 'wb6');
