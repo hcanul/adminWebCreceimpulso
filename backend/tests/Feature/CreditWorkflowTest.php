@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Domains\Credit\Services\CreditCalculator;
 use App\Domains\Credit\Services\CreditDisbursement;
 use App\Domains\Credit\Services\CreditReview;
+use App\Domains\Portfolio\Actions\ReclassifyPortfolioAction;
+use App\Domains\Portfolio\DTOs\PortfolioCommand;
 use App\Domains\Push\Services\PushSender;
 use App\Models\Branch;
 use App\Models\Client;
@@ -61,13 +63,16 @@ final class CreditWorkflowTest extends TestCase
 
     public function test_payment_confirmation_is_transactional_and_retry_does_not_duplicate(): void
     {
-        $f=$this->collectionFixture('cash_branch');
-        $a=\App\Models\ClientAccount::create(['client_id'=>$f['clients'][0]->id,'password'=>'SecretPassword123','is_active'=>true]);
-        $bad=$f['payment'];$bad['amount']='900.00';
-        $this->postJson($f['base'].'/payments',$bad)->assertUnprocessable();$this->assertDatabaseCount('app_messages',0);
-        $this->postJson($f['base'].'/payments',$f['payment'])->assertOk();
-        $this->postJson($f['base'].'/payments',$f['payment'])->assertOk();
-        $this->assertDatabaseCount('app_messages',1);$this->assertDatabaseHas('app_messages',['recipient_id'=>$a->id,'kind'=>'payment_received','payment_id'=>$f['payment']['id']]);
+        $f = $this->collectionFixture('cash_branch');
+        $a = ClientAccount::create(['client_id' => $f['clients'][0]->id, 'password' => 'SecretPassword123', 'is_active' => true]);
+        $bad = $f['payment'];
+        $bad['amount'] = '900.00';
+        $this->postJson($f['base'].'/payments', $bad)->assertUnprocessable();
+        $this->assertDatabaseCount('app_messages', 0);
+        $this->postJson($f['base'].'/payments', $f['payment'])->assertOk();
+        $this->postJson($f['base'].'/payments', $f['payment'])->assertOk();
+        $this->assertDatabaseCount('app_messages', 1);
+        $this->assertDatabaseHas('app_messages', ['recipient_id' => $a->id, 'kind' => 'payment_received', 'payment_id' => $f['payment']['id']]);
         $reversal = $this->reversalInput($f);
         Sanctum::actingAs($f['manager']);
         $this->postJson('/api/credit/receipts/'.$f['payment']['id'].'/reverse', $reversal)->assertOk();
@@ -1981,5 +1986,138 @@ final class CreditWorkflowTest extends TestCase
         $this->assertDatabaseHas('loan_installments', ['client_id' => $f['clients'][0]->id, 'number' => 2, 'amount_paid' => 280]);
         $this->assertDatabaseCount('credit_payment_allocations', 3);
         $this->assertEquals(500, DB::table('loan_installments')->sum('amount_paid'));
+    }
+
+    public function test_recovery_is_manual_audited_and_preserves_debt_and_collection(): void
+    {
+        $this->freezeTime();
+        $f = $this->collectionFixture('cash_branch');
+        $id = $f['loan']['id'];
+        $command = ['id' => (string) Str::uuid(), 'version' => 0, 'classification' => 'recovery', 'reason' => 'Traslado autorizado para seguimiento especializado.'];
+        Sanctum::actingAs($f['manager']);
+        $f['manager']->givePermissionTo('credit.portfolio.manage');
+        $this->postJson($f['base'].'/portfolio', $command)->assertForbidden();
+        $general = User::factory()->create(['is_active' => true]);
+        $general->assignRole('Gerente General');
+        Sanctum::actingAs($general);
+        $this->postJson($f['base'].'/portfolio', $command)->assertUnprocessable();
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDay());
+        $before = $this->getJson('/api/credit/portfolio?portfolio=all')->assertOk()->json('summary.balance');
+        $snapshot = LoanApplication::findOrFail($id)->approved_snapshot;
+        $this->postJson($f['base'].'/portfolio', $command)->assertOk();
+        $this->postJson($f['base'].'/portfolio', $command)->assertOk();
+        $this->assertDatabaseCount('portfolio_events', 1);
+        $this->getJson('/api/credit/portfolio')->assertOk()->assertJsonPath('total', 0);
+        $this->getJson('/api/credit/portfolio?portfolio=recovery')->assertOk()->assertJsonPath('total', 1)->assertJsonPath('summary.balance', $before);
+        $this->getJson('/api/credit/portfolio?portfolio=all')->assertOk()->assertJsonPath('total', 1)->assertJsonPath('summary.balance', $before);
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('portfolio.credits', 1);
+        $this->assertSame($snapshot, LoanApplication::findOrFail($id)->approved_snapshot);
+        $this->assertDatabaseHas('loan_applications', ['id' => $id, 'status' => 'entregado', 'portfolio_class' => 'recovery', 'portfolio_version' => 1]);
+        $this->assertDatabaseCount('credit_payments', 0);
+        $this->travel(61)->seconds(); // Start a fresh rate-limit window for report verification.
+        $this->assertStringNotContainsString($f['team']->name, $this->getJson('/api/credit/reports/portfolio?portfolio=ordinary')->assertOk()->json('html'));
+        $this->assertStringContainsString($f['team']->name, $this->getJson('/api/credit/reports/portfolio?portfolio=recovery')->assertOk()->json('html'));
+        $this->assertStringNotContainsString($f['team']->name, $this->get('/api/credit/portfolio/export')->assertOk()->streamedContent());
+        $this->assertStringContainsString($f['team']->name, $this->get('/api/credit/portfolio/export?portfolio=recovery')->assertOk()->streamedContent());
+        $account = ClientAccount::create(['client_id' => $f['clients'][0]->id, 'password' => 'ClientTestOnly123', 'is_active' => true]);
+        Sanctum::actingAs($account, ['client:read']);
+        $this->getJson('/api/client/statement')->assertOk()->assertJsonPath('active', true);
+        Sanctum::actingAs($general);
+        $this->postJson($f['base'].'/portfolio', [...$command, 'reason' => 'Otro motivo diferente'])->assertConflict();
+        Sanctum::actingAs($f['cashier']);
+        $this->postJson($f['base'].'/payments', $f['payment'])->assertOk();
+        $this->assertDatabaseHas('loan_applications', ['id' => $id, 'portfolio_class' => 'recovery']);
+        Sanctum::actingAs($general);
+        $this->postJson($f['base'].'/portfolio', ['id' => (string) Str::uuid(), 'version' => 0, 'classification' => 'ordinary', 'reason' => 'Reincorporación manual autorizada.'])->assertConflict();
+        $this->postJson($f['base'].'/portfolio', ['id' => (string) Str::uuid(), 'version' => 1, 'classification' => 'ordinary', 'reason' => 'Reincorporación manual autorizada.'])->assertOk();
+        $this->assertDatabaseCount('portfolio_events', 2);
+        $this->getJson('/api/credit/portfolio')->assertOk()->assertJsonPath('total', 1);
+    }
+
+    public function test_followup_notes_preserve_repeated_text_and_enforce_member_branch_and_permissions(): void
+    {
+        $f = $this->collectionFixture('cash_branch');
+        $admin = User::factory()->create(['is_active' => true]);
+        $admin->assignRole('Super Admin');
+        Sanctum::actingAs($admin);
+        $this->putJson('/api/branches/'.$f['branch']->id, ['name' => 'Carrillo', 'is_active' => false, 'version' => 0])->assertUnprocessable();
+        Sanctum::actingAs($f['cashier']);
+        $entry = ['id' => (string) Str::uuid(), 'client_id' => $f['clients'][0]->id, 'observation' => 'Se realizó visita y seguimiento del compromiso.'];
+        $this->postJson($f['base'].'/followup', $entry)->assertForbidden();
+        Sanctum::actingAs($f['manager']);
+        $this->postJson($f['base'].'/followup', $entry)->assertOk();
+        $this->postJson($f['base'].'/followup', $entry)->assertOk();
+        $this->postJson($f['base'].'/followup', [...$entry, 'id' => (string) Str::uuid()])->assertOk();
+        $this->assertDatabaseCount('credit_followup_entries', 2);
+        $this->getJson('/api/credit/followup?search=Las')->assertOk()->assertJsonPath('entries.total', 2);
+        $this->getJson($f['base'].'/followup')->assertOk()->assertJsonCount(3, 'members')->assertJsonPath('notes.total', 2)->assertJsonPath('notes.data.0.observation', $entry['observation'])->assertJsonPath('can_manage', false);
+        $this->postJson($f['base'].'/followup', [...$entry, 'observation' => 'Contenido distinto'])->assertConflict();
+        $this->postJson($f['base'].'/followup', [...$entry, 'id' => (string) Str::uuid(), 'client_id' => (string) Str::uuid()])->assertNotFound();
+        $this->postJson($f['base'].'/followup', [...$entry, 'id' => (string) Str::uuid(), 'observation' => '   '])->assertUnprocessable();
+        $other = User::factory()->create(['branch_id' => Branch::create(['name' => 'Otra sucursal'])->id, 'is_active' => true]);
+        $other->assignRole('Cobranza');
+        Sanctum::actingAs($other);
+        $this->getJson('/api/credit/followup')->assertOk()->assertJsonPath('entries.total', 0);
+        $this->getJson($f['base'].'/followup')->assertNotFound();
+        $this->postJson($f['base'].'/followup', [...$entry, 'id' => (string) Str::uuid()])->assertNotFound();
+        $this->assertDatabaseCount('credit_followup_entries', 2);
+    }
+
+    public function test_portfolio_classification_is_atomic_if_event_insert_fails(): void
+    {
+        $f = $this->collectionFixture('cash_branch');
+        $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->addDay());
+        $general = User::factory()->create(['is_active' => true]);
+        $general->assignRole('Gerente General');
+        $this->failWrite('portfolio_events', 'insert');
+        try {
+            app(ReclassifyPortfolioAction::class)->execute($general, $f['loan']['id'], new PortfolioCommand(['id' => (string) Str::uuid(), 'version' => 0, 'classification' => 'recovery', 'reason' => 'Traslado que debe revertirse por fallo.']));
+            $this->fail('Expected rejected event insert');
+        } catch (\RuntimeException) {
+            $this->assertDatabaseCount('portfolio_events', 0);
+            $this->assertDatabaseHas('loan_applications', ['id' => $f['loan']['id'], 'portfolio_class' => 'ordinary', 'portfolio_version' => 0]);
+        }
+    }
+
+    public function test_central_cash_reconciles_channels_and_reversals_on_their_own_date_without_changing_cuts(): void
+    {
+        $this->freezeTime();
+        $f = $this->cashClosingFixture();
+        $today = now('America/Cancun')->toDateString();
+        $url = '/api/cash/central?from='.$today.'&to='.$today;
+        $this->getJson($url)->assertOk()->assertJsonPath('summary.cash_gross', '500.00')->assertJsonPath('summary.bank_gross', '1200.25')->assertJsonPath('summary.net', '1700.25')->assertJsonPath('movements.total', 2);
+        $cut = $this->postJson('/api/cash/closings', $f['closing'])->assertOk()->json('record.id');
+        $this->getJson($url)->assertOk()->assertJsonPath('summary.net', '1700.25')->assertJsonPath('movements.total', 2);
+        $this->getJson($url.'&search=BANK-CUT-001')->assertOk()->assertJsonPath('summary.cash_gross', '0.00')->assertJsonPath('summary.bank_gross', '1200.25')->assertJsonPath('movements.total', 1);
+        $this->getJson($url.'&search=%25')->assertOk()->assertJsonPath('movements.total', 0);
+        $this->travel(1)->days();
+        $tomorrow = now('America/Cancun')->toDateString();
+        Sanctum::actingAs($f['manager']);
+        $this->postJson('/api/credit/receipts/'.$f['payment']['id'].'/reverse', $this->reversalInput($f))->assertOk();
+        $this->getJson('/api/cash/central?from='.$tomorrow.'&to='.$tomorrow)->assertOk()->assertJsonPath('summary.cash_gross', '0.00')->assertJsonPath('summary.cash_reversed', '500.00')->assertJsonPath('summary.net', '-500.00')->assertJsonPath('movements.total', 1)->assertJsonPath('movements.data.0.kind', 'reversal');
+        $this->getJson($url)->assertOk()->assertJsonPath('summary.cash_gross', '500.00')->assertJsonPath('summary.cash_reversed', '0.00');
+        $this->getJson('/api/cash/central?from='.$today.'&to='.$tomorrow)->assertOk()->assertJsonPath('summary.net', '1200.25')->assertJsonPath('movements.total', 3);
+        $this->assertDatabaseHas('cash_closings', ['id' => $cut, 'cash_total' => '500.00', 'bank_total' => '1200.25']);
+        $csv = $this->get('/api/cash/central/export?from='.$today.'&to='.$tomorrow)->assertOk()->streamedContent();
+        $this->assertStringContainsString('BANK-CUT-001', $csv);
+        $this->assertStringContainsString('-500.00', $csv);
+    }
+
+    public function test_central_cash_respects_cashier_and_branch_scope(): void
+    {
+        $f = $this->cashClosingFixture();
+        $date = now('America/Cancun')->toDateString();
+        $url = '/api/cash/central?from='.$date.'&to='.$date;
+        $otherCashier = User::factory()->create(['branch_id' => $f['branch']->id, 'is_active' => true]);
+        $otherCashier->assignRole('Caja');
+        Sanctum::actingAs($otherCashier);
+        $this->getJson($url)->assertOk()->assertJsonPath('movements.total', 0)->assertJsonPath('summary.net', '0.00');
+        Sanctum::actingAs($f['manager']);
+        $this->getJson($url)->assertOk()->assertJsonPath('movements.total', 2);
+        $branch = Branch::create(['name' => 'Otra sucursal']);
+        $this->getJson($url.'&branch_id='.$branch->id)->assertNotFound();
+        $this->getJson('/api/cash/central?from=2024-01-01&to=2026-01-01')->assertUnprocessable();
+        Sanctum::actingAs($f['user']);
+        $this->getJson($url)->assertForbidden();
     }
 }

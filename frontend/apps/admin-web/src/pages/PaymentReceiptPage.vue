@@ -6,10 +6,42 @@
         no-caps
         icon="print"
         label="Imprimir comprobante"
-        :disable="!receipt || !qr || !!error || busy || !!pending"
+        :disable="!receipt || !qr || !!error || busy || !!pending || !printReady || !!printError"
         @click="printReceipt"
       />
     </div>
+    <section class="print-settings" aria-label="Configuración de impresión">
+      <FilterSelect
+        :model-value="printSettings.format"
+        :options="receiptPrintFormats"
+        emit-value
+        map-options
+        outlined
+        label="Formato del comprobante"
+        @update:model-value="printSettings.setFormat"
+      />
+      <p>
+        Al pulsar «Imprimir comprobante» se abrirá el diálogo para seleccionar impresora, copias o
+        guardar PDF. Elige papel carta o el ancho del ticket según el formato. La preferencia de
+        formato se guarda en este dispositivo.
+      </p>
+      <q-btn
+        outline
+        color="primary"
+        label="Vista previa de impresión"
+        :disable="!printReady || !!printError"
+        @click="preview = !preview"
+      />
+      <q-banner v-if="printError" class="bg-amber-1 full-width">{{ printError }}</q-banner>
+      <iframe
+        ref="printFrame"
+        title="Vista previa del comprobante para imprimir"
+        :srcdoc="printHtml"
+        sandbox="allow-same-origin allow-modals"
+        :class="preview ? 'print-preview' : 'print-frame-hidden'"
+        @load="validatePrint"
+      />
+    </section>
     <q-linear-progress v-if="loading" indeterminate />
     <q-banner v-if="error" class="bg-red-1 text-negative">{{ error }}</q-banner>
     <div
@@ -47,7 +79,7 @@
     </div>
     <article v-if="receipt" class="receipt-paper">
       <header>
-        <img src="/crece-impulso-logo.png" alt="Crece Impulso" class="logo" />
+        <img :src="logoUrl" alt="Crece Impulso" class="logo" />
         <p>COMPROBANTE DE PAGO RECIBIDO</p>
         <h1>{{ receipt.folio }}</h1>
       </header>
@@ -144,7 +176,10 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import FilterSelect from '../components/FilterSelect.vue';
+import { useReceiptPrintStore } from '../stores/receipt-print.store';
+import { receiptPrintDocument, receiptPrintFormats } from '../services/receipt-print.service';
 import { onBeforeRouteLeave } from 'vue-router';
 import { isAxiosError } from 'axios';
 import { useAuthStore } from '../stores/auth.store';
@@ -242,7 +277,64 @@ onBeforeRouteLeave(
 );
 onMounted(() => window.addEventListener('beforeunload', beforeUnload));
 onUnmounted(() => window.removeEventListener('beforeunload', beforeUnload));
-const printReceipt = () => window.print();
+const printSettings = useReceiptPrintStore();
+const logoUrl = new URL(`${import.meta.env.BASE_URL}crece-impulso-logo.png`, window.location.href)
+  .href;
+const printFrame = ref<HTMLIFrameElement>();
+const printReady = ref(false),
+  printError = ref(''),
+  preview = ref(false);
+const printHtml = computed(() =>
+  receipt.value && qr.value
+    ? receiptPrintDocument(receipt.value, qr.value, logoUrl, printSettings.format)
+    : '',
+);
+watch(
+  printHtml,
+  () => {
+    printReady.value = false;
+    printError.value = '';
+  },
+  { flush: 'sync' },
+);
+function validatePrint() {
+  if (!receipt.value || !qr.value || !printFrame.value?.contentDocument) return;
+  const copies = Array.from(
+    printFrame.value.contentDocument.querySelectorAll<HTMLElement>('.copy'),
+  );
+  const doc = printFrame.value.contentDocument;
+  if (printSettings.format !== 'letter') {
+    const heightMm = Math.min(
+      2000,
+      Math.max(60, Math.ceil((doc.body.getBoundingClientRect().height * 25.4) / 96) + 6),
+    );
+    const size = doc.createElement('style');
+    size.textContent = `@page { size: ${printSettings.format === 'ticket58' ? 58 : 80}mm ${heightMm}mm; margin:3mm; }`;
+    doc.head.appendChild(size);
+  }
+
+  if (
+    printSettings.format === 'letter' &&
+    copies.some((copy) => copy.scrollHeight > copy.clientHeight + 2)
+  ) {
+    printError.value =
+      'El contenido no cabe en media carta sin recortar. Selecciona formato ticket para conservar todo el detalle, o consulta a administración para ajustar este caso.';
+  } else printError.value = '';
+  printReady.value = true;
+}
+function printReceipt() {
+  if (
+    !printReady.value ||
+    printError.value ||
+    !receipt.value ||
+    busy.value ||
+    pending.value ||
+    error.value
+  )
+    return;
+  printFrame.value?.contentWindow?.focus();
+  printFrame.value?.contentWindow?.print();
+}
 onMounted(async () => {
   loading.value = true;
   try {
@@ -415,6 +507,44 @@ a {
   }
   footer {
     flex-direction: row;
+  }
+}
+</style>
+
+<style scoped>
+.print-settings {
+  max-width: 850px;
+  margin: 0 auto 20px;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e3e4e8;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+.print-settings p {
+  margin: 0;
+  color: #626b7b;
+}
+.print-preview {
+  width: 100%;
+  height: 640px;
+  border: 1px solid #ccc;
+  background: white;
+}
+.print-frame-hidden {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 850px;
+  height: 1100px;
+  border: 0;
+  pointer-events: none;
+}
+@media print {
+  .print-settings {
+    display: none;
   }
 }
 </style>

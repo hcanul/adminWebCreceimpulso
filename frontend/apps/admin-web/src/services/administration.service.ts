@@ -56,6 +56,8 @@ export const administrationService = {
   },
 };
 export const permissionLabels: Record<string, string> = {
+  'credit.followup': 'Consultar y agregar observaciones de cobranza',
+  'credit.portfolio.manage': 'Reclasificar cartera (solo Gerente General y Super Admin)',
   'cash.view': 'Consultar mis cortes de caja',
   'cash.close': 'Cerrar mis cobros por día y sucursal',
   'cash.audit': 'Consultar cortes de otros cajeros en las sucursales permitidas',

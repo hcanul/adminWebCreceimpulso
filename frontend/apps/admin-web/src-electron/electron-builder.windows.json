@@ -1,0 +1,31 @@
+{
+  "appId": "com.creceimpulso.admin",
+  "toolsets": {
+    "nsis": "1.2.1"
+  },
+  "artifactName": "CreceImpulso-Admin-${version}-Windows-${arch}-Setup.${ext}",
+  "directories": {
+    "app": "../dist/electron/UnPackaged",
+    "output": "../dist/electron/Packaged"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "electron-assets/icons/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Crece Impulso Admin",
+    "installerLanguages": ["es_ES"],
+    "installerIcon": "electron-assets/icons/icon.ico",
+    "uninstallerIcon": "electron-assets/icons/icon.ico"
+  }
+}

@@ -1,11 +1,21 @@
 <?php
+
 namespace Tests\Feature;
 
 use App\Domains\Push\Services\PushSender;
-use App\Models\{Branch, Client, ClientAccount, LoanApplication, LoanParticipation, Promoter, Rate, Team, User};
+use App\Models\Branch;
+use App\Models\Client;
+use App\Models\ClientAccount;
+use App\Models\LoanApplication;
+use App\Models\LoanParticipation;
+use App\Models\Promoter;
+use App\Models\Rate;
+use App\Models\Team;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\{Crypt, DB};
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -17,6 +27,7 @@ final class ClientPushTest extends TestCase
     {
         $branch = Branch::create(['name' => 'Push prueba', 'is_active' => true]);
         $client = Client::create(['branch_id' => $branch->id, 'curp' => 'PUSH'.Str::uuid(), 'first_name' => 'Prueba', 'last_name' => 'Push', 'status' => 'activo']);
+
         return ClientAccount::create(['client_id' => $client->id, 'password' => 'SeguraCliente123', 'is_active' => true]);
     }
 
@@ -29,6 +40,7 @@ final class ClientPushTest extends TestCase
         $part = LoanParticipation::create(['branch_id' => $user->branch_id, 'loan_application_id' => $loan->id, 'client_id' => $a->client_id, 'role_in_group' => 'integrante', 'amount_requested' => 1000, 'amount_approved' => 1000]);
         $id = (string) Str::uuid();
         DB::table('loan_installments')->insert(['id' => $id, 'branch_id' => $user->branch_id, 'loan_application_id' => $loan->id, 'loan_participation_id' => $part->id, 'client_id' => $a->client_id, 'number' => 1, 'due_on' => $due, 'amount_due' => '80.00', 'amount_paid' => $paid, 'created_at' => now()]);
+
         return $id;
     }
 
@@ -36,6 +48,7 @@ final class ClientPushTest extends TestCase
     {
         $id = (string) Str::uuid();
         DB::table('client_push_devices')->insert(['id' => $id, 'client_account_id' => $a->id, 'session_token_id' => $tokenId ?? 999, 'credential_fingerprint' => hash('sha256', $a->password), 'installation_id' => (string) Str::uuid(), 'platform' => 'android', 'token_hash' => hash('sha256', $id), 'token_encrypted' => Crypt::encryptString($id), 'enabled' => true, 'created_at' => now(), 'updated_at' => now()]);
+
         return $id;
     }
 
@@ -85,10 +98,19 @@ final class ClientPushTest extends TestCase
         // UTC Oct30 02:00 remains Oct29 in Cancun; tomorrow is Oct30.
         $this->travelTo(CarbonImmutable::parse('2026-10-30T02:00:00Z'));
         config(['client_push.enabled' => true]);
-        $a = $this->account(); $this->device($a); $this->due($a, '2026-10-30', '30.00');
-        $paid = $this->account(); $this->device($paid); $this->due($paid, '2026-10-30', '80.00');
-        $future = $this->account(); $this->device($future); $this->due($future, '2026-10-31');
-        $changed = $this->account(); $this->device($changed); $this->due($changed, '2026-10-30'); $changed->update(['password' => 'OtraSegura123']);
+        $a = $this->account();
+        $this->device($a);
+        $this->due($a, '2026-10-30', '30.00');
+        $paid = $this->account();
+        $this->device($paid);
+        $this->due($paid, '2026-10-30', '80.00');
+        $future = $this->account();
+        $this->device($future);
+        $this->due($future, '2026-10-31');
+        $changed = $this->account();
+        $this->device($changed);
+        $this->due($changed, '2026-10-30');
+        $changed->update(['password' => 'OtraSegura123']);
         $sender = $this->mock(PushSender::class);
         $sender->shouldReceive('ready')->andReturn(true);
         $sender->shouldReceive('send')->once()->andReturn(['status' => 'accepted', 'reference' => 'provider-test']);
@@ -100,9 +122,15 @@ final class ClientPushTest extends TestCase
 
     public function test_unknown_delivery_is_not_resent_and_disabled_account_is_skipped(): void
     {
-        $this->freezeTime(); config(['client_push.enabled' => true]);
-        $a = $this->account(); $this->device($a); $this->due($a, now('America/Cancun')->addDay()->toDateString());
-        $b = $this->account(); $this->device($b); $this->due($b, now('America/Cancun')->addDay()->toDateString()); $b->update(['is_active' => false]);
+        $this->freezeTime();
+        config(['client_push.enabled' => true]);
+        $a = $this->account();
+        $this->device($a);
+        $this->due($a, now('America/Cancun')->addDay()->toDateString());
+        $b = $this->account();
+        $this->device($b);
+        $this->due($b, now('America/Cancun')->addDay()->toDateString());
+        $b->update(['is_active' => false]);
         $sender = $this->mock(PushSender::class);
         $sender->shouldReceive('ready')->andReturn(true);
         $sender->shouldReceive('send')->once()->andThrow(new \RuntimeException('Network interrupted'));

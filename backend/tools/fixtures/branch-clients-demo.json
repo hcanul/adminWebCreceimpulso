@@ -1,0 +1,45 @@
+{
+  "source_id": "sucursal-demo-carrillo",
+  "source_database": "respaldo_ficticio",
+  "source_timezone": "America/Cancun",
+  "source_timezone_confirmed": true,
+  "backup_label": "DATOS FICTICIOS",
+  "branch": {
+    "id": "8ff22eba-2ee3-4a18-8385-62b32c11ad87",
+    "name": "Carrillo DEMO",
+    "legacy_city_id": "1"
+  },
+  "citys": [
+    {
+      "id": "1",
+      "name": "Carrillo DEMO"
+    }
+  ],
+  "demands": [
+    {
+      "id": "1",
+      "curp": "GOMA900101MQNRRR01",
+      "city_id": "1",
+      "pNombre": "Persona",
+      "sNombre": "DEMO",
+      "aPaterno": "Prueba",
+      "aMaterno": "Ficticia",
+      "dudtelefono": "0000000000",
+      "dudcalle": "Domicilio ficticio",
+      "dudcp": "00123",
+      "created_at": "2026-11-13 10:00:00",
+      "updated_at": null,
+      "deleted_at": null
+    },
+    {
+      "id": "2",
+      "curp": "INVALIDA-DEMO",
+      "city_id": "1",
+      "pNombre": "Revisión",
+      "aPaterno": "DEMO",
+      "created_at": null,
+      "updated_at": null,
+      "deleted_at": null
+    }
+  ]
+}

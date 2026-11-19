@@ -36,3 +36,9 @@ quasar build
 ### Customize the configuration
 
 See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-file).
+
+## Aplicación de escritorio
+
+Consulta [DESKTOP.md](DESKTOP.md) para compilar con Electron, crear el instalador macOS y configurar el servidor.
+
+Para generar el instalador de Windows x64: `pnpm desktop:build:windows`. Consulta [WINDOWS.md](WINDOWS.md).

@@ -17,7 +17,13 @@ final class CreditPortfolio
 
         return DB::transaction(function () use ($actor, $filters, $access, $paginate) {
             $today = now('America/Cancun')->toDateString();
-            $visible = $access->query($actor)->where('status', 'entregado')->select(['id', 'folio', 'team_id', 'branch_id']);
+            $visible = $access->query($actor)->where('status', 'entregado')->select(['id', 'folio', 'team_id', 'branch_id', 'portfolio_class', 'portfolio_version']);
+            if (($filters['portfolio'] ?? 'ordinary') !== 'all') {
+                $visible->where('portfolio_class', $filters['portfolio'] ?? 'ordinary');
+            }
+            if ($filters['branch_id'] ?? null) {
+                $visible->where('branch_id', $filters['branch_id']);
+            }
             $pending = 'CASE WHEN amount_due > amount_paid THEN ROUND((amount_due - amount_paid) * 100, 0) ELSE 0 END';
             $balances = DB::table('loan_installments')->whereIn('loan_application_id', (clone $visible)->select('id'))
                 ->select('loan_application_id')->selectRaw("SUM($pending) as balance")
@@ -37,7 +43,7 @@ final class CreditPortfolio
             }
             // Project charges in bounded batches. Never write financial entries from a report.
             $rows = collect();
-            $q->select(['loans.id', 'loans.folio', 'teams.name as group', 'branches.name as branch', 'balances.*'])
+            $q->select(['loans.id', 'loans.folio', 'loans.portfolio_class', 'loans.portfolio_version', 'teams.name as group', 'branches.name as branch', 'balances.*'])
                 ->orderBy('loans.id')->chunk(100, function ($batch) use (&$rows, $today) {
                     $loans = LoanApplication::query()->whereIn('id', $batch->pluck('id'))->get(['id', 'branch_id', 'approved_snapshot']);
                     $states = app(LateFeeLedger::class)->statesFor($loans);
@@ -82,7 +88,7 @@ final class CreditPortfolio
                 return $row;
             });
 
-            return ['as_of' => $today, 'summary' => $summary, 'data' => $data, 'page' => $page, 'last_page' => max(1, (int) ceil($rows->count() / 25)), 'total' => $rows->count()];
+            return ['portfolio' => $filters['portfolio'] ?? 'ordinary', 'as_of' => $today, 'summary' => $summary, 'data' => $data, 'page' => $page, 'last_page' => max(1, (int) ceil($rows->count() / 25)), 'total' => $rows->count()];
         });
     }
 }

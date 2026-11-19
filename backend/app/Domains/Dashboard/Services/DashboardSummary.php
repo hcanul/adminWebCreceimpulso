@@ -53,7 +53,7 @@ final class DashboardSummary
                     $add('Créditos por entregar', (int) $rows->where('status', 'aprobado')->sum('total'), '/desembolsos?status=aprobado');
                 }
             }
-            $portfolio = $can('credit.view') ? app(CreditPortfolio::class)->payload($actor, [])['summary'] : null;
+            $portfolio = $can('credit.view') ? app(CreditPortfolio::class)->payload($actor, ['portfolio' => 'all'])['summary'] : null;
             $payments = null;
             if ($can('credit.collect') || $can('cash.audit')) {
                 $q = DB::table('credit_payments')->where('received_on', $today)->whereNotExists(fn ($q) => $q->selectRaw('1')->from('credit_payment_reversals as r')->whereColumn('r.credit_payment_id', 'credit_payments.id'));

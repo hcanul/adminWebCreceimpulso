@@ -9,6 +9,13 @@
         <q-btn
           outline
           color="primary"
+          icon="print"
+          label="Reporte para impresión"
+          :to="{ path: '/reportes', query: { portfolio: portfolio } }"
+        />
+        <q-btn
+          outline
+          color="primary"
           icon="download"
           label="Descargar CSV"
           :loading="exporting"
@@ -26,6 +33,18 @@
       </div>
     </div>
     <div class="filters q-mb-lg">
+      <FilterSelect
+        v-model="portfolio"
+        outlined
+        label="Clasificación de cartera"
+        emit-value
+        map-options
+        :options="[
+          { label: 'Ordinaria', value: 'ordinary' },
+          { label: 'Recuperación / cartera vencida', value: 'recovery' },
+          { label: 'Consolidada', value: 'all' },
+        ]"
+      />
       <q-input
         v-model="search"
         outlined
@@ -70,7 +89,7 @@
           <thead>
             <tr>
               <th>Crédito / grupo</th>
-              <th>Sucursal</th>
+              <th>Sucursal / cartera</th>
               <th>Cuotas pendientes</th>
               <th>Mora pendiente</th>
               <th>Saldo total</th>
@@ -87,7 +106,12 @@
                 <strong>{{ row.folio }}</strong
                 ><br />{{ row.group }}
               </td>
-              <td>{{ row.branch }}</td>
+              <td>
+                {{ row.branch }}<br /><q-badge
+                  :color="row.portfolio_class === 'recovery' ? 'negative' : 'primary'"
+                  >{{ row.portfolio_class === 'recovery' ? 'Recuperación' : 'Ordinaria' }}</q-badge
+                >
+              </td>
               <td>{{ money(row.installment_balance) }}</td>
               <td>{{ money(row.late_fee_balance) }}</td>
               <td>{{ money(row.balance) }}</td>
@@ -102,6 +126,14 @@
                   color="primary"
                   label="Estado de cuenta"
                   :to="`/creditos/${row.id}/estado-de-cuenta`"
+                />
+                <q-btn
+                  v-if="auth.can('credit.followup')"
+                  flat
+                  no-caps
+                  color="primary"
+                  label="Seguimiento"
+                  :to="`/creditos/${row.id}/seguimiento`"
                 />
               </td>
             </tr>
@@ -128,9 +160,22 @@ import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
 import FilterSelect from '../components/FilterSelect.vue';
 import { usePortfolioStore } from '../stores/portfolio.store';
+import { useAuthStore } from '../stores/auth.store';
 import { money } from '../domain/credit-calculation';
 import { portfolioService } from '../services/portfolio.service';
 import { alerts } from '../services/alerts.service';
+const auth = useAuthStore();
+const portfolio = computed({
+  get: (): 'ordinary' | 'recovery' | 'all' =>
+    route.query.portfolio === 'recovery'
+      ? 'recovery'
+      : route.query.portfolio === 'all'
+        ? 'all'
+        : 'ordinary',
+  set: (value: string) => {
+    void router.replace({ query: { ...route.query, portfolio: value, page: '1' } });
+  },
+});
 const route = useRoute(),
   router = useRouter(),
   store = usePortfolioStore();
@@ -154,6 +199,7 @@ async function downloadReport() {
       {
         search: typeof route.query.search === 'string' ? route.query.search.slice(0, 100) : '',
         status: status.value,
+        portfolio: portfolio.value,
       },
       controller.signal,
     );
@@ -200,6 +246,7 @@ function load() {
   return store.load({
     search: typeof route.query.search === 'string' ? route.query.search.slice(0, 100) : '',
     status: status.value,
+    portfolio: portfolio.value,
     page: page.value,
   });
 }

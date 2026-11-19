@@ -1,12 +1,18 @@
 <?php
 
 use App\Http\Controllers\Api\AdministrationController;
+use App\Http\Controllers\Api\AppMessageController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\CashClosingController;
+use App\Http\Controllers\Api\CentralCashController;
 use App\Http\Controllers\Api\ClientActivationController;
 use App\Http\Controllers\Api\ClientConnectionController;
 use App\Http\Controllers\Api\ClientDemoController;
+use App\Http\Controllers\Api\ClientPaymentsController;
+use App\Http\Controllers\Api\ClientPushController;
 use App\Http\Controllers\Api\ClientSessionController;
+use App\Http\Controllers\Api\ClientStatementController;
 use App\Http\Controllers\Api\CreditAuthorizationController;
 use App\Http\Controllers\Api\CreditCollectionController;
 use App\Http\Controllers\Api\CreditController;
@@ -18,8 +24,11 @@ use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\DocumentProfileController;
 use App\Http\Controllers\Api\GuaranteeController;
 use App\Http\Controllers\Api\IntakeController;
+use App\Http\Controllers\Api\OperationalReportController;
 use App\Http\Controllers\Api\PaymentReceiptController;
 use App\Http\Controllers\Api\PaymentReversalController;
+use App\Http\Controllers\Api\PortfolioFollowupController;
+use App\Http\Controllers\Api\StaffPushController;
 use App\Http\Middleware\RequireClientAccount;
 use App\Http\Middleware\RequireCreditAccess;
 use App\Http\Middleware\RequireIntakeAccess;
@@ -28,6 +37,11 @@ use App\Http\Middleware\RequireSuperAdmin;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::middleware(['auth:sanctum', RequireStaffAccount::class])->prefix('branches')->group(function () {
+    Route::get('/', [BranchController::class, 'index']);
+    Route::post('/', [BranchController::class, 'save'])->middleware('throttle:20,1');
+    Route::put('/{id}', [BranchController::class, 'save'])->whereUuid('id')->middleware('throttle:20,1');
+});
 
 // Rutas protegidas de ejemplo
 Route::middleware(['auth:sanctum', RequireStaffAccount::class])->group(function () {
@@ -75,9 +89,13 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class, RequireSuperAdmin
 
 Route::middleware(['auth:sanctum', RequireStaffAccount::class, RequireCreditAccess::class])->prefix('credit')->group(function () {
     $controller = CreditController::class;
-    Route::get('/reports/{kind}', \App\Http\Controllers\Api\OperationalReportController::class)->middleware('throttle:10,1');
+    Route::get('/reports/{kind}', OperationalReportController::class)->middleware('throttle:10,1');
     Route::get('/portfolio/export', [CreditPortfolioController::class, 'export'])->middleware('throttle:5,1');
+    Route::get('/followup', [PortfolioFollowupController::class, 'index'])->middleware('throttle:60,1');
     Route::get('/portfolio', CreditPortfolioController::class)->middleware('throttle:60,1');
+    Route::get('/applications/{id}/followup', [PortfolioFollowupController::class, 'show'])->whereUuid('id');
+    Route::post('/applications/{id}/followup', [PortfolioFollowupController::class, 'append'])->whereUuid('id')->middleware('throttle:30,1');
+    Route::post('/applications/{id}/portfolio', [PortfolioFollowupController::class, 'classify'])->whereUuid('id')->middleware('throttle:20,1');
     Route::post('/receipts/{id}/reverse', PaymentReversalController::class)->whereUuid('id')->middleware('throttle:10,1');
     Route::get('/receipts/{id}', [PaymentReceiptController::class, 'show'])->whereUuid('id')->middleware('throttle:60,1');
     Route::get('/applications', [$controller, 'index']);
@@ -102,6 +120,9 @@ Route::middleware(['auth:sanctum', RequireStaffAccount::class, RequireCreditAcce
 Route::middleware(['auth:sanctum', RequireStaffAccount::class])->prefix('cash')->group(function () {
     $c = CashClosingController::class;
     Route::get('/options', [$c, 'options']);
+    Route::get('/central/options', [CentralCashController::class, 'options']);
+    Route::get('/central/export', [CentralCashController::class, 'export'])->middleware('throttle:5,1');
+    Route::get('/central', [CentralCashController::class, 'show']);
     Route::get('/closings', [$c, 'index']);
     Route::get('/preview', [$c, 'preview']);
     Route::post('/closings', [$c, 'store'])->middleware('throttle:20,1');
@@ -135,12 +156,12 @@ Route::post('/client/activate', [ClientActivationController::class, 'activate'])
 Route::post('/client/login', [ClientSessionController::class, 'login'])->middleware('throttle:5,1,client-login');
 Route::middleware(['auth:sanctum', RequireClientAccount::class])->prefix('client')->group(function () {
     Route::get('/me', [ClientSessionController::class, 'me']);
-    Route::get('/push-device', [\App\Http\Controllers\Api\ClientPushController::class, 'show']);
-    Route::post('/push-device', [\App\Http\Controllers\Api\ClientPushController::class, 'store'])->middleware('throttle:20,1');
-    Route::delete('/push-device', [\App\Http\Controllers\Api\ClientPushController::class, 'destroy'])->middleware('throttle:20,1');
+    Route::get('/push-device', [ClientPushController::class, 'show']);
+    Route::post('/push-device', [ClientPushController::class, 'store'])->middleware('throttle:20,1');
+    Route::delete('/push-device', [ClientPushController::class, 'destroy'])->middleware('throttle:20,1');
     Route::post('/password', [ClientSessionController::class, 'password'])->middleware('throttle:5,1');
-    Route::get('/payments', \App\Http\Controllers\Api\ClientPaymentsController::class)->middleware('throttle:60,1');
-    Route::get('/statement', \App\Http\Controllers\Api\ClientStatementController::class)->middleware('throttle:60,1');
+    Route::get('/payments', ClientPaymentsController::class)->middleware('throttle:60,1');
+    Route::get('/statement', ClientStatementController::class)->middleware('throttle:60,1');
     Route::post('/logout', [ClientSessionController::class, 'logout']);
 });
 
@@ -150,16 +171,16 @@ Route::get('/client/demo', [ClientDemoController::class, 'show'])->middleware(['
 Route::get('/client/demo-receipts/{receipt}', [ClientDemoController::class, 'receipt'])->name('client.demo.receipt')->middleware(['signed', 'throttle:30,1,demo-receipt']);
 
 Route::middleware(['auth:sanctum', RequireStaffAccount::class])->group(function () {
-    Route::get('/messages', [\App\Http\Controllers\Api\AppMessageController::class, 'inbox']);
-    Route::post('/messages/{id}/read', [\App\Http\Controllers\Api\AppMessageController::class, 'read'])->whereUuid('id');
-    Route::get('/messaging/recipients', [\App\Http\Controllers\Api\AppMessageController::class, 'recipients'])->middleware('throttle:60,1');
-    Route::get('/messaging/branches', [\App\Http\Controllers\Api\AppMessageController::class, 'branches'])->middleware('throttle:60,1');
-    Route::post('/messaging/send', [\App\Http\Controllers\Api\AppMessageController::class, 'send'])->middleware('throttle:10,1');
-    Route::get('/push-device', [\App\Http\Controllers\Api\StaffPushController::class, 'show']);
-    Route::post('/push-device', [\App\Http\Controllers\Api\StaffPushController::class, 'store'])->middleware('throttle:20,1');
-    Route::delete('/push-device', [\App\Http\Controllers\Api\StaffPushController::class, 'destroy'])->middleware('throttle:20,1');
+    Route::get('/messages', [AppMessageController::class, 'inbox']);
+    Route::post('/messages/{id}/read', [AppMessageController::class, 'read'])->whereUuid('id');
+    Route::get('/messaging/recipients', [AppMessageController::class, 'recipients'])->middleware('throttle:60,1');
+    Route::get('/messaging/branches', [AppMessageController::class, 'branches'])->middleware('throttle:60,1');
+    Route::post('/messaging/send', [AppMessageController::class, 'send'])->middleware('throttle:10,1');
+    Route::get('/push-device', [StaffPushController::class, 'show']);
+    Route::post('/push-device', [StaffPushController::class, 'store'])->middleware('throttle:20,1');
+    Route::delete('/push-device', [StaffPushController::class, 'destroy'])->middleware('throttle:20,1');
 });
 Route::middleware(['auth:sanctum', RequireClientAccount::class])->prefix('client')->group(function () {
-    Route::get('/messages', [\App\Http\Controllers\Api\AppMessageController::class, 'inbox']);
-    Route::post('/messages/{id}/read', [\App\Http\Controllers\Api\AppMessageController::class, 'read'])->whereUuid('id');
+    Route::get('/messages', [AppMessageController::class, 'inbox']);
+    Route::post('/messages/{id}/read', [AppMessageController::class, 'read'])->whereUuid('id');
 });

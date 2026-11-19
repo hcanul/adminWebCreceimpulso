@@ -21,7 +21,7 @@ final class AdministrationController extends Controller
         return response()->json([
             'branches' => Branch::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'roles' => Role::where('guard_name', 'web')->with('permissions:id,name')->orderBy('name')->get(['id', 'name']),
-            'permissions' => Permission::where('guard_name', 'web')->whereIn('name', ['intake.access', 'intake.submit', 'promoters.register', 'credit.view', 'credit.create', 'credit.rates', 'credit.review', 'credit.propose', 'credit.authorize', 'credit.disburse', 'credit.collect', 'credit.reverse', 'cash.view', 'cash.close', 'cash.audit'])->orderBy('name')->get(['id', 'name']),
+            'permissions' => Permission::where('guard_name', 'web')->whereIn('name', ['intake.access', 'intake.submit', 'promoters.register', 'credit.view', 'credit.create', 'credit.rates', 'credit.review', 'credit.propose', 'credit.authorize', 'credit.disburse', 'credit.collect', 'credit.reverse', 'credit.followup', 'credit.portfolio.manage', 'cash.view', 'cash.close', 'cash.audit'])->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -42,7 +42,7 @@ final class AdministrationController extends Controller
         $data = $request->validate([
             'name' => [$roleId ? 'prohibited' : 'required', 'string', 'max:80', Rule::unique('roles', 'name')->where('guard_name', 'web')],
             'permissions' => ['present', 'array'],
-            'permissions.*' => ['required', 'string', 'distinct', Rule::in(['intake.access', 'intake.submit', 'promoters.register', 'credit.view', 'credit.create', 'credit.rates', 'credit.review', 'credit.propose', 'credit.authorize', 'credit.disburse', 'credit.collect', 'credit.reverse', 'cash.view', 'cash.close', 'cash.audit'])],
+            'permissions.*' => ['required', 'string', 'distinct', Rule::in(['intake.access', 'intake.submit', 'promoters.register', 'credit.view', 'credit.create', 'credit.rates', 'credit.review', 'credit.propose', 'credit.authorize', 'credit.disburse', 'credit.collect', 'credit.reverse', 'credit.followup', 'credit.portfolio.manage', 'cash.view', 'cash.close', 'cash.audit'])],
         ]);
 
         return response()->json($action->execute($request->user(), $data, $roleId), $roleId ? 200 : 201);

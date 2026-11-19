@@ -1,7 +1,7 @@
 {
   "name": "admin-web",
   "version": "0.0.1",
-  "description": "A Quasar Project",
+  "description": "Administración de microfinanzas y créditos grupales de Crece Impulso",
   "productName": "Crece Impulso Admin",
   "author": "hugoCanul <hcanul@avantronics.com.mx>",
   "type": "module",
@@ -14,7 +14,8 @@
     "typecheck": "vue-tsc --noEmit",
     "postinstall": "quasar prepare --silent",
     "desktop:dev": "quasar dev -m electron",
-    "desktop:build": "quasar build -m electron"
+    "desktop:build": "quasar build -m electron",
+    "desktop:build:windows": "node scripts/build-desktop-windows.mjs"
   },
   "dependencies": {
     "@quasar/extras": "^2.1.0",

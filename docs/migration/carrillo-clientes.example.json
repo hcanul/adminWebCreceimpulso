@@ -1,0 +1,24 @@
+{
+  "source_id": "creceimp_creceimpulso",
+  "source_timezone": "CONFIRMAR_ZONA_DEL_SISTEMA_ANTIGUO",
+  "backup_label": "SUSTITUIR_POR_FECHA_DEL_RESPALDO_Y_CONFIRMAR_ZONA_HORARIA",
+  "source": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "database": "creceimp_creceimpulso",
+    "user_env": "LEGACY_DB_USER",
+    "password_env": "LEGACY_DB_PASSWORD"
+  },
+  "lab_connection": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user_env": "TRIAL_DB_USER",
+    "password_env": "TRIAL_DB_PASSWORD"
+  },
+  "branch": {
+    "id": "01a11cfe-2867-7225-8dd7-f388c81ffb5a",
+    "name": "Carrillo",
+    "legacy_city_id": "1"
+  },
+  "source_timezone_confirmed": false
+}

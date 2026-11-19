@@ -1,0 +1,94 @@
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert = require('node:assert/strict');
+const url = process.env.CRECE_UI_URL || 'http://127.0.0.1:18914';
+(async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
+    page.setDefaultTimeout(15000);
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.addInitScript(() => localStorage.setItem('access_token', '__q_strn|test-consolidation'));
+    const id = '11111111-1111-4111-8111-111111111111';
+    const member = '22222222-2222-4222-8222-222222222222';
+    let classification = 'ordinary', version = 0, noteAttempts = [], notes = [], classificationRequests = [];
+    let loseNoteResponse = true;
+    const cashQueries = [];
+    const totals = {cash_gross:'500.00',bank_gross:'1200.25',cash_reversed:'0.00',bank_reversed:'0.00',cash_net:'500.00',bank_net:'1200.25'};
+    await page.route('**/api/**', async (route) => {
+      const req = route.request(), u = new URL(req.url());
+      let body;
+      if(u.pathname.endsWith('/me')) body = {id:'test',name:'Gerencia DEMO',is_active:true,roles:[{name:'Gerente General'}],permissions:['credit.view','credit.followup','credit.portfolio.manage','cash.view','cash.audit','credit.collect']};
+      else if(u.pathname.includes('/applications/') && u.pathname.endsWith('/followup') && req.method()==='GET') body={loan_id:id,folio:'CRE-DEMO-1',group:'Las Flores DEMO',branch_id:'branch',classification,version,can_manage:true,members:[{client_id:member,name:'María DEMO',folio:'CLI-DEMO-1',phone:'0000000000',balance:'12300.00',due:'300.00',overdue:'300.00',days_overdue:1}],events:classificationRequests.map((r,i)=>({...r,previous_class:i===0?'ordinary':'recovery',next_class:r.classification,actor_name:'Gerencia DEMO',created_at:'2026-11-18T16:00:00Z'})),notes:{data:notes,current_page:1,last_page:1,total:notes.length}};
+      else if(u.pathname.includes('/applications/') && u.pathname.endsWith('/followup') && req.method()==='POST') {
+        const input=req.postDataJSON();noteAttempts.push(input);
+        if(!notes.find(n=>n.id===input.id)) notes.push({...input,actor_name:'Gerencia DEMO',created_at:'2026-11-18T16:00:00Z'});
+        if(loseNoteResponse){loseNoteResponse=false;return route.abort('failed');}
+        body={saved:true};
+      } else if(u.pathname.endsWith(`/applications/${id}/portfolio`)) {
+        const input=req.postDataJSON();classificationRequests.push(input);classification=input.classification;version++;body={saved:true};
+      } else if(u.pathname==='/api/credit/followup') body={branches:[{id:'branch',name:'Carrillo DEMO'}],entries:{data:notes.map(n=>({...n,loan_application_id:id,credit_folio:'CRE-DEMO-1',client_folio:'CLI-DEMO-1',first_name:'María',last_name:'DEMO',group:'Las Flores DEMO',branch:'Carrillo DEMO'})),total:notes.length,current_page:1,last_page:1}};
+      else if(u.pathname.endsWith('/central/options')) body={today:'2026-11-18',branches:[{id:'branch',name:'Carrillo DEMO'}]};
+      else if(u.pathname.endsWith('/central/export')) return route.fulfill({contentType:'text/csv',body:'Fecha,Importe\r\n2026-11-18,500.00\r\n'});
+      else if(u.pathname.endsWith('/central')) { cashQueries.push(Object.fromEntries(u.searchParams)); body={from:u.searchParams.get('from'),to:u.searchParams.get('to'),branches:[{...totals,branch_id:'branch',branch:'Carrillo DEMO',payment_count:2,reversal_count:0}],summary:{...totals,net:'1700.25'},movements:{data:[{id:'pay',payment_id:'pay',event_on:'2026-11-18',kind:'payment',method:'bank_deposit',amount:'1200.25',branch:'Carrillo DEMO',credit_folio:'CRE-DEMO-1',group:'Las Flores DEMO',number:1,cashier:'Caja DEMO',closing_folio:'COR-DEMO-1',bank_name:'Banco DEMO',bank_reference:'DEP-TEST-1',deposited_on:'2026-11-17'}],current_page:1,last_page:1,total:1},generated_at_local:'2026-11-18 11:00:00'}; }
+      else if(u.pathname.endsWith('/portfolio')) body={as_of:'2026-11-18',summary:{credits:1,overdue_credits:1,installment_balance:'12300.00',late_fee_balance:'0.00',balance:'12300.00',due:'300.00',overdue:'300.00',due_today:'0.00'},data:[{id,folio:'CRE-DEMO-1',group:'Las Flores DEMO',branch:'Carrillo DEMO',portfolio_class:classification,portfolio_version:version,installment_balance:'12300.00',late_fee_balance:'0.00',balance:'12300.00',due:'300.00',overdue:'300.00',due_today:'0.00',days_overdue:1,next_due:'2026-11-25'}],page:1,last_page:1,total:1};
+      else throw Error(`Unexpected API ${req.method()} ${u.pathname}`);
+      await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+    });
+    await page.goto(`${url}/#/creditos/${id}/seguimiento`);
+    await page.locator('tbody tr').filter({hasText:'María DEMO'}).waitFor();console.log('UI seguimiento cargado');
+    await page.getByRole('button',{name:'Trasladar a recuperación',exact:true}).click();
+    await page.locator('.swal2-textarea').fill('Traslado manual autorizado para seguimiento.');
+    await page.getByRole('button',{name:'Confirmar',exact:true}).click();
+    await page.getByRole('button',{name:'Reincorporar a ordinaria',exact:true}).waitFor();
+    await page.locator('.swal2-container').waitFor({state:'hidden'});
+    assert.equal(classificationRequests.length,1);
+    assert.equal(classificationRequests[0].classification,'recovery');
+    console.log('UI reclasificación terminada');
+    const selector=page.getByLabel('Integrante',{exact:true});
+    await selector.click();await selector.fill('Mar');await page.getByRole('option',{name:'María DEMO · CLI-DEMO-1',exact:true}).click();
+    await page.getByLabel('Nueva observación',{exact:true}).fill('Visita realizada. Texto de seguimiento DEMO.');
+    await page.getByRole('button',{name:'Guardar observación',exact:true}).click();
+    await page.getByRole('button',{name:'Entendido',exact:true}).click();
+    await page.getByRole('button',{name:'Reintentar observación',exact:true}).click();
+    await page.locator('.swal2-container').waitFor({state:'hidden'});
+    assert.equal(noteAttempts.length,2);assert.deepEqual(noteAttempts[0],noteAttempts[1]);assert.equal(notes.length,1);
+    await page.getByText('Visita realizada. Texto de seguimiento DEMO.',{exact:true}).waitFor();
+    console.log('UI reintento de nota terminado');
+    await page.reload();await page.getByText('Visita realizada. Texto de seguimiento DEMO.',{exact:true}).waitFor();
+    await page.screenshot({path:'/tmp/crece-consolidation-followup.png',fullPage:true});
+    console.log('UI recarga historial terminada');
+    await page.goto(`${url}/#/observaciones-cobranza`);
+    await page.getByText('Visita realizada. Texto de seguimiento DEMO.',{exact:true}).waitFor();
+    await page.getByLabel('Buscar grupo, folio o nombre del cliente',{exact:true}).fill('María');
+    await page.getByRole('button',{name:'Consultar',exact:true}).click();
+    await page.waitForURL('**search=Mar%C3%ADa**');
+    await page.reload();await page.getByText('Visita realizada. Texto de seguimiento DEMO.',{exact:true}).waitFor();
+    assert.equal(await page.getByLabel('Buscar grupo, folio o nombre del cliente',{exact:true}).inputValue(),'María');
+    console.log('UI historial general y filtros persistentes terminados');
+    await page.goto(`${url}/#/caja-central`);
+    await page.locator('tbody tr').filter({hasText:'DEP-TEST-1'}).waitFor();
+    assert.match(await page.locator('.metrics').innerText(),/1,700.25/);
+    const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Todos los movimientos CSV',exact:true}).click();assert.equal(await (await downloadPromise).failure(),null);
+    await page.emulateMedia({media:'print'});await page.pdf({path:'/tmp/crece-caja-central-print.pdf',format:'Letter',landscape:true});
+    await page.emulateMedia({media:'screen'});await page.setViewportSize({width:390,height:844});await page.waitForTimeout(700);assert.ok((await page.locator('.central-cash-page').boundingBox()).width>=380);await page.screenshot({path:'/tmp/crece-consolidation-cash-mobile.png',fullPage:true});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1));
+    await page.goto(`${url}/#/cobros-depositos`);
+    await page.getByRole('heading',{name:'Cobros y depósitos',exact:true}).waitFor();
+    await page.locator('tbody tr').filter({hasText:'DEP-TEST-1'}).waitFor();
+    assert.match(await page.getByRole('link',{name:'Registrar cobro o depósito',exact:true}).getAttribute('href'),/#\/cobros$/);
+    assert.match(await page.getByRole('link',{name:'Ver comprobante',exact:true}).getAttribute('href'),/#\/comprobantes\/pay$/);
+    await page.getByLabel('Buscar folio bancario, crédito, grupo o cajero',{exact:true}).fill('DEP-TEST-1');
+    await page.getByRole('button',{name:'Consultar',exact:true}).click();
+    await page.waitForURL('**search=DEP-TEST-1**');
+    await page.locator('tbody tr').filter({hasText:'DEP-TEST-1'}).waitFor();
+    assert.equal(cashQueries.at(-1).search,'DEP-TEST-1');
+    await page.reload();
+    await page.locator('tbody tr').filter({hasText:'DEP-TEST-1'}).waitFor();
+    assert.equal(await page.getByLabel('Buscar folio bancario, crédito, grupo o cajero',{exact:true}).inputValue(),'DEP-TEST-1');
+    await page.screenshot({path:'/tmp/crece-cobros-depositos-mobile.png',fullPage:true});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1));
+    console.log('UI Cobros y depósitos: búsqueda persistida, acceso a captura y comprobante.');
+    assert.deepEqual(errors,[]);console.log('OK: recuperación, historial persistido, reintento idempotente, caja central, CSV, impresión y móvil (API simulada).');
+  } finally { await browser.close(); }
+})().catch(error=>{console.error(error);process.exit(1);});

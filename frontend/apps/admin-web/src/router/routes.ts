@@ -89,6 +89,31 @@ const routes: RouteRecordRaw[] = [
         meta: { superAdmin: true },
       },
       {
+        path: 'creditos/:id/seguimiento',
+        component: () => import('@/pages/CreditFollowupPage.vue'),
+        meta: { credit: true, followup: true },
+      },
+      {
+        path: 'caja-central',
+        component: () => import('@/pages/CentralCashPage.vue'),
+        meta: { cash: true },
+      },
+      {
+        path: 'observaciones-cobranza',
+        component: () => import('@/pages/FollowupHistoryPage.vue'),
+        meta: { credit: true, followup: true },
+      },
+      {
+        path: 'administracion/sucursales',
+        component: () => import('@/pages/BranchesPage.vue'),
+        meta: { branches: true },
+      },
+      {
+        path: 'cobros-depositos',
+        component: () => import('@/pages/CentralCashPage.vue'),
+        meta: { cash: true, cashMovements: true },
+      },
+      {
         path: 'cobros',
         component: () => import('@/pages/CreditApplicationsPage.vue'),
         meta: { credit: true, creditCollect: true },

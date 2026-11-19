@@ -37,6 +37,12 @@ export default defineRouter(({ store }) => {
     )
       return '/';
     if (to.meta.messagesSend && !auth.can('messages.send')) return '/';
+    if (to.meta.followup && !auth.can('credit.followup')) return '/';
+    if (
+      to.meta.branches &&
+      !auth.roles.some((role) => ['Super Admin', 'Gerente General'].includes(role))
+    )
+      return '/';
     if (to.meta.cash && !auth.can('cash.view')) return '/';
     if (to.meta.intake && !auth.can('intake.access')) return '/';
     if (to.meta.credit && !auth.can('credit.view')) return '/';

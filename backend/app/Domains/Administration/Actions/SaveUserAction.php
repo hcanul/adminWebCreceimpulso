@@ -3,10 +3,12 @@
 namespace App\Domains\Administration\Actions;
 
 use App\Domains\Administration\DTOs\UserData;
+use App\Models\Branch;
 use App\Models\Promoter;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -24,6 +26,10 @@ final class SaveUserAction
             if ($id && $user->hasRole('Super Admin') && (! $data->active || ! in_array('Super Admin', $data->roles)) && $admins->where('id', '!=', $id)->isEmpty()) {
                 throw ValidationException::withMessages(['roles' => 'Debe permanecer al menos un Super Admin activo.']);
             }
+            if ($data->branchId) {
+                $branch = Branch::whereKey($data->branchId)->lockForUpdate()->first();
+                abort_unless($branch && $branch->is_active, 422, 'La sucursal asignada ya no está activa.');
+            }
             $before = $id ? ['branch_id' => $user->branch_id, 'is_active' => (bool) $user->is_active, 'roles' => $user->getRoleNames()->all()] : null;
             $promoter = in_array('Promotor', $data->roles);
             if ((! array_intersect(['Super Admin', 'Gerente General'], $data->roles) || $promoter) && ! $data->branchId) {
@@ -34,7 +40,7 @@ final class SaveUserAction
             }
             $user->forceFill(['name' => $data->name, 'email' => $data->email, 'branch_id' => $data->branchId, 'is_active' => $data->active]);
             if ($data->password) {
-                if ($id && (\Illuminate\Support\Facades\Hash::check($data->password, $user->password) || ($user->previous_password && \Illuminate\Support\Facades\Hash::check($data->password, $user->previous_password)))) {
+                if ($id && (Hash::check($data->password, $user->password) || ($user->previous_password && Hash::check($data->password, $user->previous_password)))) {
                     throw ValidationException::withMessages(['password' => 'Usa una contraseña diferente de la actual y de la anterior.']);
                 }
                 $user->password = $data->password;

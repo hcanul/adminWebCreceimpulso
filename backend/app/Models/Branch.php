@@ -23,10 +23,12 @@ class Branch extends Model
         });
     }
 
+    protected $hidden = ['creation_hash'];
+
     protected $fillable = ['name', 'city', 'is_active'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'management_version' => 'integer'];
     }
 }

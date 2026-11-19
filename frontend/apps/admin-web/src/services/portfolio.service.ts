@@ -1,5 +1,7 @@
 import { api } from './http';
 export interface PortfolioFilters {
+  portfolio?: 'ordinary' | 'recovery' | 'all';
+  branch_id?: string;
   search: string;
   status: string;
   page: number;
@@ -13,6 +15,8 @@ export interface PortfolioTotals {
   due_today: string;
 }
 export interface PortfolioRow extends PortfolioTotals {
+  portfolio_class: 'ordinary' | 'recovery';
+  portfolio_version: number;
   id: string;
   folio: string;
   group: string;

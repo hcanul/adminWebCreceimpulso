@@ -18,6 +18,7 @@ final class PortfolioCsv
             'current' => 'Sin atraso',
             default => 'Todos los activos',
         }, 'Búsqueda', $text($filters['search'] ?? '')]);
+        $line(['Clasificación', $report['portfolio'] ?? 'ordinary']);
         $line(['Créditos', $report['total'], 'Con atraso', $report['summary']['overdue_credits'], 'Moneda', 'MXN']);
         $line(['La mora ya está incluida en saldo total, exigible y atraso. Vence hoy corresponde solo a cuotas.']);
         $line([]);

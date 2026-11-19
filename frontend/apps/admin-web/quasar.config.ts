@@ -2,6 +2,7 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app';
+import windowsBuilder from './src-electron/electron-builder.windows.json';
 
 export default defineConfig((/* ctx */) => {
   return {
@@ -220,11 +221,7 @@ export default defineConfig((/* ctx */) => {
         // win32metadata: { ... }
       },
 
-      builder: {
-        // https://www.electron.build/configuration
-
-        appId: 'admin-web',
-      },
+      builder: windowsBuilder,
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-browser-extensions/configuring-bex

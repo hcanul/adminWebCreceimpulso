@@ -7,6 +7,7 @@ use App\Domains\Credit\Services\CreditAccess;
 use App\Domains\Credit\Services\CreditCalculator;
 use App\Domains\Credit\Services\CreditEligibility;
 use App\Domains\Intake\Services\IntakeAccess;
+use App\Models\Branch;
 use App\Models\Client;
 use App\Models\LoanApplication;
 use App\Models\LoanParticipation;
@@ -32,6 +33,8 @@ final class CreateCreditAction
 
                     return $existing;
                 }
+                $branch = Branch::whereKey($team->branch_id)->lockForUpdate()->firstOrFail();
+                abort_unless($branch->is_active, 422, 'La sucursal está inactiva.');
                 // Lock clients in stable order: simultaneous requests in different groups cannot double-enroll them.
                 Client::withTrashed()->whereIn('id', array_column($data->participants, 'client_id'))->orderBy('id')->lockForUpdate()->get();
                 $team->load(['branch', 'promoter', 'memberships.client']);

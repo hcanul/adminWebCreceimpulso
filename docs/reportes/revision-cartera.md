@@ -1,5 +1,7 @@
 # Cartera vencida y catálogo de reportes
 
+**Actualización 18/11/2026:** el diagnóstico siguiente precede a la integración. La clasificación ordinaria/recuperación, su historial y los filtros de impresión/CSV ya tienen implementación: consultar [Caja central y seguimiento consolidado](../features/consolidacion-cajas-recuperacion.md). Requiere aplicar la migración pendiente en ensayo; no se trasladaron créditos operativos.
+
 Revisión del código: 18 de noviembre de 2026. No se alteraron registros operativos.
 
 ## Resultado

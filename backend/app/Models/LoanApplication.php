@@ -22,7 +22,7 @@ class LoanApplication extends Model
 
     protected function casts(): array
     {
-        return ['authorization_version' => 'integer', 'authorization_proposal' => 'array', 'approved_snapshot' => 'array', 'approved_at' => 'datetime', 'review_version' => 'integer', 'review_checks' => 'array', 'request_snapshot' => 'array', 'requested_at' => 'datetime', 'pacted_date' => 'date', 'total_requested' => 'decimal:2', 'total_approved' => 'decimal:2'];
+        return ['portfolio_version' => 'integer', 'authorization_version' => 'integer', 'authorization_proposal' => 'array', 'approved_snapshot' => 'array', 'approved_at' => 'datetime', 'review_version' => 'integer', 'review_checks' => 'array', 'request_snapshot' => 'array', 'requested_at' => 'datetime', 'pacted_date' => 'date', 'total_requested' => 'decimal:2', 'total_approved' => 'decimal:2'];
     }
 
     protected static function booted(): void

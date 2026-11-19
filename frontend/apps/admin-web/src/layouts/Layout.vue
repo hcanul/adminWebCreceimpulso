@@ -120,41 +120,51 @@ const router = useRouter();
 const route = useRoute();
 const canCapture = computed(() => auth.can('intake.access'));
 const heading = computed(() =>
-  route.path.startsWith('/accesos-clientes')
-    ? 'Accesos de clientes'
-    : route.path.startsWith('/administracion/datos-documentales')
-      ? 'Datos documentales'
-      : route.path.startsWith('/documentos')
-        ? 'Documentos'
-        : route.path.endsWith('/garantia')
-          ? 'Garantía retenida'
-          : route.path.startsWith('/cartera')
-            ? 'Cartera y vencimientos'
-            : route.path.startsWith('/cortes')
-              ? 'Cortes de caja'
-              : route.path.startsWith('/cobros')
-                ? 'Cobros en caja'
-                : route.path.startsWith('/desembolsos')
-                  ? 'Desembolsos y calendario'
-                  : route.path.startsWith('/autorizaciones')
-                    ? 'Autorización comercial'
-                    : route.path.startsWith('/gestion')
-                      ? 'Gestión de solicitudes'
-                      : route.path.startsWith('/grupos')
-                        ? 'Grupos solidarios'
-                        : route.path.startsWith('/solicitudes-credito')
-                          ? 'Solicitudes de crédito'
-                          : route.path.startsWith('/tasas')
-                            ? 'Tasas de crédito'
-                            : route.path.startsWith('/clientes')
-                              ? 'Clientes y expedientes'
-                              : route.path.startsWith('/promotores')
-                                ? 'Promotores'
-                                : route.path.startsWith('/administracion/usuarios')
-                                  ? 'Usuarios'
-                                  : route.path.startsWith('/administracion/roles')
-                                    ? 'Roles y permisos'
-                                    : 'Resumen operativo',
+  route.path.startsWith('/administracion/sucursales')
+    ? 'Sucursales'
+    : route.path.startsWith('/cobros-depositos')
+      ? 'Cobros y depósitos'
+      : route.path.startsWith('/observaciones-cobranza')
+        ? 'Observaciones de cobranza'
+        : route.path.startsWith('/caja-central')
+          ? 'Caja central'
+          : route.path.endsWith('/seguimiento')
+            ? 'Seguimiento de cobranza'
+            : route.path.startsWith('/accesos-clientes')
+              ? 'Accesos de clientes'
+              : route.path.startsWith('/administracion/datos-documentales')
+                ? 'Datos documentales'
+                : route.path.startsWith('/documentos')
+                  ? 'Documentos'
+                  : route.path.endsWith('/garantia')
+                    ? 'Garantía retenida'
+                    : route.path.startsWith('/cartera')
+                      ? 'Cartera y vencimientos'
+                      : route.path.startsWith('/cortes')
+                        ? 'Cortes de caja'
+                        : route.path.startsWith('/cobros')
+                          ? 'Cobros en caja'
+                          : route.path.startsWith('/desembolsos')
+                            ? 'Desembolsos y calendario'
+                            : route.path.startsWith('/autorizaciones')
+                              ? 'Autorización comercial'
+                              : route.path.startsWith('/gestion')
+                                ? 'Gestión de solicitudes'
+                                : route.path.startsWith('/grupos')
+                                  ? 'Grupos solidarios'
+                                  : route.path.startsWith('/solicitudes-credito')
+                                    ? 'Solicitudes de crédito'
+                                    : route.path.startsWith('/tasas')
+                                      ? 'Tasas de crédito'
+                                      : route.path.startsWith('/clientes')
+                                        ? 'Clientes y expedientes'
+                                        : route.path.startsWith('/promotores')
+                                          ? 'Promotores'
+                                          : route.path.startsWith('/administracion/usuarios')
+                                            ? 'Usuarios'
+                                            : route.path.startsWith('/administracion/roles')
+                                              ? 'Roles y permisos'
+                                              : 'Resumen operativo',
 );
 const drawer = ref(false);
 const closing = ref(false);
@@ -198,9 +208,16 @@ const operations = computed(() => [
         { label: 'Reportes para impresión', icon: 'print', to: '/reportes' },
       ]
     : []),
-  { label: 'Cobros y depósitos', icon: 'payments' },
+  ...(auth.can('credit.followup')
+    ? [{ label: 'Observaciones de cobranza', icon: 'forum', to: '/observaciones-cobranza' }]
+    : []),
+
   ...(auth.can('cash.view')
-    ? [{ label: 'Cortes de caja', icon: 'point_of_sale', to: '/cortes' }]
+    ? [
+        { label: 'Cobros y depósitos', icon: 'payments', to: '/cobros-depositos' },
+        { label: 'Caja central', icon: 'account_balance', to: '/caja-central' },
+        { label: 'Cortes de caja', icon: 'point_of_sale', to: '/cortes' },
+      ]
     : []),
 ]);
 const administration = computed(() => [
@@ -212,7 +229,7 @@ const administration = computed(() => [
     ? [{ label: 'Tasas de crédito', icon: 'percent', to: '/tasas' }]
     : []),
   ...(auth.roles.some((role) => ['Super Admin', 'Gerente General'].includes(role))
-    ? [{ label: 'Sucursales', icon: 'tune' }]
+    ? [{ label: 'Sucursales', icon: 'tune', to: '/administracion/sucursales' }]
     : []),
   ...(auth.roles.includes('Super Admin')
     ? [

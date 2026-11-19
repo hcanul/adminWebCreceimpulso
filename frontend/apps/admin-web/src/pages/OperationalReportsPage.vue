@@ -4,6 +4,19 @@
     <h1>Reportes para impresión</h1>
     <p>Consulta los formatos de referencia y guarda una copia en PDF desde la impresión.</p>
     <div class="report-controls q-gutter-md q-mb-md">
+      <FilterSelect
+        v-if="kind === 'portfolio'"
+        v-model="portfolio"
+        outlined
+        emit-value
+        map-options
+        label="Clasificación de cartera"
+        :options="[
+          { label: 'Ordinaria', value: 'ordinary' },
+          { label: 'Recuperación', value: 'recovery' },
+          { label: 'Consolidada', value: 'all' },
+        ]"
+      />
       <q-select v-model="kind" :options="kinds" emit-value map-options outlined label="Formato" />
       <q-select
         v-if="requiresCredit"
@@ -103,6 +116,7 @@
 </template>
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import FilterSelect from '../components/FilterSelect.vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store';
 import { reportsService, type ReportCredit, type ReportKind } from '../services/reports.service';
@@ -121,6 +135,13 @@ const html = ref(''),
   week = ref(''),
   search = ref(''),
   status = ref('all');
+const portfolio = ref(
+  route.query.portfolio === 'recovery'
+    ? 'recovery'
+    : route.query.portfolio === 'all'
+      ? 'all'
+      : 'ordinary',
+);
 const frame = ref<HTMLIFrameElement>();
 let searchRequest: AbortController | null = null,
   reportRequest: AbortController | null = null,
@@ -158,7 +179,7 @@ function invalidate() {
   loading.value = false;
   error.value = '';
 }
-watch([kind, credit, member, week, search, status], invalidate);
+watch([kind, credit, member, week, search, status, portfolio], invalidate);
 async function searchCredits(value: string, update: (fn: () => void) => void) {
   searchRequest?.abort();
   const request = new AbortController();
@@ -208,7 +229,11 @@ async function prepare() {
   const attempt = generation;
   reportRequest = new AbortController();
   loading.value = true;
-  const params: Record<string, string> = { search: search.value, status: status.value };
+  const params: Record<string, string> = {
+    search: search.value,
+    status: status.value,
+    portfolio: portfolio.value,
+  };
   if (requiresCredit.value && credit.value) params.credit_id = credit.value.id;
   if (member.value && requiresCredit.value) params.client_id = member.value;
   if (week.value) params.week_on = week.value;
