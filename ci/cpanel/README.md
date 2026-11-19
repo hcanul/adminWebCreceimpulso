@@ -27,3 +27,9 @@ Se mantienen los bloques de configuración PHP generados por cPanel en .htaccess
 El trabajo consulta main cada diez minutos y publica automáticamente en pruebas cuando pasan todas las verificaciones. DEPLOY_CPANEL permite solicitar publicación manual; es falso por defecto. Los commits de main, incluidos los merges, activan el flujo. Esta configuración no activa despliegues de producción.
 
 El primer intento #5 falló por el motor predeterminado del hosting. Se fijó InnoDB explícitamente y la recuperación del esquema parcial vacío se realizó tras otro respaldo, verificando que solo hubiera users y migrations sin registros. El despliegue #7 completó todas las migraciones y la comprobación local. Se corrigió DirectoryIndex a index.php index.html para permitir las tres SPA en subcarpetas.
+
+## Primera cuenta administradora de pruebas
+
+`bootstrap-admin.php` solo funciona por CLI desde la carpeta privada del hosting, exige APP_ENV=staging y la base creceimp_pruebas. El cron lo revisa antes de procesar entregas. Se prepara admin-bootstrap.env con nombre, correo, contraseña pendiente y ADMIN_CONFIRM=false. El propietario introduce la contraseña directamente en cPanel y cambia ADMIN_CONFIRM=true cuando autoriza la creación de Super Admin. Se exige contraseña de 14 a 128 caracteres con letras y números.
+
+Solo permite crear la primera cuenta si no existe ningún usuario, incluidos los eliminados. Una marca persistente impide reutilizar el alta. La contraseña se cifra mediante el modelo Laravel y el archivo de solicitud se retira tras crear la cuenta; los informes privados no incluyen la contraseña. Si ya existen usuarios, el proceso se detiene sin modificar cuentas ni credenciales. No es un mecanismo de restablecimiento de contraseñas ni un endpoint web.

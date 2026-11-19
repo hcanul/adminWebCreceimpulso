@@ -9,6 +9,9 @@ cd "$base"
 "$php" "$base/deploy-support.php" ready
 exec 9>"$base/deploy.lock"
 /usr/bin/flock -n 9 || exit 0
+if [ -f "$base/admin-bootstrap.env" ] && [ -f "$base/current/backend/vendor/autoload.php" ]; then
+    "$php" "$base/bootstrap-admin.php"
+fi
 [ -f request.json ] || exit 0
 # Una petición interrumpida requiere revisión; no sobrescribirla silenciosamente.
 [ ! -e processing.json ] || exit 1
