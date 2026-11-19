@@ -75,5 +75,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Usamos Face ID para acceder a tu cuenta de Crece Impulso cuando tú lo activas.</string>
 </dict>
 </plist>

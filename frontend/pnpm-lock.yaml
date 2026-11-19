@@ -244,6 +244,9 @@ importers:
 
   apps/client-app:
     dependencies:
+      '@aparajita/capacitor-biometric-auth':
+        specifier: 10.0.0
+        version: 10.0.0
       '@aparajita/capacitor-secure-storage':
         specifier: ^8.0.1
         version: 8.0.1
@@ -329,6 +332,9 @@ importers:
 
   apps/staff-app:
     dependencies:
+      '@aparajita/capacitor-biometric-auth':
+        specifier: 10.0.0
+        version: 10.0.0
       '@aparajita/capacitor-secure-storage':
         specifier: ^8.0.1
         version: 8.0.1
@@ -413,6 +419,10 @@ importers:
         version: 3.3.13(typescript@6.0.3)
 
 packages:
+
+  '@aparajita/capacitor-biometric-auth@10.0.0':
+    resolution: {integrity: sha512-azjWaRucB8x1/gSzSTp/NxelaOZyg+m765gSzjwUkSQgg30RrZPmPq6pyLeeXVSZNDY3Rxf5Hj8obgZaXirCFQ==}
+    engines: {node: '>=20.0.0'}
 
   '@aparajita/capacitor-secure-storage@8.0.1':
     resolution: {integrity: sha512-NSYIQtH6TyBgL3myumQGcCE3iecq2PtGNFlGxl1fJKEU37Dv5DudzDlwg42cgbVxCm1ay72g4X7rTSAvKULsVg==}
@@ -2603,6 +2613,13 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@aparajita/capacitor-biometric-auth@10.0.0':
+    dependencies:
+      '@capacitor/android': 8.6.0(@capacitor/core@8.5.3)
+      '@capacitor/app': 8.1.2(@capacitor/core@8.5.3)
+      '@capacitor/core': 8.5.3
+      '@capacitor/ios': 8.6.0(@capacitor/core@8.5.3)
 
   '@aparajita/capacitor-secure-storage@8.0.1':
     dependencies:

@@ -54,6 +54,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue';
+import { removeBiometricAccess } from '../services/device-access';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { authService } from '../services/auth.service';
@@ -70,6 +71,8 @@ async function save() {
   busy.value = true;
   try {
     await authService.changePassword(current.value, password.value, confirmation.value);
+    // The password is already changed; a local cleanup failure must not report it as rejected.
+    await removeBiometricAccess().catch(() => undefined);
     current.value = password.value = confirmation.value = '';
     await auth.clear();
     await Swal.fire({

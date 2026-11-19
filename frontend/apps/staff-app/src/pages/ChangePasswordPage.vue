@@ -85,6 +85,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue';
+import { removeBiometricAccess } from '../services/device-access';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { useStaffAuth } from '../stores/auth';
@@ -117,6 +118,8 @@ async function save() {
   error.value = '';
   try {
     await auth.changePassword(current.value, password.value, confirmation.value);
+    // The password is already changed; a local cleanup failure must not report it as rejected.
+    await removeBiometricAccess().catch(() => undefined);
     current.value = '';
     password.value = '';
     confirmation.value = '';

@@ -1,3 +1,4 @@
+import { removeBiometricAccess, rememberIdentifier } from './device-access';
 import axios from 'axios';
 import { removeSession } from './session';
 import { normalizeServerAddress } from './server-address';
@@ -16,6 +17,8 @@ export function getServerAddress(): string {
 }
 export async function saveServerAddress(value: string): Promise<void> {
   const normalized = normalizeServerAddress(value);
+  await removeBiometricAccess();
+  rememberIdentifier('', false);
   await removeSession();
   localStorage.setItem(serverKey, normalized);
   if (localStorage.getItem(serverKey) !== normalized)

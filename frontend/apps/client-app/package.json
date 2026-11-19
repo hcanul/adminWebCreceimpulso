@@ -19,6 +19,7 @@
     "android:apk": "node scripts/build-android-demo.mjs"
   },
   "dependencies": {
+    "@aparajita/capacitor-biometric-auth": "10.0.0",
     "@aparajita/capacitor-secure-storage": "^8.0.1",
     "@capacitor/core": "^8.5.3",
     "@capacitor/push-notifications": "^8.1.3",

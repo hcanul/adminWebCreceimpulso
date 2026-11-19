@@ -20,6 +20,30 @@
               : 'Ingresa con tu número de cliente y tu contraseña.'
           }}
         </p>
+        <section v-if="!activating" class="q-mb-md">
+          <q-btn
+            v-if="saved && available"
+            outline
+            color="primary"
+            icon="fingerprint"
+            class="full-width q-mb-sm"
+            :label="`Entrar con ${label}`"
+            :disable="busy"
+            @click="biometricLogin"
+          />
+          <p v-if="saved && !available" class="text-caption">
+            La biometría no está disponible. Puedes entrar con tu contraseña.
+          </p>
+          <q-btn
+            v-if="saved"
+            flat
+            no-caps
+            label="Eliminar acceso biométrico guardado"
+            :disable="busy"
+            @click="access.forget"
+          />
+          <p v-if="notice" role="status" class="text-caption">{{ notice }}</p>
+        </section>
         <q-form class="q-gutter-y-lg" @submit="submit">
           <q-input
             v-if="activating"
@@ -78,6 +102,23 @@
             :disable="busy"
             :rules="[(v) => v === password || 'Las contraseñas no coinciden']"
           />
+          <section v-if="!activating">
+            <q-checkbox
+              :model-value="remember"
+              :disable="busy"
+              label="Recordar número de cliente"
+              @update:model-value="access.toggleRemember"
+            />
+            <q-checkbox
+              v-if="available"
+              v-model="activate"
+              :disable="busy"
+              :label="`Activar acceso con ${label}`"
+            />
+            <p v-if="available" class="text-caption">
+              Se activa después de validar tu contraseña. Solo úsalo en tu dispositivo personal.
+            </p>
+          </section>
           <q-btn
             type="submit"
             color="primary"
@@ -88,7 +129,9 @@
         </q-form>
         <p class="switch-link">
           <router-link :to="activating ? '/login' : '/activar'" @click="reset">{{
-            activating ? 'Ya tengo cuenta. Iniciar sesión' : 'Tengo un código de activación o recuperación'
+            activating
+              ? 'Ya tengo cuenta. Iniciar sesión'
+              : 'Tengo un código de activación o recuperación'
           }}</router-link>
         </p>
         <div class="q-mb-lg text-center">
@@ -102,7 +145,17 @@
           />
           <p v-if="connectionResult" class="q-mt-sm" role="status">{{ connectionResult }}</p>
         </div>
-        <div class="text-center q-mb-lg"><q-btn flat no-caps color="primary" icon="settings" label="Configuración del dispositivo" to="/configuracion" :disable="busy || checking" /></div>
+        <div class="text-center q-mb-lg">
+          <q-btn
+            flat
+            no-caps
+            color="primary"
+            icon="settings"
+            label="Configuración del dispositivo"
+            to="/configuracion"
+            :disable="busy || checking"
+          />
+        </div>
         <aside class="help-box">
           <q-icon name="support_agent" size="24px" /><span
             >Si olvidaste tu contraseña o tu código venció, acude a tu sucursal para recibir
@@ -115,6 +168,7 @@
 </template>
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useDeviceAccess } from '../composables/useDeviceAccess';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { authService } from '../services/auth.service';
@@ -126,7 +180,8 @@ const router = useRouter();
 const auth = useClientAuth();
 const activating = computed(() => route.path === '/activar');
 const code = ref('');
-const identifier = ref('');
+const access = useDeviceAccess();
+const { identifier, remember, available, label, saved, activate, notice } = access;
 const password = ref('');
 const confirmation = ref('');
 const busy = ref(false);
@@ -173,7 +228,12 @@ async function submit() {
       await router.replace('/login');
     } else {
       await auth.login(identifier.value.trim().toUpperCase(), password.value);
+      const warning = await access.afterPasswordLogin(
+        password.value,
+        !!auth.profile?.must_change_password,
+      );
       reset();
+      if (warning) await Swal.fire({ icon: 'info', text: warning });
       await router.replace('/');
     }
   } catch (e) {
@@ -181,6 +241,30 @@ async function submit() {
       icon: 'error',
       title: 'Revisa tu acceso',
       text: errorMessage(e),
+      confirmButtonColor: '#7e1838',
+    });
+  } finally {
+    busy.value = false;
+  }
+}
+async function biometricLogin() {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await access.loginWithBiometry(
+      (id, secret) => auth.login(id, secret),
+      () => !!auth.profile?.must_change_password,
+    );
+    password.value = '';
+    await router.replace('/');
+  } catch (error) {
+    const isNetwork = error && typeof error === 'object' && 'isAxiosError' in error;
+    await Swal.fire({
+      icon: 'info',
+      title: 'Usa tu contraseña',
+      text: isNetwork
+        ? errorMessage(error)
+        : 'No se completó la verificación biométrica. Puedes intentarlo de nuevo o ingresar con tu contraseña.',
       confirmButtonColor: '#7e1838',
     });
   } finally {

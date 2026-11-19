@@ -68,5 +68,7 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Permite conectar con la API de Crece Impulso en tu red local durante las pruebas en sucursal.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Usamos Face ID para acceder a tu cuenta de Crece Impulso cuando tú lo activas.</string>
 </dict>
 </plist>

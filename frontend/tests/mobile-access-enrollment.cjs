@@ -1,0 +1,12 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const ts=require('../apps/client-app/node_modules/typescript');
+function fixture(app){let enabled=0,removed=0,remembered=0;const code=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../apps',app,'src/composables/useDeviceAccess.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;const exports={};const service={rememberedIdentifier:()=>'',hasBiometricAccess:()=>false,biometricAccountMatches:async()=>false,biometricAvailability:async()=>({available:true,label:'Face ID'}),rememberIdentifier:()=>remembered++,removeBiometricAccess:async()=>removed++,enableBiometricAccess:async()=>enabled++,biometricCredential:async()=>({identifier:'demo',password:'secret'})};vm.runInNewContext(code,{exports,require(name){if(name==='vue')return {ref:value=>({value}),onMounted:()=>{}};if(name==='axios')return {__esModule:true,default:{isAxiosError:e=>!!e.isAxiosError}};if(name.includes('device-access'))return service;throw Error(name);}});return {access:exports.useDeviceAccess(),counts:()=>({enabled,removed,remembered})};}
+(async()=>{for(const app of ['client-app','staff-app']){
+ let f=fixture(app);f.access.activate.value=true;assert.ok(await f.access.afterPasswordLogin('secret',true));assert.equal(f.counts().enabled,0,'expired passwords cannot enroll');
+ f=fixture(app);f.access.activate.value=true;await f.access.afterPasswordLogin('secret',false);assert.equal(f.counts().enabled,1);assert.equal(f.access.saved.value,true);
+ await f.access.afterPasswordLogin('new-secret',false);assert.equal(f.counts().removed,1,'new password login removes the previous saved account');
+ f=fixture(app);await assert.rejects(f.access.loginWithBiometry(async()=>{throw {isAxiosError:true,response:{status:422}};},()=>false));assert.equal(f.counts().removed,1,'invalid credentials revoke biometric shortcut');
+ f=fixture(app);await assert.rejects(f.access.loginWithBiometry(async()=>{throw {isAxiosError:true};},()=>false));assert.equal(f.counts().removed,0,'network failure preserves the shortcut for a retry');
+ f=fixture(app);await f.access.loginWithBiometry(async()=>{},()=>true);assert.equal(f.counts().removed,1,'renewal still required after a biometric login');
+ console.log(`OK ${app}: enrollment consent, expiry, previous account replacement, invalid credentials, network retry and forced renewal.`);
+}})().catch(e=>{console.error(e);process.exitCode=1;});

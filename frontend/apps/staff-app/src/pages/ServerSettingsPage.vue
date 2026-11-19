@@ -69,10 +69,36 @@
         </q-form>
       </q-card-section>
     </q-card>
+    <q-card flat bordered class="q-mt-lg">
+      <q-card-section>
+        <h2>Acceso en este dispositivo</h2>
+        <q-checkbox
+          :model-value="access.remember.value"
+          :disable="!access.remember.value && !access.identifier.value"
+          label="Recordar correo"
+          @update:model-value="access.toggleRemember"
+        />
+        <p class="text-caption">
+          Para activar la biometría, entra con tu contraseña y marca la opción correspondiente.
+        </p>
+        <q-btn
+          v-if="access.saved.value"
+          flat
+          no-caps
+          color="negative"
+          label="Eliminar acceso biométrico guardado"
+          @click="access.forget"
+        />
+        <p v-else class="text-caption">No hay un acceso biométrico guardado para este servidor.</p>
+        <p v-if="access.notice.value" role="status">{{ access.notice.value }}</p>
+      </q-card-section>
+    </q-card>
   </main>
 </template>
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useDeviceAccess } from '../composables/useDeviceAccess';
+const access = useDeviceAccess();
 import Swal from 'sweetalert2';
 import { normalizeServerAddress } from '../services/server-address';
 import {
