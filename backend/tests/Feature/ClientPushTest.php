@@ -44,7 +44,8 @@ final class ClientPushTest extends TestCase
         config(['client_push.enabled' => false]);
         $a = $this->account();
         $token = $a->createToken('test', ['client:read'])->plainTextToken;
-        $this->withToken($token)->getJson('/api/client/push-device')->assertOk()->assertJsonPath('available.android', false)->assertJsonPath('enabled', false);
+        $this->withToken($token)->getJson('/api/client/push-device')->assertUnprocessable()->assertJsonValidationErrors('installation_id');
+        $this->getJson('/api/client/push-device?installation_id='.Str::uuid())->assertOk()->assertJsonPath('available.android', false)->assertJsonPath('enabled', false);
         $this->withToken($token)->postJson('/api/client/push-device', ['platform' => 'android', 'token' => str_repeat('a', 40), 'installation_id' => (string) Str::uuid(), 'consent' => true])->assertStatus(503);
         $this->artisan('clients:payment-reminders')->assertSuccessful();
         $this->assertDatabaseCount('client_payment_reminders', 0);
@@ -54,7 +55,7 @@ final class ClientPushTest extends TestCase
         $this->withToken($staff->createToken('staff')->plainTextToken)->getJson('/api/client/push-device')->assertForbidden();
     }
 
-    public function test_enrollment_encrypts_requires_consent_and_logout_revokes_only_session(): void
+    public function test_enrollment_encrypts_requires_consent_and_logout_revokes_account_devices(): void
     {
         $sender = $this->mock(PushSender::class);
         $sender->shouldReceive('ready')->andReturn(true);
@@ -67,10 +68,16 @@ final class ClientPushTest extends TestCase
         $saved = DB::table('client_push_devices')->first();
         $this->assertNotSame($payload['token'], $saved->token_encrypted);
         $this->assertSame($payload['token'], Crypt::decryptString($saved->token_encrypted));
-        $other = $this->device($a, 999);
+        $otherToken = $a->createToken('other-session', ['client:read']);
+        $other = $this->device($a, $otherToken->accessToken->id);
+        $anotherAccount = $this->account();
+        $anotherDevice = $this->device($anotherAccount);
         $this->postJson('/api/client/logout')->assertNoContent();
         $this->assertDatabaseHas('client_push_devices', ['id' => $saved->id, 'enabled' => false]);
-        $this->assertDatabaseHas('client_push_devices', ['id' => $other, 'enabled' => true]);
+        $this->assertDatabaseHas('client_push_devices', ['id' => $other, 'enabled' => false]);
+        $this->assertDatabaseHas('client_push_devices', ['id' => $anotherDevice, 'enabled' => true]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $token->accessToken->id]);
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $otherToken->accessToken->id]);
     }
 
     public function test_tomorrow_unpaid_timezone_dedup_and_password_revocation(): void

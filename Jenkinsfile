@@ -39,6 +39,7 @@ pipeline {
                 dir('backend') {
                     sh 'composer validate --no-check-publish'
                     sh 'composer install --no-interaction --prefer-dist --no-progress --no-scripts'
+                    sh 'test -f .env || cp .env.example .env'
                     sh 'php artisan package:discover --ansi'
                     sh 'mkdir -p ../artifacts'
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
