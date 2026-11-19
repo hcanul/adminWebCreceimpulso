@@ -4,6 +4,7 @@ umask 077
 base=/home/creceimp/jenkins-creceimpulso-pruebas
 public=/home/creceimp/pruebas.creceimpulso.com
 php=/opt/alt/php83/usr/bin/php
+exec >>"$base/deploy.log" 2>&1
 cd "$base"
 "$php" "$base/deploy-support.php" ready
 exec 9>"$base/deploy.lock"

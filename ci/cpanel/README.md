@@ -8,10 +8,10 @@ La carpeta privada /home/creceimp/jenkins-creceimpulso-pruebas, modo 700, contie
 
 El parámetro DEPLOY_CPANEL solicita la publicación en este entorno, usando la credencial Jenkins `creceimpulso-pruebas-ftps`. `upload.php` verifica TLS con svgm374.serverneubox.com.mx:21, carga el ZIP y publica la petición al final mediante renombrado. Espera hasta diez minutos la confirmación del cron. Las credenciales se inyectan como variables y no se guardan en el repositorio.
 
-El cron ejecuta cada minuto:
+El cron ejecuta cada cinco minutos:
 
 ```sh
-/bin/bash /home/creceimp/jenkins-creceimpulso-pruebas/deploy.sh >>/home/creceimp/jenkins-creceimpulso-pruebas/deploy.log 2>&1
+/bin/bash /home/creceimp/jenkins-creceimpulso-pruebas/deploy.sh
 ```
 
 Se instalan deploy.sh y deploy-support.php fuera de la raíz pública. El cron no expone un endpoint de ejecución. PHP tiene desactivadas proc_open y symlink; los comandos fijos de Artisan, mysqldump y enlaces se ejecutan desde Bash. Un bloqueo impide entregas simultáneas; sin request.json el cron solo verifica que está listo.
