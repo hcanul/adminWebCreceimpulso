@@ -24,7 +24,16 @@ pipeline {
     }
     stages {
         stage('Checkout') {
-            steps { checkout scm }
+            steps {
+                script {
+                    def revision = checkout scm
+                    env.CI_GIT_BRANCH = revision.GIT_BRANCH ?: ''
+                    if (!env.CI_GIT_BRANCH) {
+                        error('Git no devolvió la rama de la revisión; se detiene para evitar omitir el despliegue silenciosamente.')
+                    }
+                    echo "Rama comprobada: ${env.CI_GIT_BRANCH}"
+                }
+            }
         }
         stage('Herramientas') {
             steps {
@@ -82,7 +91,7 @@ pipeline {
             }
         }
         stage('Publicar en cPanel de pruebas') {
-            when { expression { (params.DEPLOY_CPANEL || env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main') && currentBuild.currentResult == 'SUCCESS' } }
+            when { expression { (params.DEPLOY_CPANEL || env.CI_GIT_BRANCH == 'origin/main' || env.CI_GIT_BRANCH == 'main') && currentBuild.currentResult == 'SUCCESS' } }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'creceimpulso-pruebas-ftps', usernameVariable: 'CPANEL_FTP_USER', passwordVariable: 'CPANEL_FTP_PASSWORD')]) {
                     sh 'php ci/cpanel/upload.php'
