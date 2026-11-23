@@ -1,3 +1,4 @@
+import { sessionActivity } from '../services/session-inactivity';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { LocalStorage } from 'quasar';
@@ -23,6 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
   function clearSession() {
     generation++;
     useIntakeStore().clear();
+    if (token.value) sessionActivity.end(token.value);
     token.value = null;
     user.value = null;
     roles.value = [];
@@ -35,6 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
     const attempt = ++generation;
     const data = await authService.login(email.trim(), password, deviceName);
     if (attempt !== generation) return;
+    sessionActivity.begin(data.token);
     LocalStorage.set('access_token', data.token);
     token.value = data.token;
     user.value = data.user;
@@ -47,6 +50,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (initialized.value) return;
     const currentToken = token.value;
     const attempt = generation;
+    if (currentToken && sessionActivity.expired(currentToken)) {
+      clearSession();
+      return;
+    }
     if (!currentToken) {
       initialized.value = true;
       return;
@@ -82,6 +89,8 @@ export const useAuthStore = defineStore('auth', () => {
     const result = await authService.changePassword(current, password, confirmation);
     if (attempt !== generation) throw new Error('La sesión cambió. Vuelve a iniciar sesión.');
     generation++;
+    if (token.value) sessionActivity.end(token.value);
+    sessionActivity.begin(result.token);
     LocalStorage.set('access_token', result.token);
     token.value = result.token;
     user.value = result.user;

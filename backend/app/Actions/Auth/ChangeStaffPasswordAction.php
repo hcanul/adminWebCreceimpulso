@@ -23,6 +23,11 @@ final class ChangeStaffPasswordAction
             }
             $user->password = $password;
             $user->save();
+            // Token renewal belongs to the same login and must not consume a tour.
+            $currentToken = $actor->currentAccessToken();
+            $visitId = $currentToken instanceof \Laravel\Sanctum\PersonalAccessToken
+                ? DB::table('user_onboarding_visits')->where('user_id', $user->id)->where('token_id', $currentToken->id)->value('id')
+                : null;
             $user->tokens()->delete();
             DB::table('access_audits')->insert([
                 'id' => (string) Str::uuid(), 'actor_id' => $user->id, 'subject_type' => 'user',
@@ -30,6 +35,8 @@ final class ChangeStaffPasswordAction
                 'changes' => json_encode(['password_changed' => true]), 'created_at' => now(),
             ]);
             $token = $user->createToken('Sesión renovada', ['*'], now()->addHours(8));
+
+            if ($visitId) DB::table('user_onboarding_visits')->where('id', $visitId)->update(['token_id' => $token->accessToken->id]);
 
             // Return the renewed profile with the token: a second network request must
             // not make a successful password change appear to have failed.

@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg password-page">
+  <main class="q-pa-lg password-page">
     <img src="/crece-impulso-logo.png" alt="Crece Impulso" width="230" />
     <h1>Elige tu contraseña personal</h1>
     <p>
@@ -50,7 +50,7 @@
       />
       <q-btn flat label="Cerrar sesión" no-caps :disable="busy" @click="logout" />
     </q-form>
-  </q-page>
+  </main>
 </template>
 <script setup lang="ts">
 import { ref } from 'vue';

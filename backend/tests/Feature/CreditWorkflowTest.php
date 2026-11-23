@@ -193,7 +193,9 @@ final class CreditWorkflowTest extends TestCase
         $this->travelTo(CarbonImmutable::parse($f['delivery']['first_due_on'], 'America/Cancun')->subDay()->setTime(9, 0));
         $this->artisan('clients:payment-reminders')->assertSuccessful();
         $this->assertSame(0, $sender->calls);
+        // Several days passed while testing reminders: logout uses a new live session.
         $this->app['auth']->forgetGuards();
+        $this->withToken($account->createToken('new-device-session', ['client:read'])->plainTextToken);
         $this->postJson('/api/client/logout')->assertNoContent();
         $this->assertDatabaseHas('client_push_devices', ['client_account_id' => $account->id, 'enabled' => false]);
     }

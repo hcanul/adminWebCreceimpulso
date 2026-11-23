@@ -18,6 +18,7 @@ class AuthController extends Controller
             'email' => 'required|email',
             'password' => 'required|string',
             'device_name' => 'required|string',
+            'app' => ['nullable', 'in:admin-web'],
         ]);
 
         $dto = new LoginDTO(
@@ -26,7 +27,7 @@ class AuthController extends Controller
             deviceName: $request->device_name
         );
 
-        $result = $action->execute($dto);
+        $result = $action->execute($dto, $request->input('app'));
 
         return response()->json([
             'message' => 'Login exitoso',

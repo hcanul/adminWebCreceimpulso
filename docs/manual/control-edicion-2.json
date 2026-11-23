@@ -1,0 +1,73 @@
+{
+  "edition": "2.0",
+  "date": "2026-11-19",
+  "documents": [
+    {
+      "title": "Manual de usuario de Crece Impulso",
+      "file": "Manual de usuario Crece Impulso",
+      "pages": 12
+    },
+    {
+      "title": "Manual de Bancos",
+      "file": "Manual-Bancos",
+      "pages": 2
+    },
+    {
+      "title": "Manual de Caja",
+      "file": "Manual-Caja",
+      "pages": 4
+    },
+    {
+      "title": "Manual de Client App",
+      "file": "Manual-Client-App",
+      "pages": 3
+    },
+    {
+      "title": "Manual de Cobranza",
+      "file": "Manual-Cobranza",
+      "pages": 3
+    },
+    {
+      "title": "Manual de Coordinación Comercial",
+      "file": "Manual-Coordinacion-Comercial",
+      "pages": 4
+    },
+    {
+      "title": "Manual de Coordinador",
+      "file": "Manual-Coordinador",
+      "pages": 4
+    },
+    {
+      "title": "Manual de Gerente",
+      "file": "Manual-Gerente",
+      "pages": 6
+    },
+    {
+      "title": "Manual de Gerente General",
+      "file": "Manual-Gerente-General",
+      "pages": 8
+    },
+    {
+      "title": "Manual de Gestión",
+      "file": "Manual-Gestion",
+      "pages": 3
+    },
+    {
+      "title": "Manual de Promotor",
+      "file": "Manual-Promotor",
+      "pages": 4
+    },
+    {
+      "title": "Manual de Colaboradores",
+      "file": "Manual-Staff-App",
+      "pages": 3
+    },
+    {
+      "title": "Manual de Super Admin",
+      "file": "Manual-Super-Admin",
+      "pages": 12
+    }
+  ],
+  "visual_review": "Todas las páginas renderizadas a 100 dpi y revisadas",
+  "total_pages": 68
+}

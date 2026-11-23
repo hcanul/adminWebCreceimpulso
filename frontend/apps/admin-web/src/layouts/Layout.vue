@@ -6,6 +6,7 @@
           flat
           round
           icon="menu"
+          data-tour="menu"
           aria-label="Abrir o cerrar menú lateral"
           :aria-expanded="drawer"
           aria-controls="workspace-navigation"
@@ -15,7 +16,10 @@
           <span>OFICINA DIGITAL</span><strong>{{ heading }}</strong>
         </div>
         <q-space />
-        <q-btn flat round icon="account_circle" aria-label="Abrir opciones de sesión"
+        <q-btn flat round icon="help_outline" data-tour="help" aria-label="Ver recorrido guiado" @click="repeatTour">
+          <q-tooltip>Recorrido guiado</q-tooltip>
+        </q-btn>
+        <q-btn data-tour="session" flat round icon="account_circle" aria-label="Abrir opciones de sesión"
           ><q-menu
             ><q-list style="min-width: 240px"
               ><q-item
@@ -64,6 +68,7 @@
           <q-item
             v-for="item in operations"
             :key="item.label"
+            :data-tour-module="item.to"
             :disable="!item.to"
             :clickable="!!item.to"
             :to="item.to"
@@ -81,6 +86,7 @@
           ><q-item
             v-for="item in administration"
             :key="item.label"
+            :data-tour-module="item.to"
             :disable="!item.to"
             :clickable="!!item.to"
             :to="item.to"
@@ -109,6 +115,7 @@
   </q-layout>
 </template>
 <script setup lang="ts">
+import { useOnboardingTour } from '../composables/useOnboardingTour';
 import { useAlertFeedback } from '../composables/useAlertFeedback';
 import { alerts } from '../services/alerts.service';
 import { computed, ref } from 'vue';
@@ -167,6 +174,7 @@ const heading = computed(() =>
                                               : 'Resumen operativo',
 );
 const drawer = ref(false);
+const { repeatTour } = useOnboardingTour(drawer);
 const closing = ref(false);
 const error = ref('');
 const logoUrl = `${import.meta.env.BASE_URL}crece-impulso-logo.png`;

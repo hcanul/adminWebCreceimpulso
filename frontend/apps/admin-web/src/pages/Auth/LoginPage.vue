@@ -27,6 +27,13 @@
         <q-banner v-if="errorMessage" rounded class="bg-red-1 text-negative q-mb-lg" role="alert">{{
           errorMessage
         }}</q-banner>
+        <q-banner
+          v-if="route.query.expired === 'idle'"
+          rounded
+          class="bg-amber-1 text-brown-9 q-mb-md"
+          role="status"
+          >Tu sesión terminó después de 30 minutos sin actividad. Vuelve a ingresar.</q-banner
+        >
         <q-form class="q-gutter-md" @submit="submit">
           <q-input
             v-model="email"

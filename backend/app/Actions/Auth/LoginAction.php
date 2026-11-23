@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 
 class LoginAction
 {
-    public function execute(LoginDTO $dto): array
+    public function execute(LoginDTO $dto, ?string $app = null): array
     {
         $user = User::where('email', $dto->email)->first();
 
@@ -27,6 +27,10 @@ class LoginAction
 
         // Generar Token de Sanctum
         $token = $user->createToken($dto->deviceName, $user->password_change_required ? ['staff:password-change'] : ['*'], now()->addHours(8));
+
+        if ($app === \App\Domains\Onboarding\Actions\RegisterOnboardingLoginAction::TOUR) {
+            app(\App\Domains\Onboarding\Actions\RegisterOnboardingLoginAction::class)->execute($user, $token->accessToken->id);
+        }
 
         return [
             'user' => (clone $user)->setAttribute('permissions', $user->getAllPermissions()->pluck('name')), // Clonamos para evitar mutar el original accidentalmente

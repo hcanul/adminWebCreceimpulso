@@ -44,6 +44,13 @@
           />
           <p v-if="notice" role="status" class="text-caption">{{ notice }}</p>
         </section>
+        <q-banner
+          v-if="route.query.expired === 'idle'"
+          rounded
+          class="bg-amber-1 text-brown-9 q-mb-md"
+          role="status"
+          >Tu sesión terminó después de 30 minutos sin actividad. Vuelve a ingresar.</q-banner
+        >
         <q-form class="q-gutter-y-lg" @submit="submit">
           <q-input
             v-if="activating"

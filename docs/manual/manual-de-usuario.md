@@ -1,473 +1,459 @@
-# Crece Impulso · Manual de usuario
+# Manual de usuario de Crece Impulso
 
-**Edición 1.0 — 15 de octubre de 2026**  
-**Aplicación:** portal administrativo web.  
-**Dirigido a:** Gerencia, Gestión, Coordinación Comercial, Caja, promotores y administración del sistema.
+**Edición 2.0 | 19 de noviembre de 2026**
 
-Este manual describe las funciones implementadas hasta los reversos auditados de pagos. Los nombres de opciones pueden variar ligeramente según los permisos de la cuenta. Las aplicaciones móviles independientes, la operación sin conexión y el portal de clientes no forman parte de este recorrido.
+Admin Web. Guía integral para administrar accesos, supervisar las sucursales y operar los módulos del ciclo de crédito.
 
-## Contenido
+**Alcance.** Todas las sucursales. Incluye la experiencia de Client App para orientar la atención y verificar el acceso de titulares.
 
-1. [Acceso y uso general](#1-acceso-y-uso-general)
-2. [Perfiles y responsabilidades](#2-perfiles-y-responsabilidades)
-3. [Inicio e indicadores](#3-inicio-e-indicadores)
-4. [Usuarios, permisos y promotores](#4-usuarios-permisos-y-promotores)
-5. [Crear el grupo solidario](#5-crear-el-grupo-solidario)
-6. [Registrar al cliente y su expediente](#6-registrar-al-cliente-y-su-expediente)
-7. [Tasas y cálculos](#7-tasas-y-cálculos)
-8. [Crear la solicitud de crédito](#8-crear-la-solicitud-de-crédito)
-9. [Revisión de Gestión](#9-revisión-de-gestión)
-10. [Propuesta y autorización comercial](#10-propuesta-y-autorización-comercial)
-11. [Entrega del crédito](#11-entrega-del-crédito)
-12. [Registrar cobros](#12-registrar-cobros)
-13. [Comprobantes y verificación QR](#13-comprobantes-y-verificación-qr)
-14. [Cortes de caja](#14-cortes-de-caja)
-15. [Reversar un pago incorrecto](#15-reversar-un-pago-incorrecto)
-16. [Rutina de trabajo por perfil](#16-rutina-de-trabajo-por-perfil)
-17. [Problemas frecuentes](#17-problemas-frecuentes)
-18. [Estados y términos](#18-estados-y-términos)
-19. [Ejercicio de capacitación](#19-ejercicio-de-capacitación)
-20. [Alcance actual](#20-alcance-actual)
+## Entrar y renovar la contraseña
 
-## 1. Acceso y uso general
+**Dónde:** Pantalla de acceso
 
-### Iniciar y cerrar sesión
+1. Ingresa con el correo de trabajo y tu contraseña.
+2. Si aparece Renueva tu contraseña, escribe la actual y confirma una nueva distinta de la actual y de la anterior.
+3. Comprueba tu nombre y sucursal. Abre el menú lateral y cierra sesión al terminar.
 
-1. Abre la dirección del portal indicada por administración. En el entorno local de desarrollo se utiliza `http://localhost:9001/#/`; esta dirección solo funciona en el equipo donde se ejecuta la aplicación.
-2. Escribe tu correo electrónico y contraseña.
-3. Selecciona **Ingresar al sistema**.
-4. Revisa tu sucursal y las opciones disponibles en el menú lateral. En pantallas pequeñas, abre el menú con su botón.
-5. Al terminar en un equipo compartido, cierra la sesión. Para recuperar una cuenta o contraseña, contacta a administración del sistema.
+**Verificación.** La contraseña del personal vence cada 15 días. Si no puedes renovarla, solicita asistencia al administrador. Ante un error de red, comprueba la conexión y reintenta.
 
-La sesión se conserva al recargar. Si aparece un problema de verificación de sesión, utiliza **Reintentar conexión**. Que la sesión permanezca abierta no significa que un formulario sin guardar esté protegido.
+## Consultar el tablero
 
-### Buscar y seleccionar
+**Dónde:** Inicio
 
-Los campos de catálogo permiten escribir para filtrar. Después de escribir, selecciona una coincidencia: el texto escrito por sí solo no representa una selección válida. Para buscar grupos, escribe al menos dos caracteres y afina el nombre si hay demasiadas coincidencias. Comprueba también sucursal y promotor, porque varios grupos pueden llamarse igual.
+1. Revisa la fecha operativa de Cancún y el alcance de la cuenta.
+2. Consulta los indicadores visibles de grupos, trámites, créditos, cobros y cartera.
+3. Abre el módulo asociado para identificar los registros que explican un total.
 
-### Guardar y confirmar
+**Verificación.** Los cobros del día se separan por medio y reflejan reversos. Para cuadrar efectivo físico, usa el corte de Caja.
 
-- **Guardar borrador** conserva el avance del expediente en el servidor.
-- **Enviar a revisión** cambia su etapa y restringe la edición.
-- Las confirmaciones muestran el efecto de una operación antes de registrarla. Lee el mensaje completo.
-- Los datos guardados se recuperan al volver a entrar. Los cambios sin guardar pueden perderse al recargar, cerrar la pestaña o salir.
-- Si un registro cambió mientras lo consultabas, actualiza y revisa de nuevo antes de confirmar. El sistema evita sobrescribir el trabajo de otra persona.
+## Administrar usuarios
 
-Las operaciones actuales requieren conexión. No captures cobros suponiendo que se enviarán automáticamente cuando vuelva internet.
+**Dónde:** Administración → Usuarios
 
-## 2. Perfiles y responsabilidades
+1. Selecciona Crear usuario o abre el registro existente.
+2. Captura nombre, correo, contraseña inicial cuando corresponda, rol, sucursal y estado de la cuenta.
+3. Guarda y verifica con el usuario qué opciones aparecen después de volver a iniciar sesión.
 
-Esta tabla resume la configuración inicial. Administración puede ajustar permisos; la sucursal y el alcance de cada cuenta siguen determinando qué información puede consultar.
+**Verificación.** Solo Super Admin administra cuentas. Asigna la sucursal operativa correcta. Al retirar acceso, revisa la cuenta y sus asignaciones de grupos antes de desactivarla.
 
-| Perfil | Trabajo principal |
-| --- | --- |
-| Super Admin | Administración de usuarios, roles y permisos; acceso operativo global. |
-| Gerente General | Supervisión y operación global, tasas, revisión, autorizaciones y caja según permisos. No administra técnicamente usuarios y roles. |
-| Gerente | Grupos y expedientes de su sucursal, solicitudes, propuesta de condiciones, entrega, consulta de cortes y reversos. No cobra ni autoriza comercialmente por defecto. |
-| Gestión | Revisión de identidad, domicilio, referencias, visita, historial y documentos; devolución o envío a autorización. |
-| Coordinación Comercial | Autorizar o devolver las condiciones propuestas en su sucursal. |
-| Caja | Registrar entregas y cobros, emitir comprobantes y cerrar sus propios cobros. Puede consultar reversos, pero no ejecutarlos. |
-| Promotor | Preparar grupos y expedientes dentro de su alcance. No cobra ni autoriza créditos. |
-| Coordinador de campo | Captura y consulta dentro de su alcance. Es distinto de Coordinación Comercial. |
+## Configurar roles y permisos
 
-Solo Gerente, Gerente General y Super Admin pueden enviar expedientes a revisión en la configuración inicial. El promotor prepara borradores.
+**Dónde:** Administración → Roles y permisos
 
-**Recorrido general:** grupo → clientes y expedientes → solicitud grupal → Gestión → propuesta del gerente → autorización comercial → entrega → cobros y comprobantes → cortes. Los reversos corrigen pagos ya registrados cuando corresponde.
+1. Abre un rol o selecciona Crear rol.
+2. Marca únicamente las funciones requeridas para ese puesto.
+3. Guarda y comprueba el menú y las operaciones con una cuenta de prueba del perfil.
 
-## 3. Inicio e indicadores
+**Verificación.** Un permiso habilita una acción y el servidor también valida sucursal, grupo, estado y versión del registro. Conserva una cuenta de Super Admin operativa.
 
-La pantalla de Inicio muestra información real dentro del alcance de tu cuenta.
+## Registrar y asignar promotores
 
-| Indicador | Qué representa |
-| --- | --- |
-| Grupos solidarios | Grupos activos que puedes consultar. |
-| Solicitudes en revisión | Solicitudes de crédito pendientes de Gestión o en revisión; no cuenta cada expediente individual como una solicitud de crédito. |
-| Créditos activos | Créditos entregados que todavía no están liquidados. Un crédito aprobado sin entregar no entra aquí. |
-| Cobros del día | Pagos vigentes recibidos hoy, separados en efectivo y depósitos. Excluye pagos revertidos. |
+**Dónde:** Promotores
 
-Las fechas operativas se interpretan con horario de Cancún. El cobro cuenta por el día de recepción en Caja, aunque el depósito bancario tenga otra fecha. Cerrar un corte no elimina el cobro del indicador.
+1. Comprueba que el colaborador tenga una cuenta activa, rol Promotor y sucursal asignada.
+2. Usa Registrar promotor y selecciona la cuenta correspondiente.
+3. Al crear un grupo, busca y elige un promotor registrado de esa sucursal.
 
-Caja consulta sus cobros; los perfiles con facultad de auditoría pueden consultar el conjunto permitido de cajeros. **Sin acceso** significa que tu cuenta no puede consultar ese dato. Un cero significa que la consulta sí se realizó y no encontró operaciones correspondientes.
+**Verificación.** El nombre de quien captura no determina la asignación. Cuando quien captura es Promotor, el sistema utiliza su propia asignación si es elegible.
 
-La bandeja de pendientes ofrece accesos a las etapas que requieren atención. Usa el botón de actualización para traer los cambios recientes; no es una pantalla de actualización continua ni un reporte completo de mora o de cortes de días anteriores.
+## Crear grupos y registrar el comité
 
-## 4. Usuarios, permisos y promotores
+**Dónde:** Grupos solidarios
 
-### Crear una cuenta — Super Admin
+1. Busca el grupo por sucursal y nombre antes de crear otro. Usa su folio o identificador para distinguir homónimos.
+2. Crea el grupo con nombre, sucursal y promotor elegible. Guarda antes de incorporar integrantes.
+3. Abre el grupo y registra los cargos de Presidenta, Tesorera e integrantes conforme al acta.
 
-1. Abre **Administración → Usuarios**.
-2. Crea el usuario y captura nombre, correo, sucursal, rol o roles, estado y contraseña con su confirmación.
-3. La contraseña debe tener al menos 12 caracteres, mayúsculas, minúsculas y números.
-4. Guarda y entrega las credenciales al titular por el procedimiento interno autorizado.
+**Verificación.** Verifica que las personas correspondan al grupo y que el comité esté completo. Una solicitud de crédito requiere al menos tres participantes.
 
-Los cambios de cuenta revocan sus sesiones existentes: el usuario deberá ingresar nuevamente. No se permite que el administrador desactive su propia cuenta o se retire su propio rol Super Admin. Debe conservarse al menos un administrador activo.
+## Capturar o corregir expedientes
 
-### Roles y permisos — Super Admin
+**Dónde:** Clientes → Capturar expediente
 
-Abre **Administración → Roles y permisos**, revisa las facultades y guarda los cambios necesarios. Conceder un permiso no convierte una cuenta en un perfil con acceso a todas las sucursales. Para ver el menú actualizado, recarga o vuelve a iniciar sesión.
+1. Consulta la CURP antes de capturar. Si existe, revisa sucursal, créditos y la opción de editar cuando esté habilitada.
+2. Selecciona el grupo de la sucursal mediante búsqueda. Llena identidad, domicilio, familia, economía, referencias, créditos externos y declaraciones aplicables.
+3. Guarda borrador. Si Gestión pidió una corrección, abre el expediente existente, corrige lo observado y vuelve a guardarlo.
 
-### Registrar un promotor
+**Verificación.** El sistema asigna el folio al guardar. Captura el monto en Solicitudes de crédito. Si la CURP corresponde a otra sucursal o no tienes acceso, escala el caso a Gerencia.
 
-Para una cuenta nueva, asigna el rol **Promotor** y su sucursal desde Usuarios: al guardar, se crea o actualiza su perfil de promotor automáticamente.
+## Enviar expedientes y solicitar un crédito
 
-El apartado **Promotores** permite consultar los perfiles y vincular cuentas anteriores elegibles mediante **Registrar promotor**. Solo aparecen cuentas con el rol y la sucursal requeridos. Si no hay coincidencias, primero revisa la cuenta en Usuarios.
+**Dónde:** Clientes y Solicitudes de crédito → Nueva solicitud
 
-Un promotor con grupos asignados no puede desactivarse, perder ese rol o cambiar de sucursal hasta resolver la reasignación de sus grupos.
+1. Verifica expedientes completos, comité, elegibilidad del grupo y ausencia de bloqueos por deuda u otro crédito abierto.
+2. Envía los expedientes que correspondan. Abre Nueva solicitud y selecciona grupo, tasa común, límite por integrante y monto individual solicitado.
+3. Revisa el total y las estimaciones. Presenta la solicitud a Gestión y conserva el folio para seguimiento.
 
-## 5. Crear el grupo solidario
+**Verificación.** Si Gestión devuelve una observación, corrige y envía los expedientes afectados, luego usa Reenviar a Gestión con una nota. Los montos originales se conservan.
 
-1. Abre **Grupos solidarios** y la opción para crear un grupo.
-2. Captura el nombre y selecciona la sucursal permitida.
-3. Selecciona el promotor responsable. Si tu cuenta es de promotor, el sistema utiliza tu propio perfil; los demás capturistas deben elegirlo expresamente.
-4. Guarda y abre la ficha del grupo.
-5. Incorpora a las personas mediante el procedimiento de verificación de CURP y captura de expediente.
-6. Asigna los cargos del comité: una **Presidenta**, una **Tesorera** y el resto como **Integrantes**.
+## Revisar una solicitud en Gestión
 
-El nombre puede repetirse. Confirma siempre la sucursal y el responsable al seleccionar un grupo. Crear un grupo no crea un crédito ni asigna al capturista como promotor.
+**Dónde:** Gestión de solicitudes → Revisión de Gestión
 
-Para solicitar crédito se requieren al menos tres participantes, exactamente una Presidenta y una Tesorera. Actualmente no se ha establecido un máximo obligatorio de veinte integrantes. El grupo puede crearse antes de estar completo.
+1. Busca por folio o grupo y abre cada integrante.
+2. Coteja identidad, domicilio, referencias, visita, historial interno y documentos firmados. Registra evidencia u observaciones en cada comprobación.
+3. Guarda avance. Para devolver, indica la comprobación observada y una nota general. Para enviar a autorización, verifica las seis comprobaciones por integrante y registra la nota general.
 
-## 6. Registrar al cliente y su expediente
+**Verificación.** La evidencia se coteja en la operación. El estado de revisión habilita la etapa comercial. Si hay cambios simultáneos, recarga y vuelve a cotejar.
 
-### Verificar la CURP antes de capturar
+## Preparar la propuesta comercial
 
-1. Entra desde **Clientes** o desde la ficha del grupo.
-2. Selecciona el grupo correcto mediante la búsqueda.
-3. Captura la CURP y presiona **Verificar antes de continuar**.
-4. Revisa la respuesta:
-   - **Persona no registrada:** continúa con **Capturar nuevo expediente**.
-   - **Persona existente y accesible:** revisa sucursal de alta y antecedentes disponibles; confirma si deseas abrir o modificar su expediente.
-   - **Persona existente fuera de tu alcance:** consulta el resumen permitido y solicita atención a Gerencia. No crees una variante de CURP para evitar la restricción.
-5. Completa y revisa los datos antes de guardar.
+**Dónde:** Autorización comercial → Detalle
 
-La validación de CURP revisa su estructura y consistencia. **No equivale a una consulta a RENAPO ni acredita por sí sola la identidad.** Los antecedentes mostrados corresponden a los datos disponibles en la base actual; no garantizan que no haya créditos en sucursales históricas todavía sin migrar.
+1. Abre un crédito que Gestión remitió a autorización. Comprueba el solicitado de cada persona y la tasa conservada.
+2. Captura los montos propuestos dentro de los límites. Selecciona por separado el medio de entrega del crédito y el de pagos semanales.
+3. Revisa garantía, importe neto y cuota. Envía la propuesta a Coordinación Comercial. Si se devuelve, atiende las notas y presenta la propuesta revisada.
 
-La CURP no se modifica dentro del formulario. Una corrección excepcional debe canalizarse a administración; no se resuelve creando otra persona.
+**Verificación.** Comprueba que el solicitado se mantiene separado del aprobado. La propuesta queda en el historial.
 
-### Secciones del expediente
+## Autorizar o devolver condiciones
 
-Usa la navegación por secciones y los botones **Anterior** y **Siguiente sección**. Los campos marcados con asterisco son obligatorios para completar el envío; un borrador permite conservar avance.
+**Dónde:** Autorización comercial → Detalle
 
-| Sección | Información que debes revisar |
-| --- | --- |
-| Datos Generales | Fecha, oficina, grupo y promotor. La información contextual depende del grupo seleccionado. |
-| Datos Solicitante | Nombres y apellidos, género, nacimiento, país, nacionalidad, identificación y número, RFC, CURP, estado civil, régimen, escolaridad y oficio. |
-| Datos de Ubicación del Domicilio | Calle, números exterior e interior, colonia, municipio, ciudad, código postal, referencia, tipo y número de teléfono, tipo de vivienda. |
-| Datos de la Familia y Cónyuge | Nombre del cónyuge, trabajo y ocupación, número de hijos y dependientes económicos. |
-| Situación Económica del Solicitante | Actividad económica, ocupación, ingresos del hogar, habitantes, habitaciones y material de vivienda. |
-| Referencia Familiar | Nombre, parentesco, teléfono, domicilio, código postal, ocupación y lugar de trabajo. |
-| Referencia Personal | Nombre, parentesco, teléfono, domicilio, código postal, ocupación y lugar de trabajo. |
-| Créditos Vigentes | Antecedentes declarados de hasta dos créditos: empresa, fechas y total. No sustituye la consulta del historial interno. |
-| Información Importante al Solicitante | Relaciones con directivos de la empresa o cargos públicos, nombres relacionados y observaciones. |
+1. Revisa la propuesta vigente, las observaciones de Gestión y los datos de cada integrante.
+2. Para devolver, escribe el motivo. Para autorizar, captura la fecha pactada del primer pago y revisa las 16 fechas con intervalos de siete días.
+3. Confirma la autorización y revisa el estado aprobado antes de remitir a la sucursal para la entrega.
 
-Respeta los mensajes de validación de la pantalla. Si un campo obligatorio no corresponde a la situación real de la persona, consulta el criterio de captura con Gestión; no inventes información para superar la validación.
+**Verificación.** La fecha del primer pago queda vinculada a las condiciones autorizadas. Si la entrega se retrasa hasta esa fecha, escala el caso antes de intentar registrar la entrega.
 
-### Guardar y enviar
+## Mantener el catálogo de tasas
 
-- Usa **Guardar borrador** para continuar después.
-- Revisa los datos precargados de expedientes anteriores: no asumas que el domicilio, teléfono o referencias siguen vigentes.
-- Cuando esté completo, el perfil autorizado utiliza **Enviar a revisión**.
-- Un expediente enviado se consulta sin sobrescribirlo. Si Gestión lo devuelve, recupera la posibilidad de corregirlo.
+**Dónde:** Tasas
 
-El número de cliente se asigna automáticamente al guardar, por ejemplo `CLI-S001-000001`. No debes capturarlo manualmente. El expediente **no pide el monto solicitado del préstamo**: ese dato se registra en la solicitud financiera del grupo.
+1. Busca una tasa o crea una entrada con nombre, ciclo, límites configurados y factor semanal por cada mil pesos.
+2. Verifica los importes de muestra y guarda el estado activo cuando corresponda.
+3. Coteja la selección de la tasa en una nueva solicitud.
 
-## 7. Tasas y cálculos
+**Verificación.** Una tasa nueva o editada aplica a selecciones posteriores. Las condiciones guardadas en solicitudes anteriores se conservan.
 
-Los perfiles autorizados administran **Tasas de crédito**: pueden buscar, crear, editar y desactivar tasas. Los límites de catálogo son opcionales; el gerente establece además el límite por integrante de cada solicitud.
+## Registrar la entrega del crédito
 
-El factor es la **cuota semanal por cada $1,000 de capital**. No es una tasa porcentual anual ni un interés que se suma nuevamente al importe calculado.
+**Dónde:** Desembolsos y calendario
 
-| Tasa de referencia | Factor semanal por cada $1,000 |
-| --- | ---: |
-| Cobre | $80 |
-| Bronce | $75 |
-| Plata | $70 |
+1. Abre el crédito aprobado y confirma las condiciones vigentes y el medio autorizado.
+2. Coteja capital aprobado, garantía retenida y neto entregado. Registra la fecha real y los datos bancarios si la entrega es por depósito.
+3. Confirma una vez realizada la entrega. Comprueba el estado Entregado y el calendario de 16 cuotas.
 
-Las personas pueden solicitar cantidades distintas, pero comparten la tasa del grupo. El plazo es de **16 semanas**.
+**Verificación.** Usa la fecha pactada de solo lectura. En autorizaciones históricas sin primer vencimiento, captura la fecha cuando la pantalla lo solicite.
 
-### Ejemplo: $10,000 aprobados con Cobre
+## Registrar abonos y emitir comprobante
 
-| Concepto | Cálculo | Resultado |
-| --- | --- | ---: |
-| Cuota semanal | $10,000 ÷ 1,000 × $80 | $800 |
-| Total a devolver | $800 × 16 | $12,800 |
-| Interés total | $12,800 − $10,000 | $2,800 |
-| Garantía retenida | $10,000 × 10% | $1,000 |
-| Entrega neta | $10,000 − $1,000 | $9,000 |
+**Dónde:** Cobros en caja → Abrir crédito
 
-La garantía no reduce la deuda a $9,000 ni se registra como abono. Su devolución o aplicación posterior no está automatizada. Los adelantos y la liquidación anticipada conservan el interés pactado. Los importes se redondean a centavos; usa el resumen del sistema como referencia del cálculo registrado.
+1. Confirma el folio, la sucursal, el saldo y la fecha de recepción. Selecciona el medio real de pago.
+2. En depósito, coteja el comprobante y captura banco, folio y fecha. Desglosa quién aporta y a qué integrante se aplica cada importe.
+3. Confirma el cobro y abre el ticket. Verifica importe, medio, folio y estado del QR antes de entregar el comprobante.
 
-Cambiar una tasa del catálogo no modifica las condiciones de solicitudes o créditos ya registrados.
+**Verificación.** Puede registrar pagos parciales. El sistema cubre primero las cuotas exigibles desde la más antigua, luego mora y después cuotas futuras. Ante un error de conexión, consulta si el cobro quedó registrado antes de repetirlo.
 
-## 8. Crear la solicitud de crédito
+## Revertir un pago registrado por error
 
-**Responsable habitual: Gerente.** Antes de comenzar, verifica grupo activo, promotor elegible, comité y expedientes completos enviados.
+**Dónde:** Cobros en caja → Ver comprobante
 
-1. Abre **Solicitudes de crédito → Nueva solicitud**, o **Solicitar crédito** desde el grupo.
-2. Busca y selecciona el grupo.
-3. Revisa los requisitos pendientes mostrados.
-4. Selecciona la tasa común y establece el límite por integrante.
-5. Selecciona las personas que participarán y captura el monto solicitado de cada una.
-6. Revisa capital grupal, cuota semanal, interés, total a devolver, garantía estimada y entrega neta estimada.
-7. Confirma el registro y conserva el folio asignado, por ejemplo `CRE-S001-000001`.
+1. Abre el comprobante original y coteja operación, medio e importe.
+2. Con permiso de reverso, registra el motivo y confirma el reverso completo.
+3. Comprueba el estado del comprobante, el saldo actualizado y el ajuste del corte cuando corresponda.
 
-Cada importe debe ser positivo y respetar los límites aplicables. Se requieren al menos tres personas con el comité completo. El sistema verifica expedientes, mora y solicitudes o créditos abiertos incompatibles del grupo o de sus participantes.
+**Verificación.** El sistema conserva el pago original y su trazabilidad. Cualquier devolución física de dinero se gestiona por el procedimiento de sucursal.
 
-En esta etapa no hay importe aprobado ni entrega de dinero. Los montos solicitados quedan conservados como antecedente; la aprobación se registra por separado. Tampoco se eligen todavía los medios de entrega y pago semanal.
+## Cerrar y consultar caja
 
-La solicitud registrada no tiene un formulario libre para cambiar participantes, tasa o montos originales. Si estos datos fueron capturados incorrectamente, escala el caso antes de continuar; devolver expedientes desde Gestión no cambia las condiciones financieras originales.
+**Dónde:** Cortes de caja
 
-## 9. Revisión de Gestión
+1. Selecciona la fecha de recepción y verifica tus cobros pendientes de cerrar en la sucursal.
+2. Compara efectivo registrado y contado, y valida los depósitos por separado. Registra la explicación si existe diferencia.
+3. Confirma el corte. Abre Reporte completo y usa Imprimir o guardar PDF. Gerencia puede consultar cortes conforme a su alcance.
 
-1. Abre **Gestión de solicitudes** y busca el folio o grupo.
-2. Abre la solicitud y expande cada integrante en **Revisión de Gestión**.
-3. Revisa las seis comprobaciones: **identidad, domicilio, referencias, visita, historial interno y documentos firmados**.
-4. Marca cada una como pendiente, verificada o con observaciones.
-5. Para una comprobación verificada u observada, escribe la evidencia revisada o la corrección concreta requerida.
-6. Guarda el avance si continuarás después.
+**Verificación.** El corte incluye los cobros del cajero que corresponde. Los reversos posteriores aparecen como ajustes separados de los totales originales.
 
-### Devolver para corregir
+## Consultar cartera ordinaria y recuperación
 
-Utiliza **Devolver con observaciones**, registra al menos una comprobación observada y una nota general. Solo los expedientes observados vuelven a borrador.
+**Dónde:** Cartera y vencimientos y Reportes para impresión
 
-Gerencia abre esos expedientes desde Clientes, verifica la CURP, corrige y vuelve a enviarlos. Después usa **Reenviar a Gestión** en el crédito y explica los cambios. La revisión anterior se conserva y las comprobaciones vuelven a pendiente para revisarlas nuevamente.
+1. Busca por folio, grupo o sucursal y selecciona cartera Ordinaria, Recuperación o Todas según la pantalla. Combina los filtros de atraso que correspondan.
+2. Consulta cuotas, mora, saldo, exigible y días de atraso. Abre el estado de cuenta para verificar los movimientos.
+3. Descarga el CSV o prepara el reporte de cartera con la clasificación seleccionada. Para conciliación general revisa Todas.
 
-### Terminar la revisión
+**Verificación.** Recuperación separa créditos de la cartera ordinaria y conserva la deuda en el consolidado. El traslado no liquida ni elimina el crédito. Los abonos no lo reincorporan automáticamente. Exigible y atraso forman parte del saldo: evita sumarlos de nuevo.
 
-Con todas las comprobaciones verificadas y sus evidencias escritas, añade la nota general y utiliza **Enviar a autorización**. Esto acredita el término de Gestión; todavía no aprueba ni entrega el crédito.
+## Revisar estados de cuenta y garantía
 
-Actualmente las comprobaciones son declaraciones del personal basadas en documentos y verificaciones externas. No existe carga de archivos, validación automática de firmas ni generación de los formatos oficiales del expediente desde este flujo.
+**Dónde:** Detalle del crédito → Estado de cuenta o Garantía
 
-## 10. Propuesta y autorización comercial
+1. Abre el estado de cuenta de un crédito entregado o liquidado y selecciona grupo o integrante.
+2. Comprueba vencimientos, abonos, saldo, mora y aplicaciones de garantía. Usa Imprimir o guardar PDF o el Formato de referencia.
+3. En Garantía consulta importe retenido, aplicado y disponible por persona.
 
-### Proponer condiciones — Gerente
+**Verificación.** La retención no es un abono. El saldo exigible incluye cuotas de hoy, atrasos y mora aplicable.
 
-1. Abre **Autorización comercial** y filtra **Pendiente de condiciones del gerente**.
-2. Abre el crédito con Gestión terminada.
-3. Captura el importe propuesto por integrante. Debe ser positivo, no superar lo solicitado y respetar los límites originales.
-4. Define por separado:
-   - **Forma de entrega del crédito:** en sucursal o depósito bancario.
-   - **Forma de pagos semanales:** en sucursal o depósito bancario.
-5. Revisa cálculos, garantía y entrega neta; escribe las observaciones y envía la propuesta.
+## Aplicar la garantía retenida
 
-Las dos formas de operación pueden ser diferentes. La propuesta conserva a los participantes originales y no modifica lo que pidieron inicialmente.
+**Dónde:** Detalle del crédito → Garantía
 
-### Resolver — Coordinación Comercial
+1. Comprueba que haya llegado el vencimiento de la semana 16 y que exista saldo aplicable.
+2. Revisa cuánto se aplicará a las cuotas de cada integrante. Registra el motivo y confirma con permiso comercial.
+3. Comprueba el movimiento y el saldo nuevo. Para corregir una aplicación usa el ajuste disponible según permisos y estado.
 
-1. Abre una propuesta pendiente de autorización.
-2. Compara el solicitado, la propuesta y la revisión de Gestión.
-3. Autoriza exactamente las condiciones presentadas o devuelve con observaciones.
-4. Si se devuelve, Gerencia envía una nueva versión; la anterior permanece en el historial.
+**Verificación.** La garantía cubre cuotas de la misma integrante. El remanente queda identificado y la mora se consulta aparte.
 
-Al autorizar, el crédito queda **aprobado** y pendiente de entrega. Los importes aprobados y ambos medios quedan registrados. El rol de Coordinador de campo no sustituye al de Coordinación Comercial.
+## Configurar datos documentales
 
-## 11. Entrega del crédito
+**Dónde:** Administración → Datos documentales por sucursal
 
-**Responsable habitual: oficina de sucursal, con cuenta autorizada para entregas.**
+1. Selecciona Empresa o sucursal.
+2. Captura domicilio legal, representante, cargo, lugar de pago y lugar habitual de suscripción. Para una sucursal elige si hereda los datos generales.
+3. Guarda, reabre y coteja que aparece el origen de los datos esperado.
 
-1. Abre **Desembolsos** y localiza un crédito aprobado.
-2. Comprueba identidad, importes autorizados, garantía, neto y medio de entrega.
-3. Captura la fecha real de entrega y la fecha del primer vencimiento.
-4. Si la entrega es bancaria, registra el banco y la referencia correspondiente.
-5. Escribe las notas requeridas, revisa y confirma la entrega.
+**Verificación.** La fecha de suscripción corresponde a la firma real. Las versiones emitidas conservan los datos con los que se generaron.
 
-La fecha real no puede ser futura ni anterior a la autorización. El primer vencimiento debe ser posterior a la entrega. El calendario continúa cada siete días durante 16 semanas; no desplaza automáticamente vencimientos por festivos o fines de semana.
+## Generar e imprimir documentos
 
-El registro cambia el crédito a **entregado** y genera las cuotas de cada integrante. La pantalla registra una entrega realizada: **no ejecuta una transferencia bancaria ni entrega dinero automáticamente**.
+**Dónde:** Expediente o crédito autorizado → Documentos
 
-La garantía real es el 10% del capital aprobado. No vuelvas a restarla de la deuda al revisar el calendario. La entrega registrada no tiene edición o eliminación directa.
+1. En el expediente genera solicitud o acta de instalación. En crédito autorizado genera acta de autorización, calendario o los formatos de referencia de contrato y pagaré.
+2. Abre la versión generada, coteja folio, integrantes y datos visibles. Usa Imprimir o guardar PDF. Adjunta el PDF firmado únicamente en los formatos que permiten adjuntarlo.
+3. Para reimprimir, elige la versión en el historial. En la impresión del contrato, entrega de forma individual el anexo de acceso cuando se genere.
 
-## 12. Registrar cobros
+**Verificación.** Contrato y pagaré de referencia están en revisión. Las diferencias de condiciones entre el texto de referencia y la operación se revisan antes de formalizar. Reimprimir conserva versiones y no recupera claves.
 
-**Responsable habitual: Caja.** El promotor no registra cobranza en campo.
+## Preparar reportes para impresión
 
-1. Abre **Cobros en caja** y localiza el crédito entregado.
-2. Revisa saldo, cuotas exigibles, atrasos y distribución por integrante.
-3. Comprueba la forma de pago semanal autorizada.
-4. Captura el importe recibido y su distribución, identificando **quién aporta** y **a quién se aplica** cada aportación.
-5. Para depósitos, captura banco, folio del ticket y fecha del depósito.
-6. Verifica que la suma de aportaciones coincida exactamente con el importe recibido.
-7. Confirma y revisa el pago en el historial. Desde allí puedes abrir su comprobante.
+**Dónde:** Reportes para impresión
 
-La fecha de recepción la asigna el sistema. La fecha del depósito se conserva aparte y no puede ser futura ni anterior a la entrega del crédito. Capturar un ticket no constituye conciliación automática con el banco.
+1. Elige cartera, estado de cuenta, relación de fichas de depósito, bitácora o agenda según el permiso.
+2. Selecciona filtros, crédito, integrante o semana según el formato. Pulsa Preparar reporte y verifica el resultado en la vista previa.
+3. Imprime o guarda PDF. Completa citas y compromisos en los espacios manuales que correspondan.
 
-### Cómo se aplican los importes
+**Verificación.** Los depósitos vigentes se muestran separados de reversos. Los campos sin dato registrado quedan indicados. El corte completo y los tickets se imprimen desde sus módulos.
 
-Se cubre primero la cuota pendiente más antigua de la persona beneficiada y después sus siguientes cuotas. No se aceptan importes superiores a su saldo pendiente.
+## Entregar y recuperar acceso a clientes
 
-| Caso | Registro y resultado |
-| --- | --- |
-| Cuota de $800; recibe $500 | Se registra $500 y quedan $300 pendientes. Si vence sin cubrirse, aparece atraso. |
-| Otra integrante cubre esos $300 | Registra quién aporta y que la beneficiaria es la persona con el faltante. No se registra como pago a la deuda de quien ayudó. |
-| Aporta $1,600 con cuotas de $800 y sin atrasos previos | Cubre dos cuotas. Si hay pendientes anteriores, estos tienen prioridad. |
-| Liquida el saldo total | Se conserva el interés pactado. El crédito grupal se marca pagado cuando todas sus participaciones quedan saldadas. |
+**Dónde:** Accesos de clientes
 
-Una cuota es exigible en su fecha de vencimiento; el atraso comienza al día siguiente. El grupo puede estar completo en el periodo si las aportaciones solidarias cubren los faltantes, manteniendo registrado quién aportó y a quién se aplicó.
+1. Busca la CURP o el número de cliente completo. Confirma el folio y verifica presencialmente la identidad.
+2. Selecciona la opción de activación o recuperación de cuenta existente. Genera el código y entrégalo únicamente a la persona titular.
+3. Indica cómo abrir el flujo de activación o recuperación en Client App. Si el código venció, valida nuevamente la identidad para emitir otro.
 
-### Evitar duplicados
+**Verificación.** Una contraseña temporal entregada en el anexo del contrato se usa en Entrar y debe cambiarse. Entrega solo el renglón de la titular, nunca la hoja completa.
 
-El sistema impide dos pagos activos con la misma combinación de sucursal, banco, fecha y folio bancario. Si aparece una coincidencia, revisa el historial antes de intentar otra captura.
+## Enviar y consultar mensajes
 
-Cuando la respuesta de un cobro es incierta por una falla de conexión, utiliza el reintento de la misma operación que ofrece la pantalla. Si ya recargaste o saliste, consulta primero el historial: el pago pudo haberse guardado aunque no recibieras la confirmación.
+**Dónde:** Mensajes → Enviar mensaje
 
-## 13. Comprobantes y verificación QR
+1. Elige Cliente o Colaborador. Selecciona la sucursal y busca al destinatario escribiendo su nombre.
+2. Captura asunto y mensaje. Revisa destinatario y texto antes de confirmar el envío.
+3. Consulta Mensajes para los avisos de tu cuenta. La entrega push depende del dispositivo y de la configuración del servicio.
 
-1. Abre el historial del crédito en Cobros.
-2. Selecciona **Ver comprobante QR** del pago.
-3. Comprueba folio, crédito, fecha, importe, medio y distribución.
-4. Usa **Imprimir comprobante**. El navegador permite imprimir o guardar como PDF según sus opciones.
+**Verificación.** Evita incluir contraseñas o información sensible en el asunto. Los clientes pueden revisar su bandeja desde la app.
 
-Reimprimir conserva el mismo folio y no crea otro pago. El comprobante acredita un pago recibido; no es una referencia para efectuar un pago futuro.
+## Consultar avisos
 
-### Validar un comprobante
+**Dónde:** Mensajes
 
-Escanea el QR, comprueba que la dirección corresponda al sistema de Crece Impulso y compara folio, crédito, importe, fecha y estado con el documento presentado. La consulta pública muestra información limitada y no expone CURP ni datos personales del expediente.
+1. Abre la bandeja desde el menú.
+2. Actualiza y revisa los avisos. Marca como leído cuando corresponda.
 
-La verificación consulta el registro del servidor. Un QR puede copiarse: su utilidad es contrastar el documento con el pago registrado, no impedir físicamente que se copie una impresión. Si el pago fue revertido, el mismo QR mostrará **Pago revertido** y no debe considerarse un pago vigente.
+**Verificación.** Para mensajes sobre un crédito, localiza el folio en el módulo correspondiente y verifica la información registrada.
 
-En desarrollo, un QR con dirección `localhost` no funciona desde otro teléfono. Para usarlo con clientes se necesita el servidor publicado y accesible mediante la dirección oficial.
+## Activar o recuperar tu acceso
 
-## 14. Cortes de caja
+**Dónde:** Client App → Pantalla de acceso
 
-Cada cajero cierra **sus propios cobros**, por día de recepción y sucursal, separando efectivo y depósitos.
+1. Acude a la sucursal con tu identificación y recibe el código de activación o recuperación.
+2. En la app abre Configura tu acceso. Captura el código y la contraseña nueva, confírmala y usa Guardar mi acceso.
+3. Vuelve a Entrar e inicia sesión con tu número de cliente y la nueva contraseña.
 
-1. Abre **Cortes de caja**.
-2. Selecciona sucursal y fecha de recepción.
-3. Presiona **Preparar mi corte**.
-4. Revisa los totales separados y el detalle. Aunque haya varias páginas, el cierre incluye todos los cobros pendientes del ámbito elegido.
-5. Captura el efectivo contado correspondiente únicamente a esos cobros.
-6. Si hay diferencia, escribe la explicación obligatoria.
-7. Confirma **Cerrar mi corte** y consulta el folio asignado, por ejemplo `COR-S001-000001`.
+**Verificación.** Usa al menos 12 caracteres con letras y números. Si el código vence o ya fue utilizado, pide asistencia a tu sucursal.
 
-**Diferencia = efectivo contado − efectivo registrado.** Una cantidad positiva es sobrante; una negativa es faltante. En un corte únicamente de depósitos, el efectivo contado será cero cuando no exista efectivo correspondiente.
+## Entrar con tu número de cliente
 
-No incluyas fondo inicial, garantías, desembolsos, retiros ni otros movimientos: este módulo cierra ingresos de cobranza y no realiza el arqueo completo de la sucursal.
+**Dónde:** Client App → Entrar
 
-### Después del cierre
+1. Escribe el número de cliente completo y la contraseña personal. Si recibiste una contraseña temporal, escríbela en este mismo formulario.
+2. Si aparece Elige tu contraseña personal, introduce la temporal y confirma la nueva. Guarda y verifica tu nombre, folio y sucursal.
+3. Usa Cerrar sesión al terminar, sobre todo si compartes el dispositivo.
 
-- El corte no cambia los pagos ni sus saldos.
-- Los cobros no pueden incluirse en dos cortes.
-- Si recibes nuevos pagos del mismo día, puedes realizar otro corte con los pendientes; el anterior se conserva.
-- Gerencia puede consultar los cortes dentro de su alcance, pero no cerrarlos en nombre del cajero ni modificar su conteo.
-- Las diferencias quedan registradas. No generan cargos automáticos ni tienen todavía un flujo de aprobación gerencial.
-- Si un pago del corte se revierte después, aparece en **Reversos posteriores · ajustes separados**. Los totales originales permanecen intactos.
+**Verificación.** La clave temporal de contrato vence a los siete días. Si pierdes el acceso, solicita recuperación presencial.
 
-Un depósito de una fecha anterior entra al corte del día en que Caja registró su recepción. Un corte no certifica conciliación bancaria ni entrega física de efectivo a Tesorería.
+## Consultar tu crédito y los pagos semanales
 
-## 15. Reversar un pago incorrecto
+**Dónde:** Inicio → Tu crédito activo → Estado de cuenta
 
-**Autorizados inicialmente:** Gerente, Gerente General y Super Admin, dentro de su alcance. Caja consulta el resultado.
+1. Consulta saldo, próxima fecha, atrasos y las secciones Condiciones y entrega y Detalle de mora cuando estén disponibles.
+2. En Estado de cuenta, elige Personal para tus cuotas o Grupo para los totales semanales. Desliza la tabla para ver todas las columnas.
+3. Lee la fecha, monto pactado, aplicado, pendiente y estado. Verde indica pagada, amarillo incompleta sin vencer y rojo vencida con saldo. Las cuotas futuras sin abono y las que vencen hoy se muestran en estado neutro.
 
-Utiliza esta función para corregir un pago capturado por error. El reverso es completo: no permite modificar una parte del pago ni borrar su comprobante.
+**Verificación.** Si tu abono fue de $500 y la cuota era de $800, quedan $300 de esa cuota antes de la mora que corresponda. Si no hay crédito activo o un dato no coincide, consulta a tu sucursal.
 
-1. Abre **Cobros en caja**, selecciona el crédito y localiza el pago incorrecto en el historial.
-2. Abre **Ver comprobante QR**.
-3. Comprueba folio, importe, distribución y si pertenece a un corte.
-4. Escribe un motivo específico de al menos diez caracteres. Ejemplo: «Se aplicó el depósito a la integrante equivocada; se registrará nuevamente con la beneficiaria correcta».
-5. Selecciona **Revertir pago completo**, revisa la confirmación y acepta cuando los datos sean correctos.
-6. Verifica la marca **PAGO REVERTIDO**, fecha, responsable y motivo.
-7. Si corresponde, Caja registra el pago correcto como una operación nueva.
+## Consultar un comprobante de pago
 
-### Qué cambia
+**Dónde:** Inicio → Comprobantes → Ver ticket QR
 
-Se restituyen los saldos de las cuotas a las que se aplicó ese pago. Si el crédito estaba pagado, vuelve a entregado con saldo pendiente; pueden reaparecer atrasos desde los vencimientos originales. Los pagos posteriores conservan su aplicación y no se redistribuyen automáticamente.
+1. Busca el pago registrado y pulsa Ver ticket QR.
+2. Coteja folio, fecha, importe y estado. Si necesitas ver más movimientos, usa Cargar comprobantes.
+3. Si un ticket figura revertido o falta un pago, lleva tu comprobante a Caja para revisión.
 
-El pago y el comprobante originales permanecen en el historial. El QR público comunica el reverso, sin mostrar el motivo privado ni el nombre del responsable. Un pago revertido antes del corte ya no entra a un nuevo corte; si ya estaba cerrado, su ajuste se muestra por separado.
+**Verificación.** El QR verifica el registro de un pago recibido. Realiza los pagos por el medio acordado con tu sucursal.
 
-El ticket bancario se libera para una captura corregida, manteniendo el registro histórico y la protección contra dos pagos activos iguales.
+## Consultar mensajes y activar recordatorios
 
-### Qué no cambia
+**Dónde:** Inicio → Mis mensajes y Recordatorios
 
-El reverso no altera las condiciones aprobadas, intereses o garantía, y **no devuelve dinero automáticamente**. Tampoco cancela créditos posteriores de la persona: Gerencia debe revisar esa situación si se reabre una deuda anterior.
+1. Abre Mis mensajes, actualiza y marca los avisos leídos cuando corresponda.
+2. En Recordatorios, usa Activar recordatorios y autoriza las notificaciones del dispositivo. Puedes desactivarlos en la misma sección.
+3. Consulta la bandeja y el calendario de pagos si un aviso no aparece.
 
-No hay reverso parcial ni función para revertir un reverso. Si se revierte por equivocación, la corrección requiere un nuevo pago debidamente documentado. Ante respuesta incierta, reintenta la misma operación desde la pantalla; si ya saliste, verifica primero el estado del comprobante.
+**Verificación.** Los recordatorios pueden incluir avisos del día anterior, del vencimiento, del pago recibido y del día siguiente. Las notificaciones requieren los permisos y la configuración del dispositivo y del servicio.
 
-## 16. Rutina de trabajo por perfil
+## Resolver problemas de conexión
 
-| Perfil | Revisión recomendada |
-| --- | --- |
-| Promotor | Confirmar grupo asignado; verificar CURP antes de capturar; revisar referencias y domicilio; guardar cada avance. |
-| Gerente | Completar comité y expedientes; enviar a revisión; atender devoluciones; proponer condiciones; revisar entregas, cortes y errores reportados. |
-| Gestión | Revisar las seis comprobaciones de cada persona; registrar evidencia concreta; guardar avances; devolver observaciones claras o enviar a autorización. |
-| Coordinación Comercial | Comparar solicitud, revisión y propuesta; verificar los dos medios de operación; autorizar o devolver con motivo. |
-| Caja | Verificar crédito y beneficiarias antes de cobrar; capturar folios bancarios fielmente; entregar comprobante; revisar pagos del día y cerrar sus propios cobros. |
-| Super Admin | Mantener cuentas y sucursales asignadas; revisar permisos; atender accesos y perfiles de promotor sin compartir cuentas. |
+**Dónde:** Pantalla de acceso → Probar conexión
 
-Antes de cerrar sesión, confirma que tus operaciones aparecen guardadas. Los movimientos financieros deben identificarse por su folio, no solo por el nombre del grupo.
+1. Comprueba tu conexión a internet y pulsa Probar conexión. Si el servidor responde pero el acceso falla, revisa número de cliente y contraseña.
+2. En Configuración del dispositivo cambia IP o dominio solo con la dirección que te indique soporte. Prueba la conexión, guarda la dirección autorizada y vuelve al acceso. Guardar una dirección distinta cierra la sesión.
+3. Si no puedes entrar después de probar la conexión, comunica la pantalla y el mensaje a tu sucursal. Mantén en privado tu código y contraseña.
 
-## 17. Problemas frecuentes
+**Verificación.** Usar dirección inicial restaura la dirección de la instalación. Consulta a soporte si el dispositivo tiene una dirección de pruebas.
 
-| Situación | Qué hacer |
-| --- | --- |
-| No veo una opción del menú | Revisa tu rol y sucursal con administración. Si hubo un cambio de permisos, vuelve a iniciar sesión. |
-| No encuentro un grupo | Escribe dos o más caracteres, afina la búsqueda y verifica sucursal, promotor y alcance de tu cuenta. |
-| No aparece un promotor para registrar | Revisa que la cuenta tenga el rol Promotor, sucursal y estado elegibles; puede tener ya su perfil creado. |
-| La CURP ya existe | Consulta el resultado y reutiliza el registro permitido. No cambies letras o números para duplicarlo. |
-| La persona está en otra sucursal | Solicita revisión a Gerencia; la coincidencia no concede permiso para editar su expediente. |
-| No puedo enviar el expediente | Atiende los campos obligatorios y comprueba que tu perfil tenga facultad de envío. |
-| El grupo no puede solicitar crédito | Revisa comité, mínimo de integrantes, expedientes enviados, promotor, estados activos y créditos o mora incompatibles. |
-| No puedo editar el monto solicitado | Es el antecedente original. La autorización registra importes propuestos y aprobados por separado; consulta el caso con Gerencia. |
-| La pantalla dice que los datos cambiaron | Actualiza, revisa las nuevas condiciones o saldos y confirma de nuevo. No intentes forzar la versión anterior. |
-| El depósito se indica como duplicado | Busca banco, fecha y folio en el historial; si el registro es erróneo, solicita un reverso autorizado. |
-| Se perdió la conexión al cobrar, cerrar o revertir | Usa el reintento conservado por la pantalla. Si la abandonaste, consulta el historial antes de registrar otra operación. |
-| El QR no abre en el teléfono | Comprueba conexión y dirección. Una dirección local de desarrollo no es accesible desde el dispositivo del cliente. |
-| El comprobante dice Pago revertido | No lo tomes como pago vigente; consulta el historial y, si existe, el comprobante de la nueva captura correcta. |
-| El dashboard muestra un error o guiones | Reintenta la consulta. No interpretes la falta de conexión como saldo o actividad en cero. |
-| El corte no coincide con todo el efectivo del cajón | Compara solo los ingresos de cobranza incluidos; separa fondos, entregas, garantías y otros movimientos. |
+## Ejemplo de un ciclo completo
 
-Para reportar una incidencia, proporciona módulo, folio, sucursal, fecha y mensaje mostrado. Evita compartir contraseñas o expedientes completos en canales no autorizados.
+**Dónde:** Solicitud → Gestión → Comercial → Desembolso → Caja
 
-## 18. Estados y términos
+1. Para un grupo de tres personas, registra $10,000 solicitados y aprobados por integrante. Con factor Cobre de $80 por cada mil, cada cuota es de $800 y el total individual es de $12,800 en 16 semanas.
+2. Comercial autoriza el primer vencimiento. En la entrega se registra $1,000 de garantía y $9,000 netos por persona. El grupo recibe $27,000 y su calendario suma $38,400.
+3. Si una integrante abona $500 en una cuota de $800 y nadie cubre el faltante, quedan $300. Con la política semanal autorizada, el primer tramo de atraso genera $30 de mora. Un abono posterior cambia la base de los siguientes tramos.
+4. Caja emite el ticket y clasifica el medio de pago en el corte. Comercial revisa la garantía al llegar la semana 16.
 
-| Término o estado | Significado operativo |
-| --- | --- |
-| Cliente | Persona identificada por CURP y folio de cliente. Puede tener historia en distintos ciclos. |
-| Expediente en borrador | Información personal que todavía puede corregirse dentro de los permisos. |
-| Expediente en revisión | Fue enviado completo; no significa que Gestión ya lo haya validado. |
-| Solicitud pendiente | Registro financiero que todavía no está aprobado. |
-| Revisión devuelta | Hay observaciones de Gestión que deben corregirse en los expedientes correspondientes. |
-| Lista para autorización | Gestión concluyó; faltan las condiciones y la decisión comercial según su etapa. |
-| Propuesta devuelta | Coordinación Comercial pide corregir las condiciones propuestas; no cambia por sí sola los expedientes personales. |
-| Crédito aprobado | Condiciones autorizadas, todavía sin entrega registrada. |
-| Crédito entregado | Entrega registrada y calendario vigente; se considera activo mientras exista saldo. |
-| Crédito pagado | Todas las participaciones están saldadas. Un reverso puede reabrirlo. |
-| Exigible | Importe que corresponde pagar hasta la fecha de consulta, incluido el vencimiento de hoy. |
-| Atraso | Importe vencido pendiente; los días se calculan conforme a sus vencimientos. |
-| Aportante / beneficiaria | Quien aporta el dinero / persona cuya deuda recibe la aplicación. |
-| Folio | Número legible para localizar cliente, crédito, comprobante o corte. Lo asigna el sistema. |
-| Reverso | Corrección auditada de un pago completo, conservando el original y recuperando el saldo aplicado. |
+**Verificación.** Ejemplo ficticio. Contrasta el estado de cuenta, el reporte de cartera, el ticket y el corte con los mismos folios. Las condiciones del crédito definen la mora aplicable.
 
-Los estados del expediente, de Gestión, de autorización y del crédito describen etapas diferentes. No deben interpretarse como una sola aprobación.
+## Resolver incidencias de operación
 
-## 19. Ejercicio de capacitación
+**Dónde:** Módulo donde apareció el aviso
 
-Realiza esta práctica únicamente con datos de demostración. La guía [Prueba manual de un crédito](../features/prueba-manual-credito.md) identifica las cuentas de capacitación existentes; las credenciales se entregan por separado. Los registros pueden haber avanzado desde su creación: revisa su estado antes de comenzar y no los reinicies para repetir el ejercicio.
+1. Si falta una opción, revisa el rol y la sucursal asignados. Si no aparece un crédito, verifica su etapa, los filtros y el alcance.
+2. Si una operación queda en duda tras perder conexión, recarga el registro y verifica historial, folio y estado antes de reenviar.
+3. Si dos usuarios editaron el mismo trámite, abre la versión actual y vuelve a cotejar los datos antes de confirmar.
+4. Entrega a soporte el módulo, folio, hora y texto del error. Mantén en privado las contraseñas, códigos y datos personales innecesarios.
 
-Para un grupo de tres integrantes con Cobre, importes de $10,000, $8,000 y $5,000 y aprobación por esos mismos valores:
+**Verificación.** Escala discrepancias de saldo a Caja o Gerencia y bloqueos de autorización a Comercial. Usa el historial para documentar la resolución.
 
-| Resultado grupal | Importe |
-| --- | ---: |
-| Capital | $23,000 |
-| Cuota semanal | $1,840 |
-| Total de las 16 semanas | $29,440 |
-| Interés | $6,440 |
-| Garantía retenida | $2,300 |
-| Entrega neta | $20,700 |
+## Auditar la operación por sucursal
 
-Recorre con cada perfil: solicitud → Gestión → propuesta → autorización → entrega → un cobro → comprobante → corte. Después, en el entorno de prueba, revierte ese cobro con Gerencia y verifica que el comprobante cambie de estado, el saldo se restituya y el corte conserve su total original con un ajuste separado. Si se necesita corregirlo, registra un nuevo pago con Caja.
+**Dónde:** Inicio → Cartera y vencimientos → Cortes de caja
 
-Al cambiar de perfil, cierra la sesión anterior. Las pestañas del mismo navegador pueden compartir la sesión.
+1. Comprueba el filtro de sucursal, la fecha operativa y los folios del caso.
+2. Cruza saldos y atrasos con estados de cuenta. Para cobros, coteja el comprobante, el medio y el corte correspondiente.
+3. Si hay un reverso posterior, comprueba su motivo y los ajustes separados. Revisa depósitos y efectivo contado por separado.
 
-## 20. Alcance actual
+**Verificación.** Una consulta de cartera representa saldos actuales. El corte conserva los totales originales del cierre.
 
-Este manual cubre el portal administrativo implementado. Las siguientes funciones requieren desarrollo o puesta en marcha adicional y no deben darse por disponibles:
+## Sesión y cierre por inactividad
 
-- Operación offline y sincronización de aplicaciones móviles.
-- App de clientes para consultar créditos y tickets.
-- Consolidación completa de las siete bases históricas: las consultas solo abarcan información realmente incorporada.
-- Consulta oficial de identidad, carga documental y generación de los PDF originales del expediente para firma. La impresión del comprobante de pago sí está disponible.
-- Conciliación automática con bancos, transferencias automáticas y devolución de dinero por reverso.
-- Devolución o aplicación de garantías, tesorería integral y aprobación de diferencias de caja.
-- Corrección libre de solicitudes registradas, modificación de entregas y ajustes automáticos de fechas por días inhábiles.
+**Dónde:** Admin Web y apps móviles
 
-Las opciones marcadas como **Próximamente** son informativas. Este documento debe actualizarse cuando cambien pantallas, permisos o reglas operativas.
+1. Guarda los cambios antes de dejar de trabajar. La sesión termina al cumplir 30 minutos sin usar teclado, puntero o pantalla táctil.
+2. Al volver de segundo plano o desbloquear el teléfono, comprueba si aparece el aviso de sesión terminada. Ingresa nuevamente con contraseña o con el acceso biométrico que hayas activado.
+3. Después de ingresar, abre el registro y revisa lo que quedó guardado antes de continuar. Cierra sesión manualmente al finalizar en un equipo compartido.
+
+**Verificación.** Las consultas automáticas y notificaciones no mantienen abierta la sesión. El correo o número recordado y la preferencia biométrica se conservan. Los formularios sin guardar pueden perderse; la caducidad de sesión es distinta de la renovación de contraseña del personal cada 15 días.
+
+## Recordar el acceso y activar biometría
+
+**Dónde:** Apps móviles → Pantalla de acceso y Configuración del dispositivo
+
+1. Escribe tu correo en Colaboradores o tu número de cliente en Clientes. Marca Recordar correo o Recordar número de cliente si quieres conservarlo en ese dispositivo.
+2. En la app nativa, marca Activar acceso con Face ID, Touch ID, huella o reconocimiento facial, según la opción disponible. Entra primero con tu contraseña y acepta la comprobación del teléfono.
+3. Si tu contraseña es temporal o está vencida, cámbiala primero; después vuelve a ingresar con la nueva y activa la biometría.
+4. En un acceso posterior, elige Entrar con Face ID o el método disponible, o usa el formulario de contraseña. Si cancelas, no se abre la sesión.
+5. Para retirarlo, pulsa Eliminar acceso biométrico guardado en el acceso o en Configuración del dispositivo. Para olvidar el identificador, desmarca Recordar correo o Recordar número de cliente.
+
+**Verificación.** La preferencia biométrica es independiente del identificador recordado. Solo úsala en un dispositivo personal. En navegador se utiliza contraseña; la biometría requiere una versión nativa actualizada y compatible. Cambiar de servidor elimina el acceso guardado del servidor anterior. Cerrar sesión conserva la opción biométrica; eliminar el acceso la retira. Las fotos y huellas las administra el teléfono, no la sucursal.
+
+## Crear y mantener sucursales
+
+**Dónde:** Administración → Sucursales
+
+1. Busca por nombre, localidad o código y filtra Activas, Inactivas o Todas.
+2. Para crear, pulsa Nueva sucursal. Escribe el nombre y, cuando corresponda, localidad, teléfono, correo y domicilio operativo. Guarda y comprueba el código asignado.
+3. Para corregir, abre Editar sucursal, cambia los datos y guarda. Si otro usuario editó el registro, actualiza antes de repetir la operación.
+4. Para desactivar, resuelve las solicitudes y créditos abiertos y reasigna o desactiva a los usuarios activos de la sucursal. Después cambia el estado en Editar sucursal.
+5. Si se perdió la respuesta al guardar, utiliza el reintento del mismo registro y comprueba la lista antes de crear otro.
+
+**Verificación.** Solo Super Admin y Gerente General administran este catálogo. El UUID y el código de folios son permanentes; cambiar el nombre no los modifica. No se elimina el historial. Los datos legales del contrato y pagaré se mantienen aparte en Datos documentales, administrados por Super Admin.
+
+## Consultar cobros y depósitos
+
+**Dónde:** Cobros y depósitos o Caja central
+
+1. Selecciona Desde, Hasta, sucursal permitida y Medio del cobro. Escribe una referencia bancaria, folio de crédito, nombre de grupo o cajero para afinar la búsqueda.
+2. Pulsa Consultar y coteja efectivo recibido, depósitos registrados, reversos y neto. Revisa fecha, crédito, grupo, cajero, ficha bancaria y corte original en el detalle.
+3. Si tienes permiso de cobro, usa Registrar cobro o depósito para abrir el flujo de Caja y distribuir el importe. Ver comprobante abre el ticket cuando tu permiso lo permite.
+4. Descarga Todos los movimientos CSV para obtener todas las páginas del filtro, o Imprimir resumen para el consolidado.
+
+**Verificación.** El filtro se conserva al recargar. Los cobros se agrupan por fecha de recepción y los reversos por fecha del ajuste. El corte original se conserva. Capturar una ficha bancaria no verifica automáticamente el depósito con el banco. Los permisos de consulta no habilitan captura ni reversos.
+
+## Registrar observaciones de cobranza
+
+**Dónde:** Cartera → Seguimiento y Observaciones de cobranza
+
+1. Localiza el crédito y abre Seguimiento. Revisa la clasificación y la situación por integrante.
+2. Selecciona la integrante y captura una observación clara sobre visita, llamada, compromiso o aclaración. Guarda y comprueba autor y fecha en el historial.
+3. Si se perdió la respuesta, reintenta la misma observación. Verifica que figure una sola vez.
+4. En Observaciones de cobranza, filtra sucursal, periodo y búsqueda según la pantalla. Recarga para consultar el historial guardado.
+
+**Verificación.** Super Admin, Gerente General, Gerente y Cobranza disponen inicialmente del seguimiento, según su alcance. Una observación no registra dinero, no altera saldos ni sustituye un cobro de Caja. No agregues contraseñas ni información personal innecesaria.
+
+## Trasladar o reincorporar cartera
+
+**Dónde:** Crédito → Seguimiento
+
+1. Como Super Admin o Gerente General, verifica que el crédito tenga atraso antes de trasladarlo.
+2. Pulsa Trasladar a recuperación, escribe el motivo obligatorio y confirma. Comprueba el cambio y su historial.
+3. Verifica que no aparezca en el reporte ordinario y que se conserve en Recuperación y en Todas.
+4. Para devolverlo, abre Seguimiento, selecciona Reincorporar a ordinaria, registra el motivo y confirma.
+
+**Verificación.** El traslado es manual y exclusivo de Super Admin o Gerente General. Gerencia de sucursal y Cobranza registran seguimiento, pero no autorizan esta clasificación. Los abonos siguen permitidos y no cambian automáticamente la cartera.
+
+## Elegir formato de comprobante e impresora
+
+**Dónde:** Cobros en caja → Comprobante → Impresión
+
+1. Abre el comprobante del pago y coteja el folio y el estado.
+2. Selecciona Carta con dos copias o el formato de ticket de 80 o 58 mm, según el papel de tu impresora.
+3. Pulsa Imprimir. En el diálogo del navegador o del sistema elige la impresora, el tamaño y la escala adecuados; también puedes Guardar como PDF.
+4. Revisa la vista previa y entrega la copia correspondiente. Si hay muchos conceptos, comprueba todas las páginas o segmentos antes de imprimir.
+
+**Verificación.** La preferencia de formato se guarda en ese dispositivo. El navegador no asigna automáticamente una impresora física. La impresión no modifica el importe ni genera un cobro nuevo. El QR permite consultar la autenticidad y estado del registro; conserva el original si aparece un reverso.
+
+## Preparar y corregir expedientes sin conexión
+
+**Dónde:** Colaboradores → Trabajo sin conexión
+
+1. Con internet, entra con tu cuenta y prepara el espacio y los expedientes a los que tienes acceso. Define la clave local del espacio cuando se solicite; es distinta de tu contraseña de usuario.
+2. Sin internet, abre Trabajo sin conexión, selecciona el espacio y desbloquéalo con la clave local. Realiza las altas o correcciones permitidas y usa Guardar en dispositivo.
+3. Si pasan 30 minutos sin interacción, el espacio se bloquea y solicita otra vez la clave local. Los datos guardados y la cola pendiente permanecen; los cambios sin guardar pueden perderse.
+4. Cuando recuperes conexión, vuelve a autenticarte si la sesión venció y sincroniza con la cuenta que preparó el espacio. Revisa los conflictos; selecciona los datos que deben conservarse y guarda antes de reenviar.
+
+**Verificación.** El trabajo offline no habilita cobros en campo. Los documentos se generan e imprimen desde Admin Web. No borres la aplicación ni su almacenamiento si tienes registros pendientes de sincronizar. Una corrección local no se considera recibida por oficina hasta confirmar su sincronización.
+
+## Usar la app de colaboradores
+
+**Dónde:** Colaboradores → Menú lateral
+
+1. Entra con tu correo de trabajo y contraseña. Activa el recordatorio o la biometría si deseas y el dispositivo es personal.
+2. Abre el menú y revisa Mi jornada, Grupos, Expedientes, Mis mensajes y Mi acceso. Los módulos operativos adicionales aparecen según los permisos y alcance de tu cuenta.
+3. Captura y corrige los datos autorizados, comprueba folio, grupo y sucursal y guarda antes de cambiar de pantalla.
+4. Para operaciones de revisión, autorización, entrega, Caja o administración utiliza solo las opciones que tu rol habilita. Para generar documentación vuelve a Admin Web.
+5. Si cambia la dirección del servidor, pide la dirección autorizada a soporte y actualízala en Configuración del dispositivo. Vuelve a ingresar para validar tu cuenta.
+
+**Verificación.** Ser usuario móvil no amplía los permisos ni el alcance de sucursal. El promotor no cobra en campo. Los módulos online requieren internet; las correcciones preparadas se gestionan en Trabajo sin conexión.
+
+## Consultar cortes y contrastar fichas
+
+**Dónde:** Cortes de caja y Caja central
+
+1. Selecciona fecha, sucursal y cajero según el alcance de la consulta.
+2. Abre el corte disponible y revisa por separado depósitos, efectivo y ajustes por reverso.
+3. Contrasta la referencia bancaria del movimiento con el soporte recibido por Caja. Comunica diferencias al responsable de sucursal sin modificar pagos ni cortes.
+
+**Verificación.** El rol Bancos consulta y audita; no cierra el corte de otro cajero, no captura pagos ni autoriza reversos. Los ajustes posteriores se muestran aparte de los importes originales.

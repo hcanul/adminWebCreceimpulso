@@ -29,6 +29,7 @@ export const authService = {
       email,
       password,
       device_name: deviceName,
+      app: 'admin-web',
     });
     return data.data;
   },

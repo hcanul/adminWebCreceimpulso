@@ -34,6 +34,13 @@
           />
           <p v-if="notice" role="status" class="text-caption">{{ notice }}</p>
         </section>
+        <q-banner
+          v-if="route.query.expired === 'idle'"
+          rounded
+          class="bg-amber-1 text-brown-9 q-mb-md"
+          role="status"
+          >Tu sesión terminó después de 30 minutos sin actividad. Vuelve a ingresar.</q-banner
+        >
         <q-form @submit="login" class="q-gutter-y-md">
           <q-input
             v-model="email"
@@ -116,10 +123,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useDeviceAccess } from '../composables/useDeviceAccess';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { useStaffAuth } from '../stores/auth';
 import { errorMessage } from '../services/http';
+const route = useRoute();
 const access = useDeviceAccess();
 const { identifier: email, remember, available, label, saved, activate, notice } = access;
 const password = ref(''),

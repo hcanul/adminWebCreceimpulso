@@ -316,7 +316,12 @@
   </main>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
+import {
+  createSessionActivity,
+  startSessionActivity,
+} from '../../../../packages/shared/session-inactivity';
+import { getServerAddress } from '../services/server-settings';
 import { onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
 import FilterSelect from '../components/FilterSelect.vue';
@@ -345,6 +350,17 @@ const auth = useStaffAuth(),
   editing = ref(false),
   current = ref(''),
   values = ref<Record<string, string | null>>({});
+const offlineActivity = createSessionActivity('crece.staff.offline', getServerAddress);
+const offlineActivityToken = 'offline-vault';
+let stopOfflineActivity: (() => void) | undefined;
+watch(
+  vault,
+  (value, previous) => {
+    if (value && !previous) offlineActivity.begin(offlineActivityToken);
+    if (!value && previous) offlineActivity.end(offlineActivityToken);
+  },
+  { flush: 'sync' },
+);
 const fields = schema.filter(
   (f) => !['curp', 'team_id', 'city_id', 'promoter_id', 'ncliente', 'nCredito'].includes(f.name),
 );
@@ -746,6 +762,18 @@ onBeforeRouteLeave(
 );
 onMounted(async () => {
   window.addEventListener('beforeunload', beforeUnload);
+  stopOfflineActivity = startSessionActivity({
+    namespace: 'crece.staff.offline',
+    server: getServerAddress,
+    readToken: () => Promise.resolve(vault.value ? offlineActivityToken : null),
+    heartbeat: () => Promise.resolve(),
+    expire: () => {
+      lock();
+      error.value =
+        'El espacio local se bloqueó después de 30 minutos sin actividad. Tus datos guardados se conservan; vuelve a desbloquearlo con tu clave local.';
+      return Promise.resolve();
+    },
+  });
   try {
     spaces.value = await localSpaces();
     space.value = spaces.value[0] || '';
@@ -754,6 +782,7 @@ onMounted(async () => {
   }
 });
 onUnmounted(() => {
+  stopOfflineActivity?.();
   window.removeEventListener('beforeunload', beforeUnload);
   lock();
 });
