@@ -1,5 +1,6 @@
 <template>
-  <main class="password-screen">
+  <main class="password-screen" data-module-help-content>
+    <div class="password-help"><ModuleHelp /></div>
     <q-card flat bordered class="password-card">
       <q-card-section>
         <q-icon name="lock_reset" color="primary" size="40px" />
@@ -84,6 +85,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import ModuleHelp from '../../components/ModuleHelp.vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
@@ -176,5 +178,21 @@ h1 {
 }
 p {
   line-height: 1.5;
+}
+</style>
+
+<style scoped>
+.password-help {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 1900;
+  background: white;
+  border-radius: 10px;
+}
+@media print {
+  .password-help {
+    display: none;
+  }
 }
 </style>

@@ -16,10 +16,13 @@
           <span>OFICINA DIGITAL</span><strong>{{ heading }}</strong>
         </div>
         <q-space />
-        <q-btn flat round icon="help_outline" data-tour="help" aria-label="Ver recorrido guiado" @click="repeatTour">
-          <q-tooltip>Recorrido guiado</q-tooltip>
-        </q-btn>
-        <q-btn data-tour="session" flat round icon="account_circle" aria-label="Abrir opciones de sesión"
+        <ModuleHelp :general-tour="repeatTour" />
+        <q-btn
+          data-tour="session"
+          flat
+          round
+          icon="account_circle"
+          aria-label="Abrir opciones de sesión"
           ><q-menu
             ><q-list style="min-width: 240px"
               ><q-item
@@ -108,13 +111,14 @@
         </div>
       </nav>
     </q-drawer>
-    <q-page-container
+    <q-page-container data-module-help-content
       ><q-banner v-if="error" class="bg-red-1 text-negative" role="alert">{{ error }}</q-banner
       ><router-view :key="$route.fullPath"
     /></q-page-container>
   </q-layout>
 </template>
 <script setup lang="ts">
+import ModuleHelp from '../components/ModuleHelp.vue';
 import { useOnboardingTour } from '../composables/useOnboardingTour';
 import { useAlertFeedback } from '../composables/useAlertFeedback';
 import { alerts } from '../services/alerts.service';

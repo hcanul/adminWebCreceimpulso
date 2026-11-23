@@ -1,0 +1,16 @@
+{
+  "name": "@creceimpulso/mobile-help",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./MobileHelp.vue",
+    "./types": "./types.ts",
+    "./staff-base": "./staff-base.ts"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.22",
+    "quasar": "^2.34.0",
+    "vue-router": "^5.0.6"
+  }
+}

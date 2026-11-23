@@ -5,7 +5,7 @@
       >Ejemplo con datos ficticios. No representa una deuda real.</q-banner
     >
     <p>{{ data.folio }} · {{ data.group }}<br />Corte al {{ date(data.as_of) }}</p>
-    <q-tabs v-model="tab" active-color="primary" align="justify"
+    <q-tabs data-help-client="statement-tabs" v-model="tab" active-color="primary" align="justify"
       ><q-tab name="personal" label="Personal" /><q-tab name="group" label="Grupo"
     /></q-tabs>
     <h3>{{ tab === 'personal' ? 'Mi estado de cuenta' : 'Estado de cuenta del grupo' }}</h3>
@@ -98,8 +98,18 @@ const total = (field: 'amount' | 'paid' | 'remaining') =>
   rows.value.reduce((sum, row) => sum + row[field], 0);
 </script>
 <style scoped>
-h2 { font-size: 24px; line-height: 1.3; font-weight: 700; margin: 24px 0 12px; }
-h3 { font-size: 20px; line-height: 1.3; font-weight: 600; margin: 20px 0 12px; }
+h2 {
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 700;
+  margin: 24px 0 12px;
+}
+h3 {
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 600;
+  margin: 20px 0 12px;
+}
 .statement-scroll {
   overflow-x: auto;
   border: 1px solid #d7dae2;

@@ -1,5 +1,5 @@
 <template>
-  <q-card flat bordered class="q-pa-lg q-mt-lg">
+  <q-card data-help-client="receipts" flat bordered class="q-pa-lg q-mt-lg">
     <h2 class="text-h5 q-mt-none">Mis comprobantes</h2>
     <p>
       Pagos recibidos del crédito activo en los que aportaste o recibiste una aplicación. El total
