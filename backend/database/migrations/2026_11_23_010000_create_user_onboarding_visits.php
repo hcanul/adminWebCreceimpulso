@@ -9,11 +9,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('admin_onboarding_enabled')->default(true);
-        });
-        // Existing staff can use Help without being treated as newly enrolled users.
-        DB::table('users')->update(['admin_onboarding_enabled' => false]);
+        // MySQL can retain DDL from an interrupted migration. Preserve existing
+        // preferences when retrying instead of adding the column or resetting it.
+        if (! Schema::hasColumn('users', 'admin_onboarding_enabled')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->boolean('admin_onboarding_enabled')->default(true);
+            });
+            // Existing staff can use Help without being treated as newly enrolled users.
+            DB::table('users')->update(['admin_onboarding_enabled' => false]);
+        }
+
+        if (Schema::hasTable('user_onboarding_visits')) {
+            return;
+        }
 
         Schema::create('user_onboarding_visits', function (Blueprint $table) {
             $table->uuid('id')->primary();
