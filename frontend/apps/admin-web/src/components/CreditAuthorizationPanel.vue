@@ -3,10 +3,16 @@
     <q-card-section
       ><p class="eyebrow">GERENCIA Y COORDINACIÓN COMERCIAL</p>
       <h2>Autorización del crédito</h2>
-      <q-badge v-if="data" color="primary">{{ authorizationLabels[data.status] }}</q-badge>
+      <q-badge v-if="data" color="primary">{{
+        data.proposal &&
+        loan.review_status !== 'ready_for_authorization' &&
+        loan.status === 'pendiente'
+          ? 'Condiciones guardadas · pendiente de Gestión'
+          : authorizationLabels[data.status]
+      }}</q-badge>
       <p class="q-mt-md">
-        El gerente propone las condiciones y Coordinación Comercial las confirma o devuelve. La
-        autorización conserva lo solicitado y deja pendiente la entrega del dinero.
+        Prepara las condiciones antes de terminar Gestión. Al completar la revisión, pasarán
+        directamente a Coordinación Comercial. La entrega se registra por separado.
       </p>
       <q-banner v-if="error" class="bg-red-1 text-negative"
         >{{ error
@@ -14,7 +20,8 @@
       /></q-banner>
       <q-linear-progress v-if="loading" indeterminate />
       <q-banner v-if="loan.review_status !== 'ready_for_authorization'" class="bg-orange-1"
-        >Completa primero la revisión de Gestión para preparar las condiciones.</q-banner
+        >Puedes guardar las condiciones desde ahora. Gestión debe completar las comprobaciones antes
+        de autorizar.</q-banner
       >
     </q-card-section>
     <template v-if="data">
@@ -25,8 +32,15 @@
           adelantos. Solo se retiene la garantía al entregar.</q-banner
         ></q-card-section
       >
-      <q-card-section v-if="canPropose">
-        <h2>Propuesta del gerente</h2>
+      <q-card-section v-if="editingConditions">
+        <h2>Condiciones del crédito</h2>
+        <q-banner
+          v-if="data.proposal && loan.review_status !== 'ready_for_authorization'"
+          class="bg-green-1 q-mb-md"
+        >
+          Condiciones guardadas. Siguiente responsable: Gestión; después pasarán automáticamente a
+          Coordinación.
+        </q-banner>
         <p>
           Cada importe debe ser mayor a cero y no superar lo solicitado ni los límites pactados. Los
           integrantes, la tasa y las 16 semanas se conservan.
@@ -81,10 +95,21 @@
           {{
             data.status === 'authorized'
               ? 'Condiciones autorizadas'
-              : 'Condiciones enviadas por el gerente'
+              : loan.review_status === 'ready_for_authorization'
+                ? 'Condiciones enviadas por el gerente'
+                : 'Condiciones preparadas'
           }}
         </h2>
         <p>Propuesta de {{ data.proposal.proposed_by_name }}. Versión {{ data.version }}.</p>
+        <q-btn
+          v-if="canPropose"
+          flat
+          no-caps
+          icon="edit"
+          label="Editar condiciones"
+          class="q-mb-md"
+          @click="editing = true"
+        />
         <CreditTermsSummary
           :terms="loan.approved_snapshot ?? data.proposal"
           :approved="data.status === 'authorized'"
@@ -132,7 +157,7 @@
           de semana ni días festivos.
         </p>
       </q-card-section>
-      <q-card-section v-if="canPropose || canDecide">
+      <q-card-section v-if="editingConditions || canDecide">
         <q-input
           v-model="notes"
           outlined
@@ -140,14 +165,18 @@
           label="Observaciones de la propuesta o decisión"
           maxlength="4000"
           :readonly="busy"
-          hint="Obligatorias. Se conservarán en el historial."
+          hint="Opcionales al guardar o autorizar. Obligatorias para solicitar correcciones."
         />
         <div class="authorization-actions q-mt-lg">
           <q-btn
-            v-if="canPropose"
+            v-if="editingConditions"
             color="primary"
             no-caps
-            label="Enviar propuesta a Coordinación"
+            :label="
+              loan.review_status === 'ready_for_authorization'
+                ? 'Enviar a Coordinación'
+                : 'Guardar condiciones'
+            "
             :loading="busy"
             :disable="!preview.terms || !disbursement || !repayment"
             @click="submit('propose')"
@@ -157,7 +186,7 @@
               outline
               color="negative"
               no-caps
-              label="Devolver condiciones al gerente"
+              label="Solicitar correcciones"
               :disable="busy"
               @click="submit('return')" /><q-btn
               color="primary"
@@ -220,6 +249,7 @@ const store = useAuthorizationStore(),
   auth = useAuthStore();
 const { data } = storeToRefs(store);
 const firstDueOn = ref('');
+const editing = ref(false);
 const scheduleError = computed(() => {
   if (!firstDueOn.value || !data.value?.proposal)
     return 'Selecciona la fecha pactada del primer pago.';
@@ -252,11 +282,7 @@ const loading = ref(true),
   baseline = ref('');
 const members = computed(() => props.loan.request_snapshot?.members ?? []);
 const available = computed(
-  () =>
-    !loading.value &&
-    !error.value &&
-    props.loan.status === 'pendiente' &&
-    props.loan.review_status === 'ready_for_authorization',
+  () => !loading.value && !error.value && props.loan.status === 'pendiente',
 );
 const canPropose = computed(
   () =>
@@ -264,10 +290,14 @@ const canPropose = computed(
     auth.can('credit.propose') &&
     ['awaiting_proposal', 'returned'].includes(data.value?.status ?? ''),
 );
+const editingConditions = computed(
+  () => canPropose.value && (editing.value || !data.value?.proposal),
+);
 const canDecide = computed(
   () =>
     available.value &&
     auth.can('credit.authorize') &&
+    props.loan.review_status === 'ready_for_authorization' &&
     data.value?.status === 'pending_authorization',
 );
 const methodOptions = [
@@ -336,6 +366,7 @@ async function load() {
     );
     disbursement.value = data.value?.proposal?.disbursement_method ?? null;
     repayment.value = data.value?.proposal?.repayment_method ?? null;
+    editing.value = false;
     notes.value = '';
     firstDueOn.value = props.loan.approved_snapshot?.first_due_on ?? '';
     baseline.value = state();
@@ -357,8 +388,11 @@ async function reload() {
 }
 async function submit(action: 'propose' | 'approve' | 'return') {
   if (busy.value || !data.value) return;
-  if (!notes.value.trim())
-    return alerts.error('Escribe las observaciones de tu propuesta o decisión.');
+  if (
+    (action === 'return' || (action === 'propose' && data.value.status === 'returned')) &&
+    !notes.value.trim()
+  )
+    return alerts.error('Describe las correcciones solicitadas o realizadas.');
   if (action === 'propose' && (!preview.value.terms || !disbursement.value || !repayment.value))
     return alerts.error('Revisa los importes y selecciona ambas formas de operación.');
   if (action === 'approve' && scheduleError.value) return alerts.error(scheduleError.value);
@@ -369,7 +403,9 @@ async function submit(action: 'propose' | 'approve' | 'return') {
         ? `Se autorizará un capital de ${money(data.value.proposal?.totals.principal)} con primer pago el ${firstDueOn.value} y 16 cuotas semanales. La entrega del dinero quedará pendiente.`
         : action === 'return'
           ? 'El gerente podrá corregir la propuesta. Los importes solicitados y la revisión de Gestión se conservarán.'
-          : 'La propuesta quedará cerrada mientras Coordinación Comercial la revisa.';
+          : props.loan.review_status === 'ready_for_authorization'
+            ? 'Las condiciones pasarán a Coordinación Comercial.'
+            : 'Las condiciones quedarán guardadas. Pasarán a Coordinación cuando Gestión termine su revisión.';
     if (
       !(await alerts.confirm(
         eventLabels[action],
@@ -393,7 +429,11 @@ async function submit(action: 'propose' | 'approve' | 'return') {
     baseline.value = state();
     await load();
     emit('updated');
-    await alerts.success(eventLabels[action]);
+    await alerts.success(
+      action === 'propose' && props.loan.review_status !== 'ready_for_authorization'
+        ? 'Condiciones guardadas'
+        : eventLabels[action],
+    );
   } catch (e) {
     await alerts.error(administrationError(e));
   } finally {

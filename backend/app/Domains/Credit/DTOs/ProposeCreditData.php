@@ -8,6 +8,6 @@ final readonly class ProposeCreditData
 
     public static function fromArray(array $data): self
     {
-        return new self($data['version'], $data['participants'], $data['disbursement_method'], $data['repayment_method'], trim($data['notes']));
+        return new self($data['version'], $data['participants'], $data['disbursement_method'], $data['repayment_method'], trim($data['notes'] ?? ''));
     }
 }

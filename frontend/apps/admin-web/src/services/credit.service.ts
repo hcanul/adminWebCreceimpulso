@@ -1,4 +1,8 @@
-import type { AuthorizationStatus, AuthorizationTerms } from './authorization.service';
+import type {
+  AuthorizationStatus,
+  AuthorizationTerms,
+  ProposalInput,
+} from './authorization.service';
 import { api } from './http';
 import type { Page } from './intake.service';
 export interface CreditRate {
@@ -61,6 +65,7 @@ export interface CreditApplication {
   branch?: { id: string; name: string };
 }
 export interface CreditInput {
+  preparation?: Omit<ProposalInput, 'version' | 'notes'>;
   id: string;
   team_id: string;
   rate_id: string;

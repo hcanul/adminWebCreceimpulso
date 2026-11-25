@@ -5,6 +5,7 @@ namespace App\Domains\Credit\Actions;
 use App\Domains\Credit\DTOs\ReviewCreditData;
 use App\Domains\Credit\Enums\ReviewStatus;
 use App\Domains\Credit\Services\CreditAccess;
+use App\Domains\Credit\Services\CreditAuthorization;
 use App\Domains\Credit\Services\CreditReview;
 use App\Domains\Intake\Services\IntakeAccess;
 use App\Models\ApplicationRevision;
@@ -85,6 +86,20 @@ final class ReviewCreditAction
                 'notes' => $data->notes ?: null, 'checks' => json_encode($checks, JSON_THROW_ON_ERROR),
                 'files' => json_encode($fileSnapshot, JSON_THROW_ON_ERROR), 'created_at' => now(),
             ]);
+
+            if ($data->action === 'complete' && $loan->authorization_proposal) {
+                $service = app(CreditAuthorization::class);
+                $service->validateEligibility($loan);
+                $proposal = $loan->authorization_proposal;
+                $proposal['review_version'] = $loan->review_version;
+                $beforeAuthorization = $loan->authorization_status;
+                $loan->forceFill([
+                    'authorization_proposal' => $proposal,
+                    'authorization_status' => 'pending_authorization',
+                    'authorization_version' => $loan->authorization_version + 1,
+                ])->save();
+                $service->record($actor, $loan, 'propose', $beforeAuthorization, 'Envío automático a Coordinación al completar Gestión.');
+            }
 
             return $loan;
         }, 3);

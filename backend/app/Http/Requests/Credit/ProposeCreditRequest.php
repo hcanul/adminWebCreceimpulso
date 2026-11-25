@@ -14,7 +14,7 @@ final class ProposeCreditRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'version' => 'required|integer|min:0', 'notes' => 'required|string|max:4000',
+            'version' => 'required|integer|min:0', 'notes' => 'nullable|string|max:4000',
             'disbursement_method' => 'required|in:cash_branch,bank_deposit',
             'repayment_method' => 'required|in:cash_branch,bank_deposit',
             'participants' => 'required|array|min:3',

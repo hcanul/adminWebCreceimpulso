@@ -13,8 +13,9 @@
         de cada integrante.
       </p>
       <q-banner class="bg-grey-2" rounded
-        >Las comprobaciones son declaradas por Gestión. Registra la evidencia consultada; esta
-        pantalla no valida ante RENAPO ni sustituye los documentos originales.</q-banner
+        >Las comprobaciones son declaradas por Gestión. Consulta el expediente y describe cualquier
+        observación; esta pantalla no valida ante RENAPO ni sustituye los documentos
+        originales.</q-banner
       >
       <q-banner v-if="error" class="bg-red-1 text-negative q-mt-md"
         >{{ error }} <q-btn flat no-caps label="Recargar revisión" :disable="busy" @click="reload"
@@ -94,9 +95,9 @@
                 label="Evidencia consultada u observación"
                 maxlength="2000"
                 :hint="
-                  check.status === 'pending'
-                    ? 'Opcional mientras está pendiente'
-                    : 'Describe qué verificaste o qué debe corregirse'
+                  check.status === 'observed'
+                    ? 'Obligatorio: describe qué debe corregirse'
+                    : 'Opcional: la verificación y el expediente quedarán registrados'
                 "
               />
             </div>
@@ -111,7 +112,7 @@
           label="Observaciones generales / respuesta del gerente"
           maxlength="4000"
           :readonly="busy"
-          hint="Obligatorio para devolver, reenviar o enviar a autorización."
+          hint="Obligatorio para devolver o reenviar; opcional al completar la revisión."
         />
         <div class="review-actions q-mt-lg">
           <template v-if="editable">
@@ -247,9 +248,7 @@ const canResubmit = computed(
 const state = () => JSON.stringify({ checks: checks.value, notes: notes.value });
 const dirty = computed(() => !!saved.value && state() !== saved.value);
 const allVerified = computed(
-  () =>
-    checks.value.length > 0 &&
-    checks.value.every((check) => check.status === 'verified' && check.notes?.trim()),
+  () => checks.value.length > 0 && checks.value.every((check) => check.status === 'verified'),
 );
 const checkStatusLabels = {
   pending: 'Pendiente',
@@ -302,13 +301,13 @@ async function reload() {
 }
 async function submit(action: ReviewAction) {
   if (busy.value || !review.value) return;
-  if (action !== 'save' && !notes.value.trim())
+  if (['return', 'resubmit'].includes(action) && !notes.value.trim())
     return alerts.error('Agrega las observaciones generales o tu respuesta.');
   if (
     action !== 'resubmit' &&
-    checks.value.some((check) => check.status !== 'pending' && !check.notes?.trim())
+    checks.value.some((check) => check.status === 'observed' && !check.notes?.trim())
   )
-    return alerts.error('Describe la evidencia o la observación de cada comprobación marcada.');
+    return alerts.error('Describe qué debe corregirse en cada comprobación con observaciones.');
   if (action === 'return' && !checks.value.some((check) => check.status === 'observed'))
     return alerts.error('Marca al menos una comprobación con observaciones.');
   busy.value = true;
@@ -319,7 +318,7 @@ async function submit(action: ReviewAction) {
         action === 'return'
           ? 'Se reabrirán los expedientes observados para que se corrijan. Se conservará esta revisión.'
           : action === 'complete'
-            ? 'Se cerrará la revisión de Gestión y quedará pendiente de autorización comercial.'
+            ? 'Se cerrará Gestión. Si el gerente ya guardó las condiciones, pasarán directamente a Coordinación Comercial.'
             : 'Se guardará este movimiento en el historial de la solicitud.',
       ))
     )

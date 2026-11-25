@@ -3,7 +3,7 @@
     ><div class="intake-heading">
       <div>
         <p class="eyebrow">NUEVA SOLICITUD · CRÉDITO GRUPAL</p>
-        <h1>Preparar solicitud</h1>
+        <h1>Preparar crédito</h1>
         <p>El gerente define el límite; cada integrante solicita su propio monto.</p>
       </div>
       <q-btn flat no-caps icon="arrow_back" label="Solicitudes" to="/solicitudes-credito" />
@@ -126,6 +126,16 @@
                     :disable="saving"
                     :rules="[positiveAmount]"
                   />
+                  <q-input
+                    v-if="auth.can('credit.propose') && selected.includes(member.client_id)"
+                    v-model="proposedAmounts[member.client_id]"
+                    outlined
+                    stack-label
+                    inputmode="decimal"
+                    label="Monto propuesto por el gerente (MXN)"
+                    hint="Opcional: si lo dejas vacío se propondrá el monto solicitado."
+                    :disable="saving"
+                  />
                   <p
                     v-if="memberEstimate(member.client_id)"
                     class="text-caption text-grey-7 q-mt-sm"
@@ -138,6 +148,36 @@
             >
           </div>
           <aside>
+            <q-card v-if="auth.can('credit.propose')" flat bordered class="intake-card q-mb-lg">
+              <q-card-section>
+                <h2>4. Entrega y pagos</h2>
+                <FilterSelect
+                  v-model="disbursement"
+                  :options="methodOptions"
+                  emit-value
+                  map-options
+                  outlined
+                  label="Forma de entregar el crédito *"
+                  :disable="saving"
+                  :rules="[(value: string) => !!value || 'Selecciona la forma de entrega']"
+                />
+                <FilterSelect
+                  v-model="repayment"
+                  :options="methodOptions"
+                  emit-value
+                  map-options
+                  outlined
+                  class="q-mt-md"
+                  label="Forma de realizar los pagos semanales *"
+                  :disable="saving"
+                  :rules="[(value: string) => !!value || 'Selecciona la forma de pago']"
+                />
+                <p class="text-caption q-mt-md">
+                  Al completar Gestión, estas condiciones pasarán directamente a Coordinación. No se
+                  autoriza ni entrega dinero todavía.
+                </p>
+              </q-card-section>
+            </q-card>
             <q-card flat bordered class="intake-card credit-summary"
               ><q-card-section
                 ><p class="eyebrow">RESUMEN ESTIMADO</p>
@@ -162,14 +202,15 @@
                 </p>
                 <q-separator class="q-my-md" />
                 <p class="text-caption">
-                  La entrega del crédito y el medio de pago semanal se definirán durante la
-                  autorización. Esta solicitud no registra un desembolso.
+                  Las condiciones propuestas se conservarán para la revisión. Coordinación
+                  confirmará la fecha del primer pago al autorizar. Esta solicitud no registra un
+                  desembolso.
                 </p>
                 <q-btn
                   class="full-width"
                   color="primary"
                   no-caps
-                  label="Registrar solicitud"
+                  label="Enviar a revisión"
                   type="submit"
                   :disable="context.issues.length > 0 || selected.length < 3 || !rate"
                   :loading="saving" /></q-card-section
@@ -180,6 +221,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth.store';
+import type { PaymentMethod } from '../services/authorization.service';
 import GroupSearch from '../components/GroupSearch.vue';
 import FilterSelect from '../components/FilterSelect.vue';
 import { intakeService, type Team } from '../services/intake.service';
@@ -194,6 +237,14 @@ import { alerts } from '../services/alerts.service';
 import { cents, estimateCredit, money, sumEstimates } from '../domain/credit-calculation';
 const route = useRoute(),
   router = useRouter();
+const auth = useAuthStore();
+const proposedAmounts = ref<Record<string, string>>({});
+const disbursement = ref<PaymentMethod | null>(null);
+const repayment = ref<PaymentMethod | null>(null);
+const methodOptions = [
+  { value: 'cash_branch', label: 'En sucursal' },
+  { value: 'bank_deposit', label: 'Depósito bancario' },
+];
 const team = ref<Team | null>(null),
   context = ref<CreditContext | null>(null),
   rates = ref<CreditRate[]>([]),
@@ -209,7 +260,14 @@ const loading = ref(false),
 let generation = 0;
 const rate = computed(() => rates.value.find((r) => r.id === rateId.value));
 const dirty = computed(
-  () => !saved.value && (!!limit.value || Object.values(amounts.value).some(Boolean)),
+  () =>
+    !saved.value &&
+    (!!limit.value ||
+      !!rateId.value ||
+      !!disbursement.value ||
+      !!repayment.value ||
+      Object.values(amounts.value).some(Boolean) ||
+      Object.values(proposedAmounts.value).some(Boolean)),
 );
 const positiveAmount = (value: string | undefined) => {
   try {
@@ -270,6 +328,9 @@ async function changeGroup() {
   selected.value = [];
   amounts.value = {};
   limit.value = '';
+  proposedAmounts.value = {};
+  disbursement.value = null;
+  repayment.value = null;
   error.value = '';
 }
 async function canLeave() {
@@ -294,23 +355,43 @@ async function save() {
   saving.value = true;
   error.value = '';
   try {
+    if (auth.can('credit.propose') && (!disbursement.value || !repayment.value))
+      throw Error('Selecciona las formas de entrega y pago semanal.');
     const cap = cents(limit.value);
     if (cap <= 0n) throw Error('Indica un límite mayor a cero.');
     for (const id of selected.value) {
       const amount = cents(amounts.value[id] ?? '');
       if (amount <= 0n || amount > cap)
         throw Error('Cada monto debe ser mayor a cero y no superar el límite por integrante.');
+      if (auth.can('credit.propose')) {
+        const proposed = cents(proposedAmounts.value[id]?.trim() || amounts.value[id]!);
+        if (proposed <= 0n || proposed > amount || proposed > cap)
+          throw Error(
+            'El monto propuesto debe ser mayor a cero y no superar lo solicitado ni el límite por integrante.',
+          );
+      }
     }
     if (
       !(await alerts.confirm(
-        'Registrar solicitud',
+        'Enviar a revisión',
         `Se conservarán los montos solicitados por ${selected.value.length} integrantes: ${money(totals.value.principal)} en total, con tasa ${rate.value.name}. No se autoriza ni entrega dinero en este paso.`,
-        'Registrar solicitud',
+        'Enviar a revisión',
       ))
     )
       return;
     saving.value = true;
+    const preparation = auth.can('credit.propose')
+      ? {
+          disbursement_method: disbursement.value!,
+          repayment_method: repayment.value!,
+          participants: selected.value.map((id) => ({
+            client_id: id,
+            amount_proposed: proposedAmounts.value[id]?.trim() || amounts.value[id]!,
+          })),
+        }
+      : undefined;
     const result = await creditService.create({
+      ...(preparation ? { preparation } : {}),
       id: requestId,
       team_id: context.value.team.id,
       rate_id: rate.value.id,

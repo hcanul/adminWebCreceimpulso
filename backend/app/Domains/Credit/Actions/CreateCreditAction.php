@@ -3,6 +3,7 @@
 namespace App\Domains\Credit\Actions;
 
 use App\Domains\Credit\DTOs\CreateCreditData;
+use App\Domains\Credit\DTOs\ProposeCreditData;
 use App\Domains\Credit\Services\CreditAccess;
 use App\Domains\Credit\Services\CreditCalculator;
 use App\Domains\Credit\Services\CreditEligibility;
@@ -92,6 +93,10 @@ final class CreateCreditAction
                 $loan->forceFill(['id' => $data->id, 'branch_id' => $team->branch_id, 'team_id' => $team->id, 'promoter_id' => $team->promoter_id, 'rate_id' => $rate->id, 'created_by' => $actor->id, 'total_requested' => $snapshot['totals']['principal'], 'total_approved' => null, 'status' => 'pendiente', 'request_snapshot' => $snapshot, 'request_hash' => $data->fingerprint(), 'requested_at' => now(), 'disbursement_method' => null, 'repayment_method' => null])->save();
                 foreach ($rows as $row) {
                     LoanParticipation::create(['branch_id' => $team->branch_id, 'loan_application_id' => $loan->id, 'client_id' => $row['client_id'], 'role_in_group' => $row['role_in_group'], 'amount_requested' => $row['amount_requested'], 'amount_approved' => null]);
+                }
+
+                if ($data->preparation !== null) {
+                    $loan = app(ProposeCreditAction::class)->execute($actor, $loan->id, ProposeCreditData::fromArray($data->preparation + ['version' => 0]));
                 }
 
                 return $loan;

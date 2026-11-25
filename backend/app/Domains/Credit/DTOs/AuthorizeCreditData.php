@@ -8,6 +8,6 @@ final readonly class AuthorizeCreditData
 
     public static function fromArray(array $data): self
     {
-        return new self($data['version'], $data['decision'], trim($data['notes']), $data['first_due_on'] ?? null);
+        return new self($data['version'], $data['decision'], trim($data['notes'] ?? ''), $data['first_due_on'] ?? null);
     }
 }

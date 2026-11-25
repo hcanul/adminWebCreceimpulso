@@ -56,7 +56,13 @@
       class="bg-red-1 text-negative"
       >{{ error }}</q-banner
     ><template v-if="loan"
-      ><q-banner rounded class="bg-grey-2 q-mb-lg"
+      ><ol class="credit-stages q-mb-lg" aria-label="Etapas del crédito">
+        <li :class="{ active: stage === 1 }">1. Preparar</li>
+        <li :class="{ active: stage === 2 }">2. Autorizar</li>
+        <li :class="{ active: stage === 3 }">3. Entregar</li>
+      </ol>
+      <q-banner rounded class="bg-primary text-white q-mb-md">{{ nextAction }}</q-banner>
+      <q-banner rounded class="bg-grey-2 q-mb-lg"
         >Estado:
         <strong>{{
           loan.status === 'pendiente'
@@ -100,65 +106,68 @@
         >
       </div>
       <q-card v-if="snapshot" flat bordered class="intake-card q-mt-lg"
-        ><q-card-section
-          ><h2>Integrantes y condiciones solicitadas</h2>
-          <p class="text-caption text-grey-7 lt-md">
-            Desliza la tabla para consultar las cuotas y los totales.
-          </p>
-          <div class="scroll">
-            <table class="credit-table">
-              <thead>
-                <tr>
-                  <th>Cliente / cargo</th>
-                  <th>Solicitado</th>
-                  <th>Cuota semanal estimada</th>
-                  <th>Total estimado</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="member in snapshot.members" :key="member.client_id">
-                  <td>
-                    <strong>{{ member.name }}</strong
-                    ><br /><small>{{ member.folio }} · {{ member.role_in_group }}</small>
-                  </td>
-                  <td>{{ money(member.amount_requested) }}</td>
-                  <td>{{ money(member.estimate.weekly_payment) }}</td>
-                  <td>{{ money(member.estimate.total_repayment) }}</td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th>Total grupal</th>
-                  <th>{{ money(snapshot.totals.principal) }}</th>
-                  <th>{{ money(snapshot.totals.weekly_payment) }}</th>
-                  <th>{{ money(snapshot.totals.total_repayment) }}</th>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <p class="q-mt-lg">
-            Interés estimado: <strong>{{ money(snapshot.totals.interest) }}</strong> · Garantía
-            estimada (10%): <strong>{{ money(snapshot.totals.guarantee) }}</strong> · Entrega neta
-            estimada: <strong>{{ money(snapshot.totals.net_delivery) }}</strong>
-          </p>
-          <p class="text-caption text-grey-7">
-            Calculado sobre lo solicitado. La retención real se calculará sobre lo aprobado.
-            Consulta las condiciones aprobadas y el calendario en la sección de desembolso.
-          </p></q-card-section
-        ></q-card
+        ><q-expansion-item label="Consultar integrantes y montos solicitados" icon="groups">
+          <q-card-section
+            ><h2>Integrantes y condiciones solicitadas</h2>
+            <p class="text-caption text-grey-7 lt-md">
+              Desliza la tabla para consultar las cuotas y los totales.
+            </p>
+            <div class="scroll">
+              <table class="credit-table">
+                <thead>
+                  <tr>
+                    <th>Cliente / cargo</th>
+                    <th>Solicitado</th>
+                    <th>Cuota semanal estimada</th>
+                    <th>Total estimado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="member in snapshot.members" :key="member.client_id">
+                    <td>
+                      <strong>{{ member.name }}</strong
+                      ><br /><small>{{ member.folio }} · {{ member.role_in_group }}</small>
+                    </td>
+                    <td>{{ money(member.amount_requested) }}</td>
+                    <td>{{ money(member.estimate.weekly_payment) }}</td>
+                    <td>{{ money(member.estimate.total_repayment) }}</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th>Total grupal</th>
+                    <th>{{ money(snapshot.totals.principal) }}</th>
+                    <th>{{ money(snapshot.totals.weekly_payment) }}</th>
+                    <th>{{ money(snapshot.totals.total_repayment) }}</th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <p class="q-mt-lg">
+              Interés estimado: <strong>{{ money(snapshot.totals.interest) }}</strong> · Garantía
+              estimada (10%): <strong>{{ money(snapshot.totals.guarantee) }}</strong> · Entrega neta
+              estimada: <strong>{{ money(snapshot.totals.net_delivery) }}</strong>
+            </p>
+            <p class="text-caption text-grey-7">
+              Calculado sobre lo solicitado. La retención real se calculará sobre lo aprobado.
+              Consulta las condiciones aprobadas y el calendario en la sección de desembolso.
+            </p></q-card-section
+          >
+        </q-expansion-item></q-card
       ><q-banner v-else class="bg-orange-1 q-mt-md"
         >Registro anterior sin detalle de cálculo conservado. No se reconstruyen condiciones
         históricas usando tasas actuales.</q-banner
-      ><CreditReviewPanel
+      ><CreditAuthorizationPanel
+        v-if="snapshot && (auth.can('credit.propose') || auth.can('credit.authorize'))"
+        :key="loan.authorization_version ?? 0"
+        :loan="loan"
+        @updated="loadLoan" /><CreditReviewPanel
         v-if="
           snapshot &&
           (auth.can('credit.review') || auth.can('credit.create') || auth.can('credit.authorize'))
         "
         :loan="loan"
-        @updated="loan.review_status = $event" /><CreditAuthorizationPanel
-        v-if="snapshot && (auth.can('credit.propose') || auth.can('credit.authorize'))"
-        :loan="loan"
-        @updated="loadLoan" /><CreditDisbursementPanel
+        @updated="reviewUpdated" /><CreditDisbursementPanel
         v-if="loan.approved_snapshot"
         :loan="loan"
         @updated="loadLoan" /></template
@@ -180,6 +189,34 @@ const route = useRoute(),
   loan = ref<CreditApplication | null>(null),
   loading = ref(false),
   error = ref('');
+const stage = computed(() =>
+  !loan.value ||
+  (loan.value.status === 'pendiente' && loan.value.review_status !== 'ready_for_authorization')
+    ? 1
+    : loan.value.status === 'pendiente'
+      ? 2
+      : 3,
+);
+const nextAction = computed(() => {
+  const current = loan.value;
+  if (!current) return '';
+  if (current.status === 'entregado' || current.status === 'pagado')
+    return 'Entrega registrada. Consulta los cobros y el estado de cuenta.';
+  if (current.status === 'aprobado')
+    return 'Siguiente responsable: sucursal. Registra la entrega cuando se realice.';
+  if (current.review_status === 'returned')
+    return 'Siguiente responsable: gerente. Corrige los expedientes observados y reenvía a Gestión.';
+  if (current.review_status !== 'ready_for_authorization')
+    return 'Siguiente responsable: Gestión. Verifica los expedientes. El gerente puede guardar las condiciones mientras tanto.';
+  if (current.authorization_status === 'returned')
+    return 'Siguiente responsable: gerente. Corrige las condiciones y envíalas a Coordinación.';
+  if (current.authorization_status === 'pending_authorization')
+    return 'Siguiente responsable: Coordinación Comercial. Confirma la fecha del primer pago y autoriza.';
+  return 'Siguiente responsable: gerente. Guarda las condiciones para enviar a Coordinación.';
+});
+function reviewUpdated(status: NonNullable<CreditApplication['review_status']>) {
+  if (loan.value && loan.value.review_status !== status) void loadLoan();
+}
 const snapshot = computed(() => loan.value?.request_snapshot);
 const method = (value: string | null | undefined) =>
   value === 'cash_branch'
@@ -200,6 +237,24 @@ async function loadLoan() {
 onMounted(loadLoan);
 </script>
 <style scoped>
+.credit-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.credit-stages li {
+  padding: 10px 18px;
+  border-radius: 24px;
+  background: #eee;
+  color: #555;
+}
+.credit-stages li.active {
+  background: #811335;
+  color: white;
+  font-weight: 600;
+}
 .credit-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

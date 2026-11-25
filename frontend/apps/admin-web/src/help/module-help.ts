@@ -128,11 +128,11 @@ const entries: Array<{ pattern: RegExp; help: ModuleHelp }> = [
       steps: [
         'Selecciona un grupo elegible y revisa sus integrantes.',
         'Define una tasa común y el límite por integrante autorizado por el gerente.',
-        'Captura el monto solicitado por cada participante, revisa el cálculo de 16 semanas y registra la solicitud.',
+        'Captura los montos solicitados y propuestos, define las formas de entrega y pago y envía a revisión. Al completar Gestión pasará directamente a Coordinación.',
       ],
       important:
         'Los montos solicitados se conservan separados de los aprobados. Guardar una solicitud no entrega dinero.',
-      primaryLabel: 'Registrar solicitud',
+      primaryLabel: 'Enviar a revisión',
     },
   },
   {
@@ -191,7 +191,7 @@ const entries: Array<{ pattern: RegExp; help: ModuleHelp }> = [
       steps: [
         'Busca la solicitud con revisión lista y abre la autorización.',
         'Revisa cantidades aprobadas, tasa, fecha pactada del primer pago y modalidades de entrega y pago semanal.',
-        'Confirma la propuesta o decisión que permita tu perfil y revisa el estado resultante.',
+        'Confirma la fecha del primer pago y pulsa Autorizar crédito; para devolver, explica las correcciones necesarias.',
       ],
       important:
         'El monto solicitado es inmutable. Los siguientes vencimientos se calculan semanalmente a partir del primer pago pactado.',

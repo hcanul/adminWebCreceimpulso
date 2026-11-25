@@ -36,11 +36,12 @@ final class CreditAuthorization
         abort_unless($actor->hasRole('Super Admin') || $actor->can('credit.propose') || $actor->can('credit.authorize'), 403);
     }
 
-    public function lock(LoanApplication $visible, int $version): LoanApplication
+    public function lock(LoanApplication $visible, int $version, bool $requireReview = true): LoanApplication
     {
         Team::whereKey($visible->team_id)->lockForUpdate()->firstOrFail();
         $loan = LoanApplication::lockForUpdate()->findOrFail($visible->id);
-        abort_unless($loan->status === 'pendiente' && $loan->request_snapshot && $loan->review_status === 'ready_for_authorization', 409, 'La solicitud debe estar pendiente y haber completado Gestión.');
+        abort_unless($loan->status === 'pendiente' && $loan->request_snapshot, 409, 'La solicitud debe estar pendiente.');
+        abort_unless(! $requireReview || $loan->review_status === 'ready_for_authorization', 409, 'Completa la revisión de Gestión antes de autorizar.');
         abort_unless($loan->authorization_version === $version, 409, 'Las condiciones cambiaron. Recarga antes de continuar.');
 
         return $loan;

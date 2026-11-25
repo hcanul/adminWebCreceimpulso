@@ -468,6 +468,7 @@ final class CreditWorkflowTest extends TestCase
         $f = $this->reviewFixture();
         $url = '/api/credit/applications/'.$f['loan']['id'].'/review';
         $p = ['version' => 0, 'action' => 'save', 'checks' => $f['checks']];
+        $p['checks'][0]['status'] = 'observed';
         $p['checks'][0]['notes'] = ' ';
         $this->postJson($url, $p)->assertUnprocessable();
         $p['checks'] = $f['checks'];
@@ -493,6 +494,73 @@ final class CreditWorkflowTest extends TestCase
         $loan->update(['status' => 'aprobado']);
         $this->postJson('/api/credit/applications/'.$loan->id.'/review', ['version' => 0, 'action' => 'save', 'checks' => $f['checks']])->assertConflict();
         $this->assertDatabaseCount('credit_review_events', 0);
+    }
+
+    public function test_prepared_conditions_pass_directly_from_management_to_commercial(): void
+    {
+        $f = $this->reviewFixture();
+        $base = '/api/credit/applications/'.$f['loan']['id'];
+        Sanctum::actingAs($f['manager']);
+        $proposal = ['version' => 0, 'disbursement_method' => 'cash_branch', 'repayment_method' => 'bank_deposit', 'participants' => array_map(fn ($c, $a) => ['client_id' => $c->id, 'amount_proposed' => $a], $f['clients'], ['9000', '8000', '5000'])];
+        $this->postJson($base.'/proposal', $proposal)->assertOk()->assertJsonPath('status', 'awaiting_proposal');
+        $commercial = User::factory()->create(['branch_id' => $f['branch']->id, 'is_active' => true]);
+        $commercial->assignRole('Coordinación Comercial');
+        Sanctum::actingAs($commercial);
+        $decision = ['version' => 1, 'decision' => 'approve', 'first_due_on' => now('America/Cancun')->addDays(7)->toDateString()];
+        $this->postJson($base.'/authorization', $decision)->assertConflict();
+        Sanctum::actingAs($f['reviewer']);
+        $checks = array_map(fn ($check) => array_merge($check, ['notes' => '']), $f['checks']);
+        $review = ['version' => 0, 'action' => 'complete', 'checks' => $checks];
+        $this->postJson($base.'/review', $review)->assertOk();
+        $this->postJson($base.'/review', $review)->assertConflict();
+        Sanctum::actingAs($commercial);
+        $this->getJson($base.'/authorization')->assertOk()->assertJsonPath('status', 'pending_authorization')->assertJsonPath('version', 2)->assertJsonPath('proposal.review_version', 1)->assertJsonPath('proposal.proposed_by', $f['manager']->id);
+        $this->postJson($base.'/authorization', ['version' => 2, 'decision' => 'return'])->assertUnprocessable();
+        $this->postJson($base.'/authorization', $decision)->assertConflict();
+        $decision['version'] = 2;
+        $this->postJson($base.'/authorization', $decision)->assertOk()->assertJsonPath('status', 'authorized');
+        $this->assertDatabaseHas('loan_applications', ['id' => $f['loan']['id'], 'total_requested' => '23000.00', 'total_approved' => '22000.00', 'status' => 'aprobado']);
+        $this->assertDatabaseHas('credit_authorization_events', ['actor_id' => $f['reviewer']->id, 'action' => 'propose', 'version' => 2]);
+        $this->assertDatabaseCount('credit_authorization_events', 3);
+        $this->assertNull(LoanApplication::findOrFail($f['loan']['id'])->pacted_date);
+    }
+
+    public function test_creation_with_preparation_is_atomic_idempotent_and_manager_only(): void
+    {
+        $f = $this->fixture();
+        $input = $f['payload'];
+        $input['preparation'] = ['disbursement_method' => 'cash_branch', 'repayment_method' => 'bank_deposit', 'participants' => array_map(fn ($r) => ['client_id' => $r['client_id'], 'amount_proposed' => $r['amount_requested']], $input['participants'])];
+        $input['preparation']['participants'][0]['amount_proposed'] = '10000.01';
+        $this->postJson('/api/credit/applications', $input)->assertUnprocessable();
+        $this->assertDatabaseCount('loan_applications', 0);
+        $this->assertDatabaseCount('loan_participations', 0);
+        $input['preparation']['participants'][0]['amount_proposed'] = '9000';
+        $f['manager']->syncRoles(['Coordinador']);
+        $f['manager']->givePermissionTo('credit.create');
+        Sanctum::actingAs($f['manager']);
+        $this->postJson('/api/credit/applications', $input)->assertForbidden();
+        $this->assertDatabaseCount('loan_applications', 0);
+        $f['manager']->syncRoles(['Gerente']);
+        Sanctum::actingAs($f['manager']);
+        $loan = $this->postJson('/api/credit/applications', $input)->assertCreated()->json();
+        $this->postJson('/api/credit/applications', $input)->assertCreated();
+        $this->assertDatabaseCount('loan_applications', 1);
+        $this->assertDatabaseCount('credit_authorization_events', 1);
+        $this->getJson('/api/credit/applications/'.$loan['id'].'/authorization')->assertOk()->assertJsonPath('proposal.totals.principal', '22000.00')->assertJsonPath('status', 'awaiting_proposal');
+    }
+
+    public function test_automatic_handoff_rolls_back_review_when_a_member_is_no_longer_eligible(): void
+    {
+        $f = $this->reviewFixture();
+        $base = '/api/credit/applications/'.$f['loan']['id'];
+        Sanctum::actingAs($f['manager']);
+        $this->postJson($base.'/proposal', ['version' => 0, 'disbursement_method' => 'cash_branch', 'repayment_method' => 'bank_deposit', 'participants' => array_map(fn ($r) => ['client_id' => $r['client_id'], 'amount_proposed' => $r['amount_requested']], $f['payload']['participants'])])->assertOk();
+        $f['clients'][0]->update(['status' => 'moroso']);
+        Sanctum::actingAs($f['reviewer']);
+        $this->postJson($base.'/review', ['version' => 0, 'action' => 'complete', 'checks' => $f['checks']])->assertUnprocessable();
+        $this->assertDatabaseHas('loan_applications', ['id' => $f['loan']['id'], 'review_status' => 'pending', 'review_version' => 0, 'authorization_status' => 'awaiting_proposal', 'authorization_version' => 1]);
+        $this->assertDatabaseCount('credit_review_events', 0);
+        $this->assertDatabaseCount('credit_authorization_events', 1);
     }
 
     private function authorizationFixture(): array
@@ -577,7 +645,7 @@ final class CreditWorkflowTest extends TestCase
         $this->postJson($base.'/authorization', $decision)->assertForbidden();
     }
 
-    public function test_proposal_requires_complete_review_all_members_valid_amounts_and_both_methods(): void
+    public function test_prepared_conditions_require_all_members_valid_amounts_and_both_methods(): void
     {
         $f = $this->authorizationFixture();
         $base = '/api/credit/applications/'.$f['loan']['id'];
@@ -599,8 +667,8 @@ final class CreditWorkflowTest extends TestCase
         $p['total_approved'] = '1';
         $this->postJson($base.'/proposal', $p)->assertUnprocessable();
         LoanApplication::findOrFail($f['loan']['id'])->forceFill(['review_status' => 'in_review'])->save();
-        $this->postJson($base.'/proposal', $f['proposal'])->assertConflict();
-        $this->assertDatabaseCount('credit_authorization_events', 0);
+        $this->postJson($base.'/proposal', $f['proposal'])->assertOk()->assertJsonPath('status', 'awaiting_proposal');
+        $this->assertDatabaseCount('credit_authorization_events', 1);
     }
 
     public function test_authorization_revalidates_mora_files_and_participations_atomically(): void

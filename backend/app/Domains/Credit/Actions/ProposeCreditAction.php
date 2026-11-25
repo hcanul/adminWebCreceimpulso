@@ -20,15 +20,19 @@ final class ProposeCreditAction
 
         return DB::transaction(function () use ($actor, $visible, $data) {
             $service = app(CreditAuthorization::class);
-            $loan = $service->lock($visible, $data->version);
+            $loan = $service->lock($visible, $data->version, requireReview: false);
             $before = $loan->authorization_status;
             abort_unless(in_array($before, [AuthorizationStatus::AwaitingProposal->value, AuthorizationStatus::Returned->value]), 409, 'La propuesta enviada está cerrada; Coordinación debe devolverla antes de cambiarla.');
-            $service->validateEligibility($loan);
+            abort_unless($before !== AuthorizationStatus::Returned->value || trim($data->notes) !== '', 422, 'Describe las correcciones realizadas.');
+            $reviewReady = $loan->review_status === 'ready_for_authorization';
+            if ($reviewReady) {
+                $service->validateEligibility($loan);
+            }
             $proposal = $service->calculate($loan, $data);
             $proposal['proposed_by'] = $actor->id;
             $proposal['proposed_by_name'] = $actor->name;
             $proposal['proposed_at'] = now()->toISOString();
-            $loan->forceFill(['authorization_proposal' => $proposal, 'authorization_status' => AuthorizationStatus::Pending->value, 'authorization_version' => $loan->authorization_version + 1])->save();
+            $loan->forceFill(['authorization_proposal' => $proposal, 'authorization_status' => $reviewReady ? AuthorizationStatus::Pending->value : AuthorizationStatus::AwaitingProposal->value, 'authorization_version' => $loan->authorization_version + 1])->save();
             $service->record($actor, $loan, 'propose', $before, $data->notes);
 
             return $loan;
