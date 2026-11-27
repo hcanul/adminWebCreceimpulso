@@ -47,12 +47,13 @@ final class CreditAuthorization
         return $loan;
     }
 
-    public function validateEligibility(LoanApplication $loan): void
+    public function validateEligibility(LoanApplication $loan, bool $requireReview = true): void
     {
+        $requireReview = $requireReview && ($loan->approved_snapshot['workflow'] ?? $loan->request_snapshot['workflow'] ?? null) !== 'direct';
         $ids = array_column($loan->request_snapshot['members'], 'client_id');
         Client::withTrashed()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
         $team = Team::with(['branch', 'promoter', 'memberships.client'])->findOrFail($loan->team_id);
-        $context = app(CreditEligibility::class)->forTeam($team, $loan->id);
+        $context = app(CreditEligibility::class)->forTeam($team, $loan->id, requireReviewedFiles: $requireReview);
         $issues = $context['issues'];
         $members = $context['members']->keyBy('client_id');
         foreach ($loan->request_snapshot['members'] as $original) {
@@ -63,6 +64,16 @@ final class CreditAuthorization
         }
         if ($team->promoter_id !== $loan->promoter_id) {
             $issues[] = 'El promotor del grupo cambió desde la solicitud.';
+        }
+        foreach (['presidenta', 'tesorera'] as $role) {
+            if (count(array_filter($loan->request_snapshot['members'], fn ($row) => $row['role_in_group'] === $role)) !== 1) {
+                $issues[] = 'Se requiere exactamente una '.$role.'.';
+            }
+        }
+        if (count($loan->request_snapshot['members']) < 3) $issues[] = 'Se requieren al menos tres integrantes.';
+        if (! $requireReview) {
+            if ($issues) throw ValidationException::withMessages(['eligibility' => array_values(array_unique($issues))]);
+            return;
         }
         $files = app(CreditReview::class)->files($loan, true);
         $event = DB::table('credit_review_events')->where('loan_application_id', $loan->id)->where('version', $loan->review_version)->where('action', 'complete')->first();
@@ -112,6 +123,26 @@ final class CreditAuthorization
         }
 
         return ['review_version' => $loan->review_version, 'weeks' => 16, 'guarantee_percent' => 10, 'rate' => $original['rate'], 'members' => $rows, 'totals' => array_map(fn ($value) => CreditCalculator::money($value), $totals), 'disbursement_method' => $data->disbursementMethod, 'repayment_method' => $data->repaymentMethod];
+    }
+
+    public function calculateAuthorization(LoanApplication $loan, array $conditions): array
+    {
+        $rate = \App\Models\Rate::where('is_active', true)->where('calculation_method', 'weekly_per_thousand')->lockForUpdate()->findOrFail($conditions['rate_id']);
+        abort_unless(hash_equals($rate->terms_hash, $conditions['rate_signature']), 409, 'La tasa cambió. Vuelve a seleccionarla y revisa el cálculo.');
+        $original = $loan->request_snapshot;
+        $original['rate'] = ['id' => $rate->id, 'name' => $rate->name, 'factor' => $rate->rate_factor,
+            'method' => $rate->calculation_method, 'min_amount' => $rate->min_amount, 'max_amount' => $rate->max_amount];
+        $original['member_limit'] = '99999999.99';
+        $calculation = clone $loan;
+        $calculation->request_snapshot = $original;
+        $terms = $this->calculate($calculation, new ProposeCreditData(
+            $loan->authorization_version,
+            array_map(fn ($row) => ['client_id' => $row['client_id'], 'amount_proposed' => $row['amount_approved']], $conditions['participants']),
+            $conditions['disbursement_method'], $conditions['repayment_method'], ''
+        ));
+        $terms['workflow'] = 'direct';
+
+        return $terms;
     }
 
     public function record(User $actor, LoanApplication $loan, string $action, string $before, string $notes): void

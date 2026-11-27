@@ -35,7 +35,7 @@ final class CollectCreditAction
                     return $loan;
                 }
                 abort_unless($loan->status === 'entregado' && DB::table('credit_disbursements')->where('loan_application_id', $loan->id)->exists(), 409, 'Solo se cobran créditos entregados con saldo pendiente.');
-                if ($loan->repayment_method !== $v['method']) {
+                if (($loan->repayment_method === 'bank_transfer' ? 'bank_deposit' : $loan->repayment_method) !== $v['method']) {
                     $this->invalid('method', 'Usa la modalidad de pago autorizada para este crédito.');
                 }
                 $bank = $v['method'] === 'bank_deposit';

@@ -201,9 +201,7 @@ const operations = computed(() => [
   ...(auth.can('credit.view')
     ? [{ label: 'Solicitudes de crédito', icon: 'assignment', to: '/solicitudes-credito' }]
     : []),
-  ...(auth.can('credit.review')
-    ? [{ label: 'Gestión de solicitudes', icon: 'fact_check', to: '/gestion' }]
-    : []),
+
   ...(auth.can('credit.authorize') || auth.can('credit.propose')
     ? [{ label: 'Autorización comercial', icon: 'verified', to: '/autorizaciones' }]
     : []),

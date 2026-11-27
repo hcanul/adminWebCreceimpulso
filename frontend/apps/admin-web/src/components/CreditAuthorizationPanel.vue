@@ -1,227 +1,165 @@
 <template>
   <q-card flat bordered class="intake-card q-mt-lg">
-    <q-card-section
-      ><p class="eyebrow">GERENCIA Y COORDINACIÓN COMERCIAL</p>
-      <h2>Autorización del crédito</h2>
-      <q-badge v-if="data" color="primary">{{
-        data.proposal &&
-        loan.review_status !== 'ready_for_authorization' &&
-        loan.status === 'pendiente'
-          ? 'Condiciones guardadas · pendiente de Gestión'
-          : authorizationLabels[data.status]
-      }}</q-badge>
-      <p class="q-mt-md">
-        Prepara las condiciones antes de terminar Gestión. Al completar la revisión, pasarán
-        directamente a Coordinación Comercial. La entrega se registra por separado.
+    <q-card-section>
+      <p class="eyebrow">PASO 3 · COORDINACIÓN COMERCIAL</p>
+      <h2>{{ loan.status === 'pendiente' ? 'Autorizar crédito' : 'Condiciones autorizadas' }}</h2>
+      <p>
+        Confirma los montos otorgados y las condiciones definitivas. Los montos solicitados se
+        conservan.
       </p>
-      <q-banner v-if="error" class="bg-red-1 text-negative"
+      <q-banner v-if="error" class="bg-red-1 text-negative" style="white-space: pre-line"
         >{{ error
         }}<q-btn flat no-caps label="Recargar condiciones" :disable="busy" @click="reload"
       /></q-banner>
       <q-linear-progress v-if="loading" indeterminate />
-      <q-banner v-if="loan.review_status !== 'ready_for_authorization'" class="bg-orange-1"
-        >Puedes guardar las condiciones desde ahora. Gestión debe completar las comprobaciones antes
-        de autorizar.</q-banner
+      <q-banner v-if="data?.status === 'returned'" class="bg-orange-1"
+        >Solicitud con correcciones. Revisa el historial antes de autorizar.</q-banner
       >
     </q-card-section>
-    <template v-if="data">
-      <q-card-section
-        ><q-banner v-if="data?.late_fee_policy" class="bg-orange-1 q-mb-md"
-          >Política de mora: 10% del saldo pendiente de cada cuota por semana de atraso iniciada
-          (días 1, 8, 15…), sin capitalización. Los pagos cubren cuotas exigibles, mora y después
-          adelantos. Solo se retiene la garantía al entregar.</q-banner
-        ></q-card-section
-      >
-      <q-card-section v-if="editingConditions">
-        <h2>Condiciones del crédito</h2>
-        <q-banner
-          v-if="data.proposal && loan.review_status !== 'ready_for_authorization'"
-          class="bg-green-1 q-mb-md"
-        >
-          Condiciones guardadas. Siguiente responsable: Gestión; después pasarán automáticamente a
-          Coordinación.
-        </q-banner>
-        <p>
-          Cada importe debe ser mayor a cero y no superar lo solicitado ni los límites pactados. Los
-          integrantes, la tasa y las 16 semanas se conservan.
-        </p>
-        <div v-for="(member, index) in members" :key="member.client_id" class="proposal-row">
+    <template v-if="data && !loading">
+      <q-card-section v-if="canDecide">
+        <div v-for="(member, index) in members" :key="member.client_id" class="authorization-row">
           <div>
             <strong>{{ member.name }}</strong>
-            <p class="text-caption">
+            <p>
               {{ member.folio }} · {{ member.role_in_group }}<br />Solicitado:
               {{ money(member.amount_requested) }}
             </p>
           </div>
-
           <q-input
             v-model="amounts[index]"
             outlined
+            stack-label
             inputmode="decimal"
-            :label="`Importe propuesto para ${member.name} (MXN)`"
+            :label="`Monto otorgado a ${member.name} (MXN)`"
             :readonly="busy"
             maxlength="11"
           />
         </div>
-        <div class="method-fields q-my-lg">
+        <div class="authorization-fields q-my-lg">
           <FilterSelect
+            v-model="rateId"
+            :options="rates"
+            :fetch-options="searchRates"
+            option-label="name"
+            option-value="id"
             emit-value
             map-options
-            v-model="disbursement"
             outlined
-            label="Forma de entregar el crédito"
-            :options="methodOptions"
+            label="Tasa de interés común *"
+            :disable="busy"
+          />
+          <q-input
+            v-model="firstDueOn"
+            type="date"
+            stack-label
+            outlined
+            label="Fecha del primer pago *"
+            :readonly="busy"
+            hint="Los otros 15 pagos vencerán cada siete días."
+          />
+          <FilterSelect
+            v-model="repayment"
+            :options="repaymentOptions"
+            emit-value
+            map-options
+            outlined
+            label="Forma de pago semanal *"
             :disable="busy"
           />
           <FilterSelect
+            v-model="disbursement"
+            :options="disbursementOptions"
             emit-value
             map-options
-            v-model="repayment"
             outlined
-            label="Forma de realizar los pagos semanales"
-            :options="methodOptions"
+            label="Forma de desembolso *"
             :disable="busy"
           />
         </div>
-        <p class="text-caption text-grey-7">
-          En los pagos por depósito, Caja registrará el folio bancario y lo separará del efectivo en
-          el corte.
-        </p>
         <q-banner v-if="preview.error" class="bg-orange-1 q-mb-md">{{ preview.error }}</q-banner>
-        <CreditTermsSummary v-if="preview.terms" :terms="preview.terms" />
-      </q-card-section>
-      <q-card-section v-else-if="data.proposal">
-        <h2>
-          {{
-            data.status === 'authorized'
-              ? 'Condiciones autorizadas'
-              : loan.review_status === 'ready_for_authorization'
-                ? 'Condiciones enviadas por el gerente'
-                : 'Condiciones preparadas'
-          }}
-        </h2>
-        <p>Propuesta de {{ data.proposal.proposed_by_name }}. Versión {{ data.version }}.</p>
-        <q-btn
-          v-if="canPropose"
-          flat
-          no-caps
-          icon="edit"
-          label="Editar condiciones"
-          class="q-mb-md"
-          @click="editing = true"
-        />
-        <CreditTermsSummary
-          :terms="loan.approved_snapshot ?? data.proposal"
-          :approved="data.status === 'authorized'"
-        />
-      </q-card-section>
-      <q-card-section v-else-if="loan.review_status === 'ready_for_authorization'"
-        ><q-banner class="bg-grey-2"
-          >El gerente debe enviar los importes propuestos y ambas formas de operación antes de
-          autorizar.</q-banner
-        ></q-card-section
-      >
-      <q-card-section v-if="canDecide">
-        <q-input
-          v-model="firstDueOn"
-          type="date"
-          stack-label
-          outlined
-          label="Fecha pactada del primer pago"
-          :readonly="busy"
-          hint="Obligatoria para autorizar. Los otros 15 pagos vencerán cada siete días."
-        />
+        <CreditTermsSummary v-if="preview.terms" :terms="preview.terms" approved />
         <q-banner v-if="firstDueOn && scheduleError" class="bg-orange-1 q-mt-md">{{
           scheduleError
         }}</q-banner>
-        <div v-if="agreedCalendar.length" class="q-mt-md scroll">
-          <table class="agreed-calendar" aria-label="Calendario pactado">
-            <thead>
-              <tr>
-                <th>Semana</th>
-                <th>Fecha de pago</th>
-                <th>Cuota grupal</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in agreedCalendar" :key="row.number">
-                <td>{{ row.number }}</td>
-                <td>{{ row.due_on }}</td>
-                <td>{{ money(row.amount_due) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="text-caption">
-          La entrega deberá realizarse antes del primer pago. No se desplazan automáticamente fines
-          de semana ni días festivos.
-        </p>
-      </q-card-section>
-      <q-card-section v-if="editingConditions || canDecide">
+        <q-expansion-item
+          v-if="calendar.length"
+          label="Consultar calendario de 16 pagos"
+          icon="event"
+          class="q-mt-md"
+        >
+          <div class="scroll">
+            <table class="agreed-calendar">
+              <thead>
+                <tr>
+                  <th>Semana</th>
+                  <th>Vencimiento</th>
+                  <th>Cuota grupal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in calendar" :key="row.number">
+                  <td>{{ row.number }}</td>
+                  <td>{{ row.due_on }}</td>
+                  <td>{{ money(row.amount_due) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </q-expansion-item>
         <q-input
           v-model="notes"
           outlined
           autogrow
-          label="Observaciones de la propuesta o decisión"
+          label="Observaciones"
+          hint="Obligatorias solo al solicitar correcciones."
           maxlength="4000"
           :readonly="busy"
-          hint="Opcionales al guardar o autorizar. Obligatorias para solicitar correcciones."
+          class="q-mt-lg"
         />
-        <div class="authorization-actions q-mt-lg">
+        <div class="row q-gutter-md q-mt-lg">
           <q-btn
-            v-if="editingConditions"
             color="primary"
             no-caps
-            :label="
-              loan.review_status === 'ready_for_authorization'
-                ? 'Enviar a Coordinación'
-                : 'Guardar condiciones'
-            "
+            label="Autorizar crédito"
             :loading="busy"
-            :disable="!preview.terms || !disbursement || !repayment"
-            @click="submit('propose')"
+            :disable="!preview.terms || !!scheduleError"
+            @click="submit('approve')"
           />
-          <template v-if="canDecide"
-            ><q-btn
-              outline
-              color="negative"
-              no-caps
-              label="Solicitar correcciones"
-              :disable="busy"
-              @click="submit('return')" /><q-btn
-              color="primary"
-              no-caps
-              label="Autorizar crédito"
-              :loading="busy"
-              :disable="!firstDueOn || !!scheduleError"
-              @click="submit('approve')"
-          /></template>
+          <q-btn
+            outline
+            color="negative"
+            no-caps
+            label="Solicitar correcciones"
+            :disable="busy"
+            @click="submit('return')"
+          />
         </div>
-        <p v-if="dirty" class="text-caption text-primary">Hay cambios sin enviar.</p>
       </q-card-section>
-      <q-card-section v-if="data.status === 'authorized' && loan.status === 'aprobado'"
-        ><q-banner class="bg-green-1" rounded
-          >Crédito autorizado. La entrega efectiva y el calendario de vencimientos se registrarán en
-          el módulo de desembolso. No se ha registrado salida de dinero.</q-banner
+      <q-card-section v-else-if="loan.approved_snapshot">
+        <CreditTermsSummary :terms="loan.approved_snapshot" approved />
+        <q-banner class="bg-green-1 q-mt-md">{{
+          loan.status === 'aprobado'
+            ? 'Condiciones autorizadas. Continúa con las firmas y la entrega en sucursal.'
+            : 'Condiciones autorizadas conservadas para consulta.'
+        }}</q-banner>
+      </q-card-section>
+      <q-card-section v-else
+        ><q-banner class="bg-grey-2"
+          >Pendiente de Coordinación Comercial. La tasa y los montos otorgados se definirán al
+          autorizar.</q-banner
         ></q-card-section
       >
-      <q-card-section
-        ><h2>Historial de autorización</h2>
-        <p v-if="!data.history.length" class="text-grey-7">
-          Todavía no hay propuestas ni decisiones.
-        </p>
-        <q-list separator
-          ><q-expansion-item
-            v-for="event in data.history"
-            :key="event.id"
-            icon="history"
-            :label="`${eventLabels[event.action]} · ${event.actor_name}`"
-            :caption="`Versión ${event.version} · ${event.created_at}`"
-            ><q-card-section
-              ><p class="notes">{{ event.notes }}</p>
-              <CreditTermsSummary :terms="event.proposal" /></q-card-section></q-expansion-item
-        ></q-list>
-      </q-card-section>
+      <q-expansion-item label="Historial de autorización" icon="history">
+        <q-card-section
+          ><p v-if="!data.history.length">Todavía no hay decisiones registradas.</p>
+          <div v-for="event in data.history" :key="event.id" class="q-mb-lg">
+            <strong>{{ eventLabels[event.action] }} · {{ event.actor_name }}</strong>
+            <p>{{ event.created_at }} · {{ event.notes }}</p>
+            <CreditTermsSummary v-if="event.proposal" :terms="event.proposal" />
+          </div>
+        </q-card-section>
+      </q-expansion-item>
     </template>
   </q-card>
 </template>
@@ -229,144 +167,164 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { onBeforeRouteLeave } from 'vue-router';
-import type { CreditApplication } from '../services/credit.service';
-import {
-  authorizationLabels,
-  type AuthorizationTerms,
-  type PaymentMethod,
-} from '../services/authorization.service';
+import { creditService, type CreditApplication, type CreditRate } from '../services/credit.service';
+import type { AuthorizationTerms, PaymentMethod } from '../services/authorization.service';
 import { useAuthorizationStore } from '../stores/authorization.store';
 import { useAuthStore } from '../stores/auth.store';
 import { administrationError } from '../services/administration.service';
 import { alerts } from '../services/alerts.service';
 import { cents, estimateCredit, money, sumEstimates } from '../domain/credit-calculation';
+import { groupSchedule, previewSchedule } from '../domain/credit-schedule';
 import FilterSelect from './FilterSelect.vue';
 import CreditTermsSummary from './CreditTermsSummary.vue';
-import { previewSchedule, groupSchedule } from '../domain/credit-schedule';
-const props = defineProps<{ loan: CreditApplication }>();
-const emit = defineEmits<{ updated: [] }>();
-const store = useAuthorizationStore(),
-  auth = useAuthStore();
-const { data } = storeToRefs(store);
-const firstDueOn = ref('');
-const editing = ref(false);
-const scheduleError = computed(() => {
-  if (!firstDueOn.value || !data.value?.proposal)
-    return 'Selecciona la fecha pactada del primer pago.';
-  try {
-    const today = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Cancun',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date());
-    if (firstDueOn.value <= today) return 'El primer pago debe ser posterior a hoy.';
-    previewSchedule(data.value.proposal, firstDueOn.value);
-    return '';
-  } catch {
-    return 'Revisa la fecha del primer pago.';
-  }
-});
-const agreedCalendar = computed(() =>
-  !scheduleError.value && data.value?.proposal
-    ? groupSchedule(previewSchedule(data.value.proposal, firstDueOn.value))
-    : [],
-);
-const amounts = ref<string[]>([]),
-  notes = ref(''),
+const props = defineProps<{ loan: CreditApplication }>(),
+  emit = defineEmits<{ updated: [] }>();
+const auth = useAuthStore(),
+  store = useAuthorizationStore(),
+  { data } = storeToRefs(store);
+const rates = ref<CreditRate[]>([]),
+  rateId = ref(''),
+  amounts = ref<string[]>([]);
+const firstDueOn = ref(''),
+  repayment = ref<PaymentMethod | null>(null),
   disbursement = ref<PaymentMethod | null>(null),
-  repayment = ref<PaymentMethod | null>(null);
+  notes = ref('');
 const loading = ref(true),
   busy = ref(false),
   error = ref(''),
   baseline = ref('');
 const members = computed(() => props.loan.request_snapshot?.members ?? []);
-const available = computed(
-  () => !loading.value && !error.value && props.loan.status === 'pendiente',
-);
-const canPropose = computed(
-  () =>
-    available.value &&
-    auth.can('credit.propose') &&
-    ['awaiting_proposal', 'returned'].includes(data.value?.status ?? ''),
-);
-const editingConditions = computed(
-  () => canPropose.value && (editing.value || !data.value?.proposal),
-);
+const rate = computed(() => rates.value.find((row) => row.id === rateId.value));
 const canDecide = computed(
   () =>
-    available.value &&
-    auth.can('credit.authorize') &&
-    props.loan.review_status === 'ready_for_authorization' &&
-    data.value?.status === 'pending_authorization',
+    !loading.value &&
+    !error.value &&
+    props.loan.status === 'pendiente' &&
+    auth.can('credit.authorize'),
 );
-const methodOptions = [
-  { value: 'cash_branch', label: 'En sucursal' },
+const repaymentOptions = [
+  { value: 'cash_branch', label: 'Efectivo en sucursal' },
   { value: 'bank_deposit', label: 'Depósito bancario' },
+  { value: 'bank_transfer', label: 'Transferencia bancaria' },
+];
+const disbursementOptions = [
+  { value: 'cash_branch', label: 'Efectivo en sucursal' },
+  { value: 'bank_transfer', label: 'Transferencia bancaria' },
+  ...(props.loan.disbursement_method === 'bank_deposit'
+    ? [{ value: 'bank_deposit', label: 'Depósito bancario (anterior)' }]
+    : []),
 ];
 const eventLabels = {
-  propose: 'Propuesta enviada',
+  propose: 'Condiciones anteriores',
   approve: 'Crédito autorizado',
-  return: 'Condiciones devueltas',
+  return: 'Correcciones solicitadas',
 };
 const state = () =>
   JSON.stringify([
+    rateId.value,
     amounts.value,
-    disbursement.value,
-    repayment.value,
-    notes.value,
     firstDueOn.value,
+    repayment.value,
+    disbursement.value,
+    notes.value,
   ]);
 const dirty = computed(() => !!baseline.value && state() !== baseline.value);
 const preview = computed<{ terms: AuthorizationTerms | null; error: string }>(() => {
-  const snapshot = props.loan.request_snapshot;
-  if (!snapshot) return { terms: null, error: '' };
+  if (!rate.value || !repayment.value || !disbursement.value)
+    return { terms: null, error: 'Selecciona la tasa y las formas de pago y desembolso.' };
   try {
     const rows = members.value.map((member, index) => {
-      const amount = amounts.value[index] ?? '';
+      const amount = amounts.value[index] || '';
+      const value = cents(amount);
+      if (value <= 0n || value > cents(member.amount_requested))
+        throw Error(
+          `${member.name}: el monto otorgado debe ser mayor a cero y no superar lo solicitado.`,
+        );
       if (
-        cents(amount) > cents(member.amount_requested) ||
-        cents(amount) > cents(snapshot.member_limit)
+        (rate.value!.min_amount && value < cents(rate.value!.min_amount)) ||
+        (rate.value!.max_amount && value > cents(rate.value!.max_amount))
       )
-        throw Error(`${member.name}: el importe supera lo solicitado o el límite del gerente.`);
+        throw Error(`${member.name}: el monto no cumple los límites de la tasa seleccionada.`);
       return {
         ...member,
-        amount_proposed: amount,
-        estimate: estimateCredit(amount, snapshot.rate.factor),
+        amount_approved: amount,
+        estimate: estimateCredit(amount, rate.value!.rate_factor),
       };
     });
     return {
       terms: {
+        workflow: 'direct',
         review_version: 0,
         weeks: 16,
         guarantee_percent: 10,
-        rate: snapshot.rate,
+        rate: { id: rate.value.id, name: rate.value.name, factor: rate.value.rate_factor },
         members: rows,
         totals: sumEstimates(rows.map((row) => row.estimate)),
-        disbursement_method: disbursement.value!,
-        repayment_method: repayment.value!,
+        disbursement_method: disbursement.value,
+        repayment_method: repayment.value,
         proposed_by_name: '',
         proposed_at: '',
       },
       error: '',
     };
   } catch (e) {
-    return { terms: null, error: e instanceof Error ? e.message : 'Revisa los importes.' };
+    return { terms: null, error: e instanceof Error ? e.message : 'Revisa los montos.' };
   }
 });
+const scheduleError = computed(() => {
+  if (!firstDueOn.value) return 'Selecciona la fecha del primer pago.';
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Cancun',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  if (firstDueOn.value <= today) return 'El primer pago debe ser posterior a hoy.';
+  try {
+    if (preview.value.terms) previewSchedule(preview.value.terms, firstDueOn.value);
+    return '';
+  } catch {
+    return 'Revisa la fecha del primer pago.';
+  }
+});
+const calendar = computed(() =>
+  preview.value.terms && !scheduleError.value
+    ? groupSchedule(previewSchedule(preview.value.terms, firstDueOn.value))
+    : [],
+);
 let disposed = false;
+async function searchRates(term: string) {
+  const result = await creditService.rates(term);
+  const known = new Map(rates.value.map((row) => [row.id, row]));
+  result.data.forEach((row) => known.set(row.id, row));
+  rates.value = [...known.values()];
+  return result.data;
+}
 async function load() {
   loading.value = true;
   try {
     if (!(await store.load(props.loan.id)) || disposed) return;
-    amounts.value = members.value.map(
-      (member) =>
-        data.value?.proposal?.members.find((row) => row.client_id === member.client_id)
-          ?.amount_proposed ?? member.amount_requested,
-    );
-    disbursement.value = data.value?.proposal?.disbursement_method ?? null;
-    repayment.value = data.value?.proposal?.repayment_method ?? null;
-    editing.value = false;
+    if (props.loan.status === 'pendiente' && auth.can('credit.authorize')) {
+      await searchRates('');
+      const previous = data.value?.proposal;
+      amounts.value = members.value.map(
+        (member) =>
+          previous?.members.find((row) => row.client_id === member.client_id)?.amount_proposed ??
+          member.amount_requested,
+      );
+      const previousRate = previous?.rate ?? props.loan.request_snapshot?.rate;
+      if (previousRate && !rates.value.some((row) => row.id === previousRate.id))
+        await searchRates(previousRate.name);
+      rateId.value =
+        previousRate && rates.value.some((row) => row.id === previousRate.id)
+          ? previousRate.id
+          : '';
+      repayment.value = previous?.repayment_method ?? null;
+      disbursement.value =
+        previous?.disbursement_method === 'bank_deposit'
+          ? 'bank_transfer'
+          : (previous?.disbursement_method ?? null);
+    }
     notes.value = '';
     firstDueOn.value = props.loan.approved_snapshot?.first_due_on ?? '';
     baseline.value = state();
@@ -380,59 +338,53 @@ async function load() {
 async function reload() {
   if (
     dirty.value &&
-    !(await alerts.confirm('Recargar condiciones', 'Se descartarán los cambios sin enviar.'))
+    !(await alerts.confirm('Recargar condiciones', 'Se descartarán los cambios sin guardar.'))
   )
     return;
   await load();
-  emit('updated');
 }
-async function submit(action: 'propose' | 'approve' | 'return') {
-  if (busy.value || !data.value) return;
-  if (
-    (action === 'return' || (action === 'propose' && data.value.status === 'returned')) &&
-    !notes.value.trim()
-  )
-    return alerts.error('Describe las correcciones solicitadas o realizadas.');
-  if (action === 'propose' && (!preview.value.terms || !disbursement.value || !repayment.value))
-    return alerts.error('Revisa los importes y selecciona ambas formas de operación.');
-  if (action === 'approve' && scheduleError.value) return alerts.error(scheduleError.value);
+async function submit(decision: 'approve' | 'return') {
+  if (busy.value || !canDecide.value || !data.value) return;
+  if (decision === 'return' && !notes.value.trim())
+    return alerts.error('Describe qué debe corregirse.');
+  if (decision === 'approve' && (!preview.value.terms || scheduleError.value))
+    return alerts.error(preview.value.error || scheduleError.value);
   busy.value = true;
   try {
-    const text =
-      action === 'approve'
-        ? `Se autorizará un capital de ${money(data.value.proposal?.totals.principal)} con primer pago el ${firstDueOn.value} y 16 cuotas semanales. La entrega del dinero quedará pendiente.`
-        : action === 'return'
-          ? 'El gerente podrá corregir la propuesta. Los importes solicitados y la revisión de Gestión se conservarán.'
-          : props.loan.review_status === 'ready_for_authorization'
-            ? 'Las condiciones pasarán a Coordinación Comercial.'
-            : 'Las condiciones quedarán guardadas. Pasarán a Coordinación cuando Gestión termine su revisión.';
     if (
       !(await alerts.confirm(
-        eventLabels[action],
-        text,
-        action === 'approve' ? 'Sí, autorizar' : 'Sí, continuar',
+        decision === 'approve' ? 'Autorizar crédito' : 'Solicitar correcciones',
+        decision === 'approve'
+          ? `Se autorizarán ${money(preview.value.terms?.totals.principal)} con primer pago el ${firstDueOn.value}. El desembolso quedará pendiente.`
+          : 'Se conservará la solicitud y se registrarán tus observaciones.',
+        decision === 'approve' ? 'Sí, autorizar' : 'Solicitar correcciones',
       ))
     )
       return;
-    if (action === 'propose')
-      await store.propose(props.loan.id, {
-        version: data.value.version,
-        notes: notes.value.trim(),
-        disbursement_method: disbursement.value!,
-        repayment_method: repayment.value!,
-        participants: members.value.map((member, index) => ({
-          client_id: member.client_id,
-          amount_proposed: amounts.value[index]!,
-        })),
-      });
-    else await store.decide(props.loan.id, action, notes.value.trim(), firstDueOn.value);
+    await store.decide(
+      props.loan.id,
+      decision,
+      notes.value.trim(),
+      firstDueOn.value,
+      decision === 'approve'
+        ? {
+            rate_id: rate.value!.id,
+            rate_signature: rate.value!.terms_hash,
+            repayment_method: repayment.value!,
+            disbursement_method: disbursement.value!,
+            participants: members.value.map((member, index) => ({
+              client_id: member.client_id,
+              amount_approved: amounts.value[index]!,
+            })),
+          }
+        : undefined,
+    );
     baseline.value = state();
-    await load();
     emit('updated');
     await alerts.success(
-      action === 'propose' && props.loan.review_status !== 'ready_for_authorization'
-        ? 'Condiciones guardadas'
-        : eventLabels[action],
+      decision === 'approve'
+        ? 'Crédito autorizado; continúa con firmas y desembolso'
+        : 'Correcciones registradas',
     );
   } catch (e) {
     await alerts.error(administrationError(e));
@@ -440,7 +392,7 @@ async function submit(action: 'propose' | 'approve' | 'return') {
     busy.value = false;
   }
 }
-const beforeUnload = (event: BeforeUnloadEvent) => {
+const unload = (event: BeforeUnloadEvent) => {
   if (dirty.value || busy.value) {
     event.preventDefault();
     event.returnValue = '';
@@ -450,24 +402,31 @@ onBeforeRouteLeave(
   async () =>
     !busy.value &&
     (!dirty.value ||
-      (await alerts.confirm(
-        'Cambios sin enviar',
-        '¿Deseas salir y descartar los cambios?',
-        'Salir',
-      ))),
+      (await alerts.confirm('Condiciones sin guardar', '¿Deseas salir y descartar los cambios?'))),
 );
 onMounted(() => {
   store.clear();
-  window.addEventListener('beforeunload', beforeUnload);
+  window.addEventListener('beforeunload', unload);
   void load();
 });
 onUnmounted(() => {
   disposed = true;
   store.clear();
-  window.removeEventListener('beforeunload', beforeUnload);
+  window.removeEventListener('beforeunload', unload);
 });
 </script>
 <style scoped>
+.authorization-row,
+.authorization-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+.authorization-row {
+  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+}
 .agreed-calendar {
   width: 100%;
   border-collapse: collapse;
@@ -478,35 +437,9 @@ onUnmounted(() => {
   padding: 10px;
   border-bottom: 1px solid #eee;
 }
-.agreed-calendar th {
-  color: #811335;
-  background: #faf5f7;
-}
-.proposal-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-.method-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.authorization-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.notes {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 @media (max-width: 750px) {
-  .proposal-row,
-  .method-fields {
+  .authorization-row,
+  .authorization-fields {
     grid-template-columns: 1fr;
   }
 }

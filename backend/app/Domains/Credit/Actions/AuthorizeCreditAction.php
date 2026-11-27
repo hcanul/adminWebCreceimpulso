@@ -21,13 +21,22 @@ final class AuthorizeCreditAction
 
         return DB::transaction(function () use ($actor, $visible, $data) {
             $service = app(CreditAuthorization::class);
-            $loan = $service->lock($visible, $data->version);
+            $loan = $service->lock($visible, $data->version, requireReview: $data->conditions === null && $data->decision !== 'return');
             $before = $loan->authorization_status;
-            abort_unless($before === AuthorizationStatus::Pending->value && $loan->authorization_proposal, 409, 'Se requiere una propuesta enviada por el gerente.');
+            $direct = $data->conditions !== null;
+            abort_unless($direct || ($data->decision === 'return' && $loan->request_snapshot) || ($before === AuthorizationStatus::Pending->value && $loan->authorization_proposal), 409, 'Captura los montos otorgados, la tasa y las formas de operación.');
             $proposal = $loan->authorization_proposal;
+            if ($direct) {
+                $service->validateEligibility($loan, requireReview: false);
+                $proposal = $service->calculateAuthorization($loan, $data->conditions);
+                $proposal['proposed_by'] = $actor->id;
+                $proposal['proposed_by_name'] = $actor->name;
+                $proposal['proposed_at'] = now()->toISOString();
+                $loan->authorization_proposal = $proposal;
+            }
             if ($data->decision === 'approve') {
-                abort_unless($proposal['review_version'] === $loan->review_version, 409, 'La revisión de Gestión cambió.');
-                $service->validateEligibility($loan);
+                abort_unless($direct || $proposal['review_version'] === $loan->review_version, 409, 'La revisión de Gestión cambió.');
+                if (! $direct) $service->validateEligibility($loan);
                 $participations = $loan->participations()->orderBy('client_id')->lockForUpdate()->get()->keyBy('client_id');
                 abort_unless($participations->count() === count($proposal['members']), 409, 'Las participaciones cambiaron.');
                 foreach ($proposal['members'] as $row) {

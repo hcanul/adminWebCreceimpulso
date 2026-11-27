@@ -127,12 +127,12 @@ const entries: Array<{ pattern: RegExp; help: ModuleHelp }> = [
       purpose: 'Registra lo que pide cada integrante conservando las condiciones del grupo.',
       steps: [
         'Selecciona un grupo elegible y revisa sus integrantes.',
-        'Define una tasa común y el límite por integrante autorizado por el gerente.',
-        'Captura los montos solicitados y propuestos, define las formas de entrega y pago y envía a revisión. Al completar Gestión pasará directamente a Coordinación.',
+        'Captura únicamente el monto solicitado por cada integrante; la revisión del expediente se realiza previamente de forma manual.',
+        'Pulsa Enviar a autorización. Coordinación capturará los montos otorgados, la tasa y las formas de pago y desembolso.',
       ],
       important:
         'Los montos solicitados se conservan separados de los aprobados. Guardar una solicitud no entrega dinero.',
-      primaryLabel: 'Enviar a revisión',
+      primaryLabel: 'Enviar a autorización',
     },
   },
   {
@@ -189,8 +189,8 @@ const entries: Array<{ pattern: RegExp; help: ModuleHelp }> = [
       title: 'Autorización comercial',
       purpose: 'Revisa y registra las condiciones aprobadas para el grupo.',
       steps: [
-        'Busca la solicitud con revisión lista y abre la autorización.',
-        'Revisa cantidades aprobadas, tasa, fecha pactada del primer pago y modalidades de entrega y pago semanal.',
+        'Busca una solicitud pendiente y abre su autorización; no requiere una segunda revisión de Gestión.',
+        'Captura montos otorgados, tasa común, primer vencimiento y formas de pago y desembolso.',
         'Confirma la fecha del primer pago y pulsa Autorizar crédito; para devolver, explica las correcciones necesarias.',
       ],
       important:
@@ -203,7 +203,7 @@ const entries: Array<{ pattern: RegExp; help: ModuleHelp }> = [
     help: {
       id: 'disbursement',
       title: 'Entrega del crédito',
-      purpose: 'Registra la entrega del dinero de un crédito autorizado.',
+      purpose: 'Confirma firmas y registra la entrega real del dinero de un crédito autorizado.',
       steps: [
         'Selecciona el crédito autorizado y revisa sus documentos y condiciones.',
         'Comprueba la modalidad de entrega y la garantía retenida antes de confirmar.',

@@ -499,7 +499,11 @@ const canReadReceipts = computed(() => auth.can('credit.collect') || auth.can('c
 const role = (value: string) =>
   ({ presidenta: 'Presidenta', tesorera: 'Tesorera', integrante: 'Integrante' })[value] ?? value;
 const method = (value: string) =>
-  value === 'bank_deposit' ? 'Depósito bancario' : 'Efectivo en sucursal';
+  value === 'bank_transfer'
+    ? 'Transferencia bancaria'
+    : value === 'bank_deposit'
+      ? 'Depósito bancario'
+      : 'Efectivo en sucursal';
 const logoUrl = `${import.meta.env.BASE_URL}crece-impulso-logo.png`;
 watch(id, (value) => store.load(value), { immediate: true });
 onUnmounted(() => store.clear());

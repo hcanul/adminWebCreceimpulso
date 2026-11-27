@@ -150,7 +150,7 @@
             ><p class="eyebrow">SECCIÓN {{ currentSection + 1 }} DE {{ sections.length }}</p>
             <h2>{{ sections[currentSection] }}</h2>
             <p class="text-caption text-grey-7">
-              * Obligatorio al enviar a revisión. Puedes guardar una captura incompleta como
+              * Obligatorio al completar el expediente. Puedes guardar una captura incompleta como
               borrador.
             </p>
             <div class="intake-form-grid">
@@ -220,7 +220,7 @@
               v-if="!readOnly && canSubmit"
               color="primary"
               no-caps
-              label="Enviar a revisión"
+              label="Completar expediente"
               :loading="busy"
               @click="save(true)" /></q-card-actions
         ></q-card></div
@@ -376,9 +376,9 @@ async function save(submit: boolean) {
   if (
     submit &&
     !(await alerts.confirm(
-      'Enviar expediente a Gestión',
+      'Completar expediente',
       'La versión enviada quedará registrada y no podrá sobrescribirse desde captura. ¿Deseas continuar?',
-      'Enviar a revisión',
+      'Completar expediente',
     ))
   ) {
     busy.value = false;
@@ -413,7 +413,7 @@ async function save(submit: boolean) {
     readOnly.value = result.status !== 'borrador';
     baseline.value = serialized.value;
     success.value = submit
-      ? `Cliente ${result.client?.folio ?? ''}. Expediente enviado a revisión.`
+      ? `Cliente ${result.client?.folio ?? ''}. Expediente completo y guardado.`
       : `Cliente ${result.client?.folio ?? ''}. Borrador guardado; puedes recuperarlo consultando esta CURP.`;
   } catch (e) {
     const result = intakeError(e);

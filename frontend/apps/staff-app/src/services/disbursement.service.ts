@@ -17,6 +17,7 @@ export interface DisbursementInput {
   bank_reference: string | null;
   notes: string;
   confirmed: boolean;
+  signed_confirmed?: boolean;
 }
 export interface DisbursementData {
   record: null | {

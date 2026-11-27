@@ -16,10 +16,10 @@ final class CreditEligibility
         app(CreditAccess::class)->authorize($actor);
         $team = app(IntakeAccess::class)->team($actor, $teamId)->load(['branch:id,name,is_active', 'promoter:id,branch_id', 'memberships.client']);
 
-        return $this->forTeam($team);
+        return $this->forTeam($team, requireReviewedFiles: false);
     }
 
-    public function forTeam(Team $team, ?string $exceptLoanId = null): array
+    public function forTeam(Team $team, ?string $exceptLoanId = null, bool $requireReviewedFiles = true): array
     {
         $blocked = LoanParticipation::whereIn('client_id', $team->memberships->pluck('client_id'))->whereHas('loan', fn ($q) => $q->whereIn('status', ['pendiente', 'aprobado', 'entregado'])->when($exceptLoanId, fn ($q) => $q->where('id', '!=', $exceptLoanId)))->pluck('client_id')->all();
         $files = ClientApplication::where('team_id', $team->id)->where('status', 'en_revision')->pluck('client_id')->all();
@@ -36,7 +36,7 @@ final class CreditEligibility
         if ($team->memberships->contains(fn ($member) => $member->client?->status === 'moroso')) {
             $reasons[] = 'El grupo tiene integrantes con mora registrada. Resuelve los atrasos antes de solicitar otro crédito.';
         }
-        $members = $team->memberships->map(function ($membership) use ($blocked, $files) {
+        $members = $team->memberships->map(function ($membership) use ($blocked, $files, $requireReviewedFiles) {
             $client = $membership->client;
             $issues = [];
             if (! $client || in_array($client->status, ['baja', 'moroso'])) {
@@ -45,7 +45,7 @@ final class CreditEligibility
             if (in_array($membership->client_id, $blocked)) {
                 $issues[] = 'Tiene otra solicitud o crédito pendiente, aprobado o activo.';
             }
-            if (! in_array($membership->client_id, $files)) {
+            if ($requireReviewedFiles && ! in_array($membership->client_id, $files)) {
                 $issues[] = 'Envía primero su expediente completo a Gestión.';
             }
 

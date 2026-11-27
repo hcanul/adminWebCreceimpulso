@@ -26,7 +26,12 @@ final class CreditController extends Controller
             $query->where('status', 'pendiente')->whereNotNull('request_snapshot')->where('review_status', $request->input('review_status'));
         }
         if ($request->filled('authorization_status')) {
-            $query->whereNotNull('request_snapshot')->where('review_status', 'ready_for_authorization')->where('authorization_status', $request->input('authorization_status'));
+            $query->whereNotNull('request_snapshot');
+            if ($request->input('authorization_status') === 'pending_authorization') {
+                $query->where('status', 'pendiente')->whereIn('authorization_status', ['awaiting_proposal', 'pending_authorization', 'returned']);
+            } else {
+                $query->where('authorization_status', $request->input('authorization_status'));
+            }
         }
         if ($request->filled('financial_status')) {
             $query->whereNotNull('approved_snapshot')->where('status', $request->input('financial_status'));

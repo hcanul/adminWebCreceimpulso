@@ -36,10 +36,11 @@ export interface CreditContext {
 export interface CreditSnapshot {
   weeks: number;
   guarantee_percent: number;
-  member_limit: string;
-  rate: { id: string; name: string; factor: string };
-  members: Array<CreditMember & { amount_requested: string; estimate: Estimate }>;
-  totals: Estimate;
+  workflow?: 'direct';
+  member_limit?: string;
+  rate?: { id: string; name: string; factor: string };
+  members: Array<CreditMember & { amount_requested: string; estimate?: Estimate }>;
+  totals: Pick<Estimate, 'principal'> & Partial<Estimate>;
   team_name: string;
   branch_name: string;
 }
@@ -55,17 +56,14 @@ export interface CreditApplication {
   total_approved: string | null;
   requested_at: string | null;
   request_snapshot?: CreditSnapshot | null;
-  disbursement_method: 'cash_branch' | 'bank_deposit' | null;
-  repayment_method?: 'cash_branch' | 'bank_deposit' | null;
+  disbursement_method: 'cash_branch' | 'bank_deposit' | 'bank_transfer' | null;
+  repayment_method?: 'cash_branch' | 'bank_deposit' | 'bank_transfer' | null;
   team?: { id: string; name: string };
   branch?: { id: string; name: string };
 }
 export interface CreditInput {
   id: string;
   team_id: string;
-  rate_id: string;
-  rate_signature: string;
-  member_limit: string;
   participants: Array<{ client_id: string; amount_requested: string }>;
 }
 export type RateInput = Pick<

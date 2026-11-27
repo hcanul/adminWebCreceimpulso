@@ -93,7 +93,13 @@
             ><fieldset :disabled="busy || !!pending" class="payment-fields">
               <div class="form-grid">
                 <q-input
-                  :model-value="bank ? 'Depósito bancario' : 'Efectivo en sucursal'"
+                  :model-value="
+                    loan?.repayment_method === 'bank_transfer'
+                      ? 'Transferencia bancaria'
+                      : bank
+                        ? 'Depósito bancario'
+                        : 'Efectivo en sucursal'
+                  "
                   outlined
                   readonly
                   label="Modalidad autorizada"
@@ -109,7 +115,7 @@
                   ><q-input
                     v-model="bankName"
                     outlined
-                    label="Banco del ticket"
+                    label="Banco del depósito o transferencia"
                     maxlength="100"
                     :rules="[required]" /><q-input
                     v-model="bankReference"
@@ -223,7 +229,8 @@
         ><q-card-section
           ><h2>Historial de cobros</h2>
           <p>
-            El registro es permanente. Abre un pago para consultar su comprobante QR. La impresión se realiza en admin-web.
+            El registro es permanente. Abre un pago para consultar su comprobante QR. La impresión
+            se realiza en admin-web.
           </p>
           <p v-if="!data.payments.total" class="text-grey-7">
             Todavía no se han registrado pagos.
@@ -328,7 +335,9 @@ const amount = ref(''),
   confirmed = ref(false);
 const contributions = ref<(Contribution & { key: string })[]>([]);
 const pending = ref<CollectionInput | null>(null);
-const bank = computed(() => loan.value?.repayment_method === 'bank_deposit');
+const bank = computed(() =>
+  ['bank_deposit', 'bank_transfer'].includes(loan.value?.repayment_method ?? ''),
+);
 const required = (v: string) => !!v?.trim() || 'Completa este campo';
 const memberOptions = computed(
   () =>

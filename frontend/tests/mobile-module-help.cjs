@@ -5,7 +5,7 @@ function load(file,modules={}){const exports={};const src=fs.readFileSync(file,'
 const shared=load(root+'/packages/shared/help/staff-base.ts');
 let total=0;
 for(const app of ['client-app','staff-app']){
- const help=load(root+'/apps/'+app+'/src/help/mobile-help.ts',{'@creceimpulso/mobile-help/staff-base':shared}).mobileHelpFor;
+ const help=load(root+'/apps/'+app+'/src/help/mobile-help.ts',{'../../../../packages/shared/help/staff-base':shared}).mobileHelpFor;
  const routes=load(root+'/apps/'+app+'/src/router/index.ts',{'#q-app':{defineRouter:f=>f({store:{}})},'vue-router':{createRouter:o=>({...o,beforeEach(){}}),createWebHashHistory:()=>null},'../stores/auth':{useStaffAuth(){},useClientAuth(){}}}).default.routes;
  let count=0;function walk(list,parent=''){for(const route of list){if(route.redirect)continue;const full=route.path.startsWith('/')?route.path:parent.replace(/\/$/,'')+'/'+route.path;const guide=help(full.replace(/:id/g,'artificial-id'));assert.notEqual(guide.id,'unknown',full);assert.ok(guide.steps.length===3);assert.ok(guide.important);if(route.children)walk(route.children,full);count++;}}
  walk(routes);total+=count;

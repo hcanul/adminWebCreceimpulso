@@ -40,7 +40,7 @@
               ? 'Estado del crédito'
               : isAuthorization
                 ? 'Estado de autorización'
-                : 'Estado de revisión'
+                : 'Estado de solicitud'
           "
           :options="statusOptions"
           class="q-mb-md"
@@ -73,9 +73,9 @@
           ><q-item-section side
             ><q-badge color="primary">{{
               request.status === 'pendiente'
-                ? request.review_status === 'ready_for_authorization'
-                  ? authorizationLabels[request.authorization_status ?? 'awaiting_proposal']
-                  : reviewLabels[request.review_status ?? 'pending']
+                ? request.authorization_status === 'returned'
+                  ? 'Correcciones solicitadas'
+                  : 'Pendiente de autorización'
                 : request.status
             }}</q-badge></q-item-section
           ></q-item
@@ -114,9 +114,7 @@ const selectedStatus = ref(
       ? 'entregado'
       : 'aprobado'
     : isAuthorization
-      ? useAuthStore().can('credit.authorize')
-        ? 'pending_authorization'
-        : 'awaiting_proposal'
+      ? 'pending_authorization'
       : isReview
         ? 'pending'
         : '',
@@ -132,7 +130,9 @@ const statusOptions = [
         }
       : isAuthorization
         ? authorizationLabels
-        : reviewLabels,
+        : isReview
+          ? reviewLabels
+          : authorizationLabels,
   ).map(([value, label]) => ({
     value,
     label,
@@ -157,8 +157,8 @@ async function load() {
     await store.load(
       search.value,
       page.value,
-      isAuthorization || isDisbursement ? '' : selectedStatus.value,
-      isAuthorization ? selectedStatus.value : '',
+      isReview ? selectedStatus.value : '',
+      !isReview && !isDisbursement ? selectedStatus.value : '',
       isDisbursement ? selectedStatus.value : '',
     );
   } catch (e) {

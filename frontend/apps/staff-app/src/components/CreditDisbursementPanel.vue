@@ -53,7 +53,8 @@
                 : 'Crédito anterior sin fecha pactada: captura el primer vencimiento.'
             "
           />
-          <template v-if="loan.disbursement_method === 'bank_deposit'"
+          <template
+            v-if="['bank_deposit', 'bank_transfer'].includes(loan.disbursement_method ?? '')"
             ><q-input
               v-model="bankName"
               outlined
@@ -75,6 +76,16 @@
           maxlength="4000"
           :readonly="busy"
         />
+        <q-banner class="bg-grey-2 q-mt-md"
+          >Los documentos se generan en Admin Web. Recaba las firmas antes de entregar el
+          dinero.</q-banner
+        >
+        <q-checkbox
+          v-if="loan.approved_snapshot?.workflow === 'direct'"
+          v-model="signedConfirmed"
+          :disable="busy"
+          label="Confirmo que los documentos requeridos fueron firmados."
+        />
         <q-checkbox
           v-model="confirmed"
           :disable="busy"
@@ -91,7 +102,13 @@
           no-caps
           label="Registrar entrega realizada"
           :loading="busy"
-          :disable="!confirmed || !calendar.length || !!calendarError || !notes.trim()"
+          :disable="
+            (loan.approved_snapshot?.workflow === 'direct' && !signedConfirmed) ||
+            !confirmed ||
+            !calendar.length ||
+            !!calendarError ||
+            !notes.trim()
+          "
           class="q-mt-md"
           @click="submit"
         />
@@ -174,6 +191,7 @@ const disbursedOn = ref(today),
   bankReference = ref(''),
   notes = ref(''),
   confirmed = ref(false),
+  signedConfirmed = ref(false),
   busy = ref(false),
   loading = ref(true),
   error = ref('');
@@ -195,7 +213,8 @@ const dirty = computed(
       bankName.value ||
       bankReference.value ||
       notes.value ||
-      confirmed.value
+      confirmed.value ||
+      signedConfirmed.value
     ),
 );
 const calendarError = computed(() => {
@@ -236,9 +255,16 @@ async function reload() {
   emit('updated');
 }
 async function submit() {
-  if (busy.value || !canDisburse.value || !confirmed.value || calendarError.value) return;
   if (
-    props.loan.disbursement_method === 'bank_deposit' &&
+    busy.value ||
+    !canDisburse.value ||
+    !confirmed.value ||
+    calendarError.value ||
+    (props.loan.approved_snapshot?.workflow === 'direct' && !signedConfirmed.value)
+  )
+    return;
+  if (
+    ['bank_deposit', 'bank_transfer'].includes(props.loan.disbursement_method ?? '') &&
     (!bankName.value.trim() || !bankReference.value.trim())
   )
     return alerts.error('Captura el banco y la referencia de la entrega.');
@@ -261,6 +287,9 @@ async function submit() {
       bank_reference: bankReference.value.trim() || null,
       notes: notes.value.trim(),
       confirmed: true,
+      ...(props.loan.approved_snapshot?.workflow === 'direct'
+        ? { signed_confirmed: signedConfirmed.value }
+        : {}),
     });
     emit('updated');
     await alerts.success('Entrega registrada y calendario generado');

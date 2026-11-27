@@ -42,7 +42,7 @@ final class DisburseCreditAction
                 if ($agreedDate !== null && $v['first_due_on'] !== $agreedDate) {
                     throw ValidationException::withMessages(['first_due_on' => 'El primer pago debe respetar la fecha pactada en la autorización: '.$agreedDate.'.']);
                 }
-                $bank = $loan->disbursement_method === 'bank_deposit';
+                $bank = in_array($loan->disbursement_method, ['bank_deposit', 'bank_transfer'], true);
                 if ($bank && (! $v['bank_name'] || ! $v['bank_reference'])) {
                     throw ValidationException::withMessages(['bank_reference' => 'Captura el banco y la referencia de la entrega bancaria.']);
                 }
@@ -51,6 +51,10 @@ final class DisburseCreditAction
                 }
                 app(CreditAuthorization::class)->validateEligibility($loan);
                 $snapshot = $loan->approved_snapshot;
+                if (($snapshot['workflow'] ?? null) === 'direct') {
+                    abort_unless($v['signed_confirmed'] ?? false, 422, 'Confirma que los documentos requeridos fueron firmados antes de registrar la entrega.');
+                    $snapshot['signed_documents_confirmed'] = true;
+                }
                 $parts = $loan->participations()->orderBy('client_id')->lockForUpdate()->get()->keyBy('client_id');
                 abort_unless($parts->count() === count($snapshot['members']) && $snapshot['totals']['principal'] === $loan->total_approved, 409, 'Revisa la integridad de los importes autorizados.');
                 foreach ($snapshot['members'] as $member) {

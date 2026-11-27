@@ -145,7 +145,7 @@
           <p>
             {{
               data
-                ? 'No hay revisiones, correcciones, autorizaciones, entregas ni cortes de hoy pendientes que correspondan a tus permisos.'
+                ? 'No hay correcciones, autorizaciones, entregas ni cortes de hoy pendientes que correspondan a tus permisos.'
                 : 'Actualiza para consultar tus pendientes.'
             }}
           </p>
@@ -158,7 +158,7 @@
         <p class="eyebrow">CAPTURA DISPONIBLE</p>
         <h2>Grupos solidarios</h2>
         <p>
-          Nombre del grupo, sucursal y asesor. Después, integrantes, comité y revisión de
+          Nombre del grupo, sucursal y asesor. Después, integrantes, comité y actualización de
           elegibilidad.
         </p>
       </div>
@@ -210,10 +210,10 @@ const metrics = computed(() => [
     note: 'Grupos activos a tu alcance',
   },
   {
-    title: 'Solicitudes en revisión',
+    title: 'Solicitudes por autorizar',
     icon: 'fact_check',
     value: count(data.value?.in_review),
-    note: 'Pendientes de Gestión o en revisión',
+    note: 'Pendientes de autorización comercial',
   },
   {
     title: 'Créditos activos',
@@ -298,11 +298,11 @@ const steps = [
     owner: 'Captura y comprobaciones de identidad',
   },
   {
-    title: 'Revisar la solicitud',
+    title: 'Capturar montos solicitados',
     icon: 'assignment',
     description:
-      'Gestión revisa identidad, domicilio, referencias, visita, historial y documentación. Las observaciones regresan a captura para su corrección.',
-    owner: 'Departamento de Gestión',
+      'Con el expediente revisado manualmente, captura lo solicitado por cada integrante y envía directamente a Coordinación Comercial.',
+    owner: 'Gerente',
   },
   {
     title: 'Autorizar y entregar',

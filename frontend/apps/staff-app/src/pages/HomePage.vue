@@ -53,8 +53,8 @@
       ><q-card-section
         ><h3>Operación por función</h3>
         <p>
-          Desde el menú encontrarás las solicitudes, Gestión, autorizaciones, entrega, cartera y
-          Caja disponibles según tus permisos. Los cobros se registran únicamente en oficina con
+          Desde el menú encontrarás las solicitudes, autorizaciones, entrega, cartera y Caja
+          disponibles según tus permisos. Los cobros se registran únicamente en oficina con
           conexión.
         </p>
         <p class="text-caption">

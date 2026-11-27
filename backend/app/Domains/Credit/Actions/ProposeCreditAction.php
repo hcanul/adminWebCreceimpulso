@@ -21,6 +21,7 @@ final class ProposeCreditAction
         return DB::transaction(function () use ($actor, $visible, $data) {
             $service = app(CreditAuthorization::class);
             $loan = $service->lock($visible, $data->version, requireReview: false);
+            abort_if(($loan->request_snapshot['workflow'] ?? null) === 'direct', 409, 'Esta solicitud pasa directamente a autorización; captura ahí los montos otorgados y las condiciones.');
             $before = $loan->authorization_status;
             abort_unless(in_array($before, [AuthorizationStatus::AwaitingProposal->value, AuthorizationStatus::Returned->value]), 409, 'La propuesta enviada está cerrada; Coordinación debe devolverla antes de cambiarla.');
             abort_unless($before !== AuthorizationStatus::Returned->value || trim($data->notes) !== '', 422, 'Describe las correcciones realizadas.');

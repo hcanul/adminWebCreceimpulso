@@ -1,4 +1,4 @@
-import { moduleHelpFor } from '@creceimpulso/mobile-help/staff-base';
+import { moduleHelpFor } from '../../../../packages/shared/help/staff-base';
 import type { HelpGuide } from '@creceimpulso/mobile-help/types';
 const guides: Record<string, HelpGuide> = {
   '/': {

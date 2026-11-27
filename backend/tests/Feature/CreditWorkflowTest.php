@@ -563,6 +563,153 @@ final class CreditWorkflowTest extends TestCase
         $this->assertDatabaseCount('credit_authorization_events', 1);
     }
 
+    private function directCreditFixture(): array
+    {
+        $f = $this->fixture();
+        ClientApplication::where('team_id', $f['team']->id)->update(['status' => 'borrador', 'submitted_at' => null]);
+        $input = collect($f['payload'])->only(['id', 'team_id', 'participants'])->all();
+        $loan = $this->postJson('/api/credit/applications', $input)->assertCreated()->json();
+        $base = '/api/credit/applications/'.$loan['id'];
+        $commercial = User::factory()->create(['branch_id' => $f['branch']->id, 'is_active' => true]);
+        $commercial->assignRole('Coordinación Comercial');
+        $decision = ['version' => 0, 'decision' => 'approve', 'rate_id' => $f['rate']->id, 'rate_signature' => $f['rate']->terms_hash,
+            'first_due_on' => now('America/Cancun')->addDays(7)->toDateString(), 'disbursement_method' => 'bank_transfer', 'repayment_method' => 'bank_transfer',
+            'participants' => array_map(fn ($c, $a) => ['client_id' => $c->id, 'amount_approved' => $a], $f['clients'], ['9000', '8000', '5000'])];
+
+        return $f + compact('input', 'loan', 'base', 'commercial', 'decision');
+    }
+
+    public function test_direct_request_has_only_requested_amounts_and_no_internal_review_or_rate(): void
+    {
+        $f = $this->directCreditFixture();
+        $this->assertNull($f['loan']['rate_id']);
+        $this->assertArrayNotHasKey('rate', $f['loan']['request_snapshot']);
+        $this->assertArrayNotHasKey('estimate', $f['loan']['request_snapshot']['members'][0]);
+        $this->assertSame('23000.00', $f['loan']['total_requested']);
+        $this->assertSame('pending_authorization', $f['loan']['authorization_status']);
+        $this->assertDatabaseCount('credit_review_events', 0);
+        $this->assertDatabaseCount('credit_authorization_events', 0);
+        $this->postJson('/api/credit/applications', $f['input'])->assertCreated();
+        $this->assertDatabaseCount('loan_applications', 1);
+        $changed = $f['input'];
+        $changed['participants'][0]['amount_requested'] = '11000';
+        $this->postJson('/api/credit/applications', $changed)->assertConflict();
+        $this->postJson($f['base'].'/authorization', $f['decision'])->assertForbidden();
+        Sanctum::actingAs($f['commercial']);
+        $this->getJson('/api/credit/applications?authorization_status=pending_authorization')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_direct_authorization_chooses_current_rate_preserves_request_and_is_immutable(): void
+    {
+        $f = $this->directCreditFixture();
+        $otherRate = Rate::create(['name' => 'Prueba Bronce', 'cicle' => 1, 'rate_factor' => '75', 'calculation_method' => 'weekly_per_thousand', 'is_active' => true]);
+        $decision = $f['decision'];
+        $decision['rate_id'] = $otherRate->id;
+        $decision['rate_signature'] = $otherRate->terms_hash;
+        Sanctum::actingAs($f['commercial']);
+        $this->postJson($f['base'].'/authorization', $decision)->assertOk()->assertJsonPath('status', 'authorized')->assertJsonPath('version', 1);
+        $this->getJson($f['base'])->assertOk()->assertJsonPath('status', 'aprobado')->assertJsonPath('total_approved', '22000.00')
+            ->assertJsonPath('approved_snapshot.totals.total_repayment', '26400.00')->assertJsonPath('approved_snapshot.totals.weekly_payment', '1650.00')
+            ->assertJsonPath('approved_snapshot.totals.net_delivery', '19800.00')->assertJsonPath('approved_snapshot.rate.name', 'Prueba Bronce')
+            ->assertJsonPath('disbursement_method', 'bank_transfer')->assertJsonPath('repayment_method', 'bank_transfer');
+        $loan = LoanApplication::findOrFail($f['loan']['id']);
+        $this->assertSame($this->canonicalObject($f['loan']['request_snapshot']), $this->canonicalObject($loan->request_snapshot));
+        $this->assertDatabaseCount('credit_review_events', 0);
+        $this->assertDatabaseCount('credit_authorization_events', 1);
+        $this->assertDatabaseCount('credit_disbursements', 0);
+        $this->postJson($f['base'].'/authorization', $decision)->assertConflict();
+        $decision['version'] = 1;
+        $this->postJson($f['base'].'/authorization', $decision)->assertConflict();
+    }
+
+    public function test_direct_authorization_validates_members_rate_scope_mora_and_versions(): void
+    {
+        $f = $this->directCreditFixture();
+        Sanctum::actingAs($f['commercial']);
+        foreach (['0', '10000.01', '-1', '9000.001'] as $amount) {
+            $bad = $f['decision']; $bad['participants'][0]['amount_approved'] = $amount;
+            $this->postJson($f['base'].'/authorization', $bad)->assertUnprocessable();
+        }
+        $bad = $f['decision']; $bad['participants'][0] = $bad['participants'][1];
+        $this->postJson($f['base'].'/authorization', $bad)->assertUnprocessable();
+        $bad = $f['decision']; $bad['participants'][0]['client_id'] = (string) Str::uuid();
+        $this->postJson($f['base'].'/authorization', $bad)->assertUnprocessable();
+        $bad = $f['decision']; $bad['rate_signature'] = str_repeat('0', 64);
+        $this->postJson($f['base'].'/authorization', $bad)->assertConflict();
+        $f['clients'][0]->update(['status' => 'moroso']);
+        $this->postJson($f['base'].'/authorization', $f['decision'])->assertUnprocessable();
+        $f['clients'][0]->update(['status' => 'activo']);
+        $branch = Branch::create(['name' => 'Otra', 'is_active' => true]);
+        $f['commercial']->forceFill(['branch_id' => $branch->id])->save();
+        $this->postJson($f['base'].'/authorization', $f['decision'])->assertNotFound();
+        $this->assertDatabaseHas('loan_applications', ['id' => $f['loan']['id'], 'status' => 'pendiente', 'total_approved' => null]);
+        $this->assertSame(0, LoanParticipation::whereNotNull('amount_approved')->count());
+        $this->assertDatabaseCount('credit_authorization_events', 0);
+    }
+
+    public function test_direct_corrections_need_reason_but_not_a_manager_proposal_or_management_review(): void
+    {
+        $f = $this->directCreditFixture();
+        Sanctum::actingAs($f['commercial']);
+        $this->postJson($f['base'].'/authorization', ['version' => 0, 'decision' => 'return'])->assertUnprocessable();
+        $this->postJson($f['base'].'/authorization', ['version' => 0, 'decision' => 'return', 'notes' => 'Confirmar importes con el gerente.'])->assertOk()->assertJsonPath('status', 'returned');
+        $this->getJson($f['base'].'/authorization')->assertOk()->assertJsonPath('history.0.proposal', null);
+        $this->postJson($f['base'].'/authorization', $f['decision'])->assertConflict();
+        $decision = $f['decision']; $decision['version'] = 1;
+        $this->postJson($f['base'].'/authorization', $decision)->assertOk();
+        $this->assertDatabaseCount('credit_review_events', 0);
+        $this->assertDatabaseCount('credit_authorization_events', 2);
+    }
+
+    public function test_direct_transfer_delivery_requires_signatures_and_collects_in_bank_channel(): void
+    {
+        $f = $this->directCreditFixture();
+        Sanctum::actingAs($f['commercial']);
+        $this->postJson($f['base'].'/authorization', $f['decision'])->assertOk();
+        Sanctum::actingAs($f['manager']);
+        $document = $this->postJson('/api/documents/sources/credit/'.$f['loan']['id'], ['kind' => 'authorization'])->assertOk()->json('id');
+        $html = $this->getJson('/api/documents/versions/'.$document)->assertOk()->json('html');
+        $this->assertStringContainsString('TRANSFERENCIA BANCARIA', $html);
+        $cashier = User::factory()->create(['branch_id' => $f['branch']->id, 'is_active' => true]); $cashier->assignRole('Caja');
+        Sanctum::actingAs($cashier);
+        $delivery = ['id' => (string) Str::uuid(), 'authorization_version' => 1, 'disbursed_on' => now('America/Cancun')->toDateString(),
+            'first_due_on' => $f['decision']['first_due_on'], 'notes' => 'Entrega con firmas cotejadas.', 'confirmed' => true];
+        $this->postJson($f['base'].'/disbursement', $delivery)->assertUnprocessable();
+        $delivery += ['bank_name' => 'Banco Demo', 'bank_reference' => 'TRANSFERENCIA-001'];
+        $this->postJson($f['base'].'/disbursement', $delivery)->assertUnprocessable();
+        $this->assertDatabaseCount('credit_disbursements', 0);
+        $delivery['signed_confirmed'] = true;
+        $this->postJson($f['base'].'/disbursement', $delivery)->assertOk();
+        $this->postJson($f['base'].'/disbursement', $delivery)->assertOk();
+        $this->assertDatabaseCount('credit_disbursements', 1);
+        $this->assertDatabaseCount('loan_installments', 48);
+        $this->assertDatabaseHas('credit_disbursements', ['method' => 'bank_transfer', 'net_delivered' => '19800.00']);
+        $snapshot = json_decode(DB::table('credit_disbursements')->value('snapshot'), true);
+        $this->assertTrue($snapshot['signed_documents_confirmed']);
+        $state = $this->getJson($f['base'].'/payments')->assertOk()->json();
+        $payment = ['id' => (string) Str::uuid(), 'balance_version' => $state['balance_version'], 'amount' => '500', 'method' => 'bank_deposit', 'confirmed' => true,
+            'bank_name' => 'Banco Demo', 'bank_reference' => 'ABONO-001', 'deposited_on' => now('America/Cancun')->toDateString(),
+            'contributions' => [['client_id' => $f['clients'][0]->id, 'payer_client_id' => $f['clients'][0]->id, 'amount' => '500']]];
+        $cash = $payment; $cash['method'] = 'cash_branch';
+        $this->postJson($f['base'].'/payments', $cash)->assertUnprocessable();
+        $this->postJson($f['base'].'/payments', $payment)->assertOk();
+        $this->assertDatabaseHas('credit_payments', ['method' => 'bank_deposit', 'amount' => '500.00']);
+        $this->getJson('/api/cash/preview?branch_id='.$f['branch']->id.'&business_date='.now('America/Cancun')->toDateString())->assertOk()->assertJsonPath('cash_total', '0.00')->assertJsonPath('bank_total', '500.00');
+    }
+
+    public function test_existing_pending_request_can_use_direct_authorization_without_rewriting_original_rate(): void
+    {
+        $f = $this->reviewFixture();
+        $commercial = User::factory()->create(['branch_id' => $f['branch']->id, 'is_active' => true]); $commercial->assignRole('Coordinación Comercial');
+        Sanctum::actingAs($commercial);
+        $decision = ['version' => 0, 'decision' => 'approve', 'rate_id' => $f['rate']->id, 'rate_signature' => $f['rate']->terms_hash,
+            'first_due_on' => now('America/Cancun')->addDays(7)->toDateString(), 'disbursement_method' => 'cash_branch', 'repayment_method' => 'bank_deposit',
+            'participants' => array_map(fn ($r) => ['client_id' => $r['client_id'], 'amount_approved' => $r['amount_requested']], $f['payload']['participants'])];
+        $this->postJson('/api/credit/applications/'.$f['loan']['id'].'/authorization', $decision)->assertOk();
+        $this->assertDatabaseCount('credit_review_events', 0);
+        $this->assertSame($this->canonicalObject($f['loan']['request_snapshot']), $this->canonicalObject(LoanApplication::findOrFail($f['loan']['id'])->request_snapshot));
+    }
+
     private function authorizationFixture(): array
     {
         $f = $this->reviewFixture();
@@ -1924,12 +2071,12 @@ final class CreditWorkflowTest extends TestCase
         $this->travelBack();
     }
 
-    public function test_dashboard_inbox_reflects_review_status_and_permissions(): void
+    public function test_dashboard_inbox_reflects_direct_authorization_and_permissions(): void
     {
         $f = $this->reviewFixture();
-        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('in_review', 1)->assertJsonPath('active_credits', 0)->assertJsonPath('inbox.0.to', '/gestion?status=pending')->assertJsonPath('inbox.0.count', 1)->assertJsonPath('payments', null);
-        DB::table('loan_applications')->where('id', $f['loan']['id'])->update(['review_status' => 'returned']);
-        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('in_review', 0)->assertJsonCount(0, 'inbox');
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('in_review', 1)->assertJsonPath('active_credits', 0)->assertJsonCount(0, 'inbox')->assertJsonPath('payments', null);
+        DB::table('loan_applications')->where('id', $f['loan']['id'])->update(['review_status' => 'returned', 'authorization_status' => 'returned']);
+        $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('in_review', 1)->assertJsonCount(0, 'inbox');
         Sanctum::actingAs($f['manager']);
         $this->getJson('/api/dashboard')->assertOk()->assertJsonPath('inbox.0.to', '/solicitudes-credito?status=returned');
         $f['team']->update(['is_active' => false]);

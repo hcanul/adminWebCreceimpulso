@@ -134,12 +134,12 @@ const entries: Array<{ pattern: RegExp; help: ModuleHelp }> = [
         "Registra lo que pide cada integrante conservando las condiciones del grupo.",
       steps: [
         "Selecciona un grupo elegible y revisa sus integrantes.",
-        "Define una tasa común y el límite por integrante autorizado por el gerente.",
-        "Captura el monto solicitado por cada participante, revisa el cálculo de 16 semanas y registra la solicitud.",
+        "Captura únicamente el monto solicitado por cada integrante; la revisión del expediente se realiza previamente de forma manual.",
+        "Pulsa Enviar a autorización. Coordinación fijará las condiciones definitivas.",
       ],
       important:
         "Los montos solicitados se conservan separados de los aprobados. Guardar una solicitud no entrega dinero.",
-      primaryLabel: "Registrar solicitud",
+      primaryLabel: "Enviar a autorización",
     },
   },
   {
@@ -199,9 +199,9 @@ const entries: Array<{ pattern: RegExp; help: ModuleHelp }> = [
       title: "Autorización comercial",
       purpose: "Revisa y registra las condiciones aprobadas para el grupo.",
       steps: [
-        "Busca la solicitud con revisión lista y abre la autorización.",
-        "Revisa cantidades aprobadas, tasa, fecha pactada del primer pago y modalidades de entrega y pago semanal.",
-        "Confirma la propuesta o decisión que permita tu perfil y revisa el estado resultante.",
+        "Busca una solicitud pendiente y abre su autorización; no requiere una segunda revisión de Gestión.",
+        "Captura montos otorgados, tasa común, primer vencimiento y formas de pago y desembolso.",
+        "Autoriza el crédito o solicita correcciones explicando el motivo.",
       ],
       important:
         "El monto solicitado es inmutable. Los siguientes vencimientos se calculan semanalmente a partir del primer pago pactado.",
@@ -213,7 +213,7 @@ const entries: Array<{ pattern: RegExp; help: ModuleHelp }> = [
     help: {
       id: "disbursement",
       title: "Entrega del crédito",
-      purpose: "Registra la entrega del dinero de un crédito autorizado.",
+      purpose: "Confirma firmas y registra la entrega real del dinero de un crédito autorizado.",
       steps: [
         "Selecciona el crédito autorizado y revisa sus documentos y condiciones.",
         "Comprueba la modalidad de entrega y la garantía retenida antes de confirmar.",

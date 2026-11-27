@@ -51,7 +51,11 @@
           <dt>Forma de pago semanal acordada</dt>
           <dd>
             {{
-              data.terms.repayment_method === 'bank_deposit' ? 'Depósito bancario' : 'En sucursal'
+              data.terms.repayment_method === 'bank_transfer'
+                ? 'Transferencia bancaria'
+                : data.terms.repayment_method === 'bank_deposit'
+                  ? 'Depósito bancario'
+                  : 'En sucursal'
             }}
           </dd>
         </dl>

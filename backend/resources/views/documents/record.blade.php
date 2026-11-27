@@ -17,7 +17,7 @@
 @elseif($kind === 'schedule')
 @php($terms = $snapshot['terms'])
 <p>16 pagos semanales · Importes en MXN · Tasa: {{ $terms['rate']['name'] }} · Factor semanal por $1,000: ${{ $terms['rate']['factor'] }}.</p>
-<p>Forma de pago: {{ $terms['repayment_method'] === 'bank_deposit' ? 'Depósito bancario: presentar el comprobante en Caja para su registro.' : 'En sucursal.' }}</p>
+<p>Forma de pago: {{ $terms['repayment_method'] === 'bank_transfer' ? 'por transferencia bancaria' : ($terms['repayment_method'] === 'bank_deposit' ? 'Depósito bancario: presentar el comprobante en Caja para su registro.' : 'En sucursal.' )}}</p>
 <h2>Cuotas por integrante</h2>
 <table><thead><tr><th>Cliente / folio</th><th>Capital aprobado</th><th>Cuota semanal</th><th>Total a devolver</th></tr></thead><tbody>@foreach($terms['members'] as $member)<tr><td>{{ $member['name'] }}<br>{{ $member['folio'] }}</td><td>${{ $member['amount_approved'] }}</td><td>${{ $member['estimate']['weekly_payment'] }}</td><td>${{ $member['estimate']['total_repayment'] }}</td></tr>@endforeach</tbody></table>
 <h2>Vencimientos del grupo</h2>
@@ -28,7 +28,7 @@
 @php($terms = $snapshot['terms'])
 @if(isset($terms['late_fee_policy']))<h2>Mora semanal</h2><p>10% sobre el saldo pendiente de cada cuota al inicio de cada semana de atraso (días 1, 8, 15 y siguientes). Sin capitalización. Los pagos cubren cuotas exigibles, mora y después adelantos. La garantía retenida no es una comisión de apertura.</p>@endif
 <h2>Condiciones autorizadas</h2><p>Autorización: {{ $snapshot['approved_at'] }} · Primer pago pactado: {{ $terms['first_due_on'] ?? 'No registrado en la autorización histórica' }}<br>Tasa: {{ $terms['rate']['name'] }} · Factor semanal por $1,000: {{ $terms['rate']['factor'] }} · Plazo: 16 semanas.</p>
-<p>Entrega: {{ $terms['disbursement_method'] === 'bank_deposit' ? 'Depósito bancario' : 'En sucursal' }} · Pagos semanales: {{ $terms['repayment_method'] === 'bank_deposit' ? 'Depósito bancario' : 'En sucursal' }}.</p>
+<p>Entrega: {{ $terms['disbursement_method'] === 'bank_transfer' ? 'por transferencia bancaria' : ($terms['disbursement_method'] === 'bank_deposit' ? 'Depósito bancario' : 'En sucursal' )}} · Pagos semanales: {{ $terms['repayment_method'] === 'bank_transfer' ? 'por transferencia bancaria' : ($terms['repayment_method'] === 'bank_deposit' ? 'Depósito bancario' : 'En sucursal' )}}.</p>
 <table><thead><tr><th>Cliente / cargo</th><th>Solicitado</th><th>Aprobado</th><th>Cuota semanal</th><th>Garantía</th><th>Neto a entregar</th></tr></thead><tbody>@foreach($terms['members'] as $m)<tr><td>{{ $m['name'] }}<br>{{ $m['folio'] }} · {{ $m['role_in_group'] }}</td><td>${{ $m['amount_requested'] }}</td><td>${{ $m['amount_approved'] }}</td><td>${{ $m['estimate']['weekly_payment'] }}</td><td>${{ $m['estimate']['guarantee'] }}</td><td>${{ $m['estimate']['net_delivery'] }}</td></tr>@endforeach</tbody></table>
 <p>Capital aprobado: ${{ $terms['totals']['principal'] }} · Interés pactado: ${{ $terms['totals']['interest'] }} · Total a devolver: ${{ $terms['totals']['total_repayment'] }}.</p><p>Garantía retenida: ${{ $terms['totals']['guarantee'] }} · Neto a entregar: ${{ $terms['totals']['net_delivery'] }}. Esta acta no acredita una entrega de dinero ni un pago.</p>
 <div class="signatures"><div class="signature">Presidenta</div><div class="signature">Tesorera</div></div><div class="signatures"><div class="signature">Gerencia</div><div class="signature">Coordinación Comercial</div></div>

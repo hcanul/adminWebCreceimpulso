@@ -39,7 +39,7 @@ final class CreateCreditAction
                 // Lock clients in stable order: simultaneous requests in different groups cannot double-enroll them.
                 Client::withTrashed()->whereIn('id', array_column($data->participants, 'client_id'))->orderBy('id')->lockForUpdate()->get();
                 $team->load(['branch', 'promoter', 'memberships.client']);
-                $context = app(CreditEligibility::class)->forTeam($team);
+                $context = app(CreditEligibility::class)->forTeam($team, requireReviewedFiles: $data->rateId !== null);
                 $errors = $context['issues'];
                 $members = $context['members']->keyBy('client_id');
                 $selected = [];
@@ -63,6 +63,34 @@ final class CreateCreditAction
                 }
                 if ($errors) {
                     throw ValidationException::withMessages(['participants' => $errors]);
+                }
+                if ($data->rateId === null) {
+                    $rows = [];
+                    $total = 0;
+                    foreach ($selected as $member) {
+                        $amount = CreditCalculator::scaled($member['amount_requested']);
+                        if ($amount <= 0) {
+                            throw ValidationException::withMessages(['participants' => 'Cada monto solicitado debe ser mayor a cero.']);
+                        }
+                        $total += $amount;
+                        $rows[] = collect($member)->only(['client_id', 'folio', 'name', 'role_in_group', 'amount_requested'])->all();
+                    }
+                    abort_if($total > 999999999999, 422, 'El total excede la capacidad del crédito.');
+                    $snapshot = ['workflow' => 'direct', 'weeks' => 16, 'guarantee_percent' => 10, 'members' => $rows,
+                        'totals' => ['principal' => CreditCalculator::money($total)], 'team_name' => $team->name, 'branch_name' => $team->branch->name];
+                    $loan = new LoanApplication;
+                    $loan->forceFill(['id' => $data->id, 'branch_id' => $team->branch_id, 'team_id' => $team->id,
+                        'promoter_id' => $team->promoter_id, 'rate_id' => null, 'created_by' => $actor->id,
+                        'total_requested' => CreditCalculator::money($total), 'total_approved' => null, 'status' => 'pendiente',
+                        'review_status' => 'ready_for_authorization', 'authorization_status' => 'pending_authorization',
+                        'request_snapshot' => $snapshot, 'request_hash' => $data->fingerprint(), 'requested_at' => now()])->save();
+                    foreach ($rows as $row) {
+                        LoanParticipation::create(['branch_id' => $team->branch_id, 'loan_application_id' => $loan->id,
+                            'client_id' => $row['client_id'], 'role_in_group' => $row['role_in_group'],
+                            'amount_requested' => $row['amount_requested'], 'amount_approved' => null]);
+                    }
+
+                    return $loan;
                 }
                 $rate = Rate::where('is_active', true)->where('calculation_method', 'weekly_per_thousand')->lockForUpdate()->findOrFail($data->rateId);
                 abort_unless(hash_equals($rate->terms_hash, $data->rateSignature), 409, 'La tasa cambió. Actualiza la selección y revisa los importes antes de guardar.');

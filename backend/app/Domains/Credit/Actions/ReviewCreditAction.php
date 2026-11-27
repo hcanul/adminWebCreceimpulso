@@ -34,6 +34,7 @@ final class ReviewCreditAction
             abort_unless($team->is_active && $team->branch?->is_active, 422, 'El grupo o la sucursal no están activos.');
             abort_unless($loan->status === 'pendiente' && $loan->request_snapshot, 409, 'Solo se revisan solicitudes pendientes con condiciones conservadas.');
             abort_unless($loan->review_version === $data->version, 409, 'La revisión cambió. Recarga antes de continuar.');
+            abort_if(($loan->request_snapshot['workflow'] ?? null) === 'direct', 409, 'Esta solicitud pasa directamente a autorización; captura ahí los montos otorgados y las condiciones.');
             $before = $loan->review_status;
             $files = app(CreditReview::class)->files($loan, true);
             $members = array_column($loan->request_snapshot['members'], 'client_id');

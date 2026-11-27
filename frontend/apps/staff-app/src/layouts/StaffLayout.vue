@@ -92,12 +92,6 @@ const operationalLinks = computed(() =>
       visible: auth.can('credit.view'),
     },
     {
-      to: '/gestion',
-      label: 'Gestión de expedientes',
-      icon: 'fact_check',
-      visible: auth.can('credit.view') && auth.can('credit.review'),
-    },
-    {
       to: '/autorizaciones',
       label: 'Autorizaciones',
       icon: 'verified',

@@ -32,22 +32,13 @@ final class DashboardSummary
             if ($can('credit.view')) {
                 $rows = app(CreditAccess::class)->query($actor)->select(['status', 'review_status', 'authorization_status'])->selectRaw('COUNT(*) as total')->groupBy('status', 'review_status', 'authorization_status')->get();
                 $pending = $rows->where('status', 'pendiente');
-                $review = (int) $pending->whereIn('review_status', ['pending', 'in_review'])->sum('total');
+                $review = (int) $pending->sum('total');
                 $active = (int) $rows->where('status', 'entregado')->sum('total');
-                if ($can('credit.review')) {
-                    $add('Solicitudes pendientes de revisión', (int) $pending->where('review_status', 'pending')->sum('total'), '/gestion?status=pending');
-                    $add('Revisiones en curso', (int) $pending->where('review_status', 'in_review')->sum('total'), '/gestion?status=in_review');
-                }
                 if ($can('credit.create')) {
-                    $add('Solicitudes con observaciones', (int) $pending->where('review_status', 'returned')->sum('total'), '/solicitudes-credito?status=returned');
-                }
-                $ready = $pending->where('review_status', 'ready_for_authorization');
-                if ($can('credit.propose')) {
-                    $add('Condiciones por proponer', (int) $ready->where('authorization_status', 'awaiting_proposal')->sum('total'), '/autorizaciones?status=awaiting_proposal');
-                    $add('Propuestas devueltas', (int) $ready->where('authorization_status', 'returned')->sum('total'), '/autorizaciones?status=returned');
+                    $add('Solicitudes con correcciones', (int) $pending->where('authorization_status', 'returned')->sum('total'), '/solicitudes-credito?status=returned');
                 }
                 if ($can('credit.authorize')) {
-                    $add('Créditos por autorizar', (int) $ready->where('authorization_status', 'pending_authorization')->sum('total'), '/autorizaciones?status=pending_authorization');
+                    $add('Créditos por autorizar', (int) $pending->sum('total'), '/autorizaciones?status=pending_authorization');
                 }
                 if ($can('credit.disburse')) {
                     $add('Créditos por entregar', (int) $rows->where('status', 'aprobado')->sum('total'), '/desembolsos?status=aprobado');

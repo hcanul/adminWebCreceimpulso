@@ -1,9 +1,17 @@
 import { api } from './http';
 import type { Estimate } from './credit.service';
-export type PaymentMethod = 'cash_branch' | 'bank_deposit';
+export type PaymentMethod = 'cash_branch' | 'bank_deposit' | 'bank_transfer';
 export type AuthorizationStatus =
   'awaiting_proposal' | 'pending_authorization' | 'returned' | 'authorized';
+export interface AuthorizationConditions {
+  rate_id: string;
+  rate_signature: string;
+  participants: Array<{ client_id: string; amount_approved: string }>;
+  disbursement_method: PaymentMethod;
+  repayment_method: PaymentMethod;
+}
 export interface AuthorizationTerms {
+  workflow?: 'direct';
   late_fee_policy?: { id: string; weekly_percent: number } | null;
   first_due_on?: string | null;
   review_version: number;
@@ -49,17 +57,19 @@ export interface ProposalInput {
   participants: Array<{ client_id: string; amount_proposed: string }>;
 }
 export const authorizationLabels: Record<AuthorizationStatus, string> = {
-  awaiting_proposal: 'Pendiente de condiciones del gerente',
+  awaiting_proposal: 'Pendiente de autorización',
   pending_authorization: 'Pendiente de autorización comercial',
-  returned: 'Condiciones devueltas al gerente',
+  returned: 'Correcciones solicitadas',
   authorized: 'Autorizado',
 };
 export const methodLabel = (value: string | null | undefined) =>
   value === 'cash_branch'
     ? 'En sucursal'
-    : value === 'bank_deposit'
-      ? 'Depósito bancario'
-      : 'Por definir';
+    : value === 'bank_transfer'
+      ? 'Transferencia bancaria'
+      : value === 'bank_deposit'
+        ? 'Depósito bancario'
+        : 'Por definir';
 export const authorizationService = {
   async get(id: string) {
     return (await api.get<AuthorizationData>(`/credit/applications/${id}/authorization`)).data;
@@ -77,6 +87,11 @@ export const authorizationService = {
       decision: 'approve' | 'return';
       notes: string;
       first_due_on?: string;
+      rate_id?: string;
+      rate_signature?: string;
+      participants?: AuthorizationConditions['participants'];
+      disbursement_method?: PaymentMethod;
+      repayment_method?: PaymentMethod;
     },
   ) {
     return (await api.post(`/credit/applications/${id}/authorization`, input)).data as {

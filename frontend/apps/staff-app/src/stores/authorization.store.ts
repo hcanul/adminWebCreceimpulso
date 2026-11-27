@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import {
   authorizationService,
   type AuthorizationData,
+  type AuthorizationConditions,
   type ProposalInput,
 } from '../services/authorization.service';
 export const useAuthorizationStore = defineStore('staff-creditAuthorization', () => {
@@ -22,9 +23,11 @@ export const useAuthorizationStore = defineStore('staff-creditAuthorization', ()
     decision: 'approve' | 'return',
     notes: string,
     firstDueOn?: string,
+    conditions?: AuthorizationConditions,
   ) {
     if (!data.value) throw Error('Carga las condiciones antes de decidir.');
     return authorizationService.decide(id, {
+      ...conditions,
       version: data.value.version,
       decision,
       notes,

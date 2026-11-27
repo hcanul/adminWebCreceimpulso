@@ -19,6 +19,7 @@ final readonly class DisburseCreditData
             'bank_name' => trim($data['bank_name'] ?? '') ?: null,
             'bank_reference' => trim($data['bank_reference'] ?? '') ?: null,
             'notes' => trim($data['notes']),
+            ...(isset($data['signed_confirmed']) ? ['signed_confirmed' => (bool) $data['signed_confirmed']] : []),
         ]);
     }
 }
